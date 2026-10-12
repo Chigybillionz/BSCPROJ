@@ -161,6 +161,20 @@ export interface Document {
   uploadedAt: string
 }
 
+export interface Faculty {
+  id: string
+  name: string
+  universityId?: string
+  departments?: Department[]
+}
+
+export interface Department {
+  id: string
+  name: string
+  facultyId: string
+  availableLevels?: string[]
+}
+
 // ─── Student ──────────────────────────────────────────────────────────────────
 
 export interface Student {

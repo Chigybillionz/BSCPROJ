@@ -6,6 +6,7 @@ import { requireRole, requireTenant } from '@/core/middleware/rbac.middleware'
 const router = Router()
 
 // Public — no auth required
+router.get('/public',         UniversitiesController.getPublicList)
 router.get('/branding/:slug', UniversitiesController.getPublicBranding)
 
 router.get('/me', authMiddleware, requireTenant, UniversitiesController.getMe)

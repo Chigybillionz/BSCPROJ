@@ -73,13 +73,22 @@ async function main() {
   })
   console.log('✅ Academic session created:', session.name)
 
+  // Clearance Campaign
+  const campaignSeedId = '00000000-0000-0000-0009-000000000000';
+  const campaign = await db.clearanceCampaign.upsert({
+    where: { id: campaignSeedId },
+    update: {},
+    create: { id: campaignSeedId, universityId: unn.id, sessionId: session.id, name: 'Main Clearance Campaign' },
+  })
+  console.log('✅ Clearance campaign created')
+
   // Clearance Stages
   const stageNames = ['Library Clearance', 'Bursary / Finance', 'Medical Centre', 'Hostel', 'Faculty Officer']
   for (let i = 0; i < stageNames.length; i++) {
     await db.clearanceStage.upsert({
       where:  { id: IDS.stages[i] },
       update: { name: stageNames[i], orderIndex: i + 1 },
-      create: { id: IDS.stages[i], universityId: unn.id, name: stageNames[i], orderIndex: i + 1 },
+      create: { id: IDS.stages[i], universityId: unn.id, campaignId: campaign.id, name: stageNames[i], orderIndex: i + 1 },
     })
   }
   console.log('✅ UNN stages created')
@@ -115,19 +124,32 @@ async function main() {
   }
   console.log('✅ Stage document requirements created')
 
-  // Faculty & Department
+  // Faculty & Department (Faculty of Physical Sciences)
   const faculty = await db.faculty.upsert({
     where:  { id: IDS.faculty },
-    update: {},
-    create: { id: IDS.faculty, universityId: unn.id, name: 'Faculty of Engineering' },
+    update: { name: 'Faculty of Physical Sciences' },
+    create: { id: IDS.faculty, universityId: unn.id, name: 'Faculty of Physical Sciences' },
   })
 
-  const department = await db.department.upsert({
-    where:  { id: IDS.department },
-    update: {},
-    create: { id: IDS.department, facultyId: faculty.id, name: 'Computer Engineering' },
-  })
-  console.log('✅ Faculty and department created')
+  const physicalScienceDepts = [
+    { name: 'Computer Science', id: IDS.department },
+    { name: 'Mathematics', id: '00000000-0000-0000-0004-000000000001' },
+    { name: 'Statistics', id: '00000000-0000-0000-0004-000000000002' },
+    { name: 'Pure and Industrial Chemistry', id: '00000000-0000-0000-0004-000000000003' },
+    { name: 'Geology', id: '00000000-0000-0000-0004-000000000004' },
+    { name: 'Nuclear Science', id: '00000000-0000-0000-0004-000000000005' },
+  ]
+
+  for (const dept of physicalScienceDepts) {
+    await db.department.upsert({
+      where:  { id: dept.id },
+      update: { name: dept.name, facultyId: faculty.id },
+      create: { id: dept.id, facultyId: faculty.id, name: dept.name, availableLevels: ['100', '200', '300', '400'] },
+    })
+  }
+
+  const department = await db.department.findUniqueOrThrow({ where: { id: IDS.department } })
+  console.log('✅ Faculty of Physical Sciences and departments created')
 
   // Officer user
   const officerUser = await db.user.upsert({
