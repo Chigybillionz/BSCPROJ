@@ -75,8 +75,8 @@ export class ClearanceRepository {
     return db.clearanceRequest.update({ where: { id }, data: { stageStatus } })
   }
 
-  static async findOfficerQueue(universityId: string, assignments: any[], opts: { page: number; limit: number; search?: string; sessionId?: string; campaignId?: string }) {
-    const { page, limit, search, sessionId, campaignId } = opts
+  static async findOfficerQueue(universityId: string, assignments: any[], opts: { page: number; limit: number; search?: string; sessionId?: string; campaignId?: string; stageStatus?: string }) {
+    const { page, limit, search, sessionId, campaignId, stageStatus } = opts
     const skip = (page - 1) * limit
 
     const assignmentOrs = assignments.map(a => {
@@ -89,16 +89,18 @@ export class ClearanceRepository {
       return cond
     })
 
-    const stageIds = [...new Set(assignments.map(a => a.stageId))]
-
     const where: any = {
       universityId,
       status: 'IN_PROGRESS',
-      stageStatus: 'SUBMITTED',
-      stageApprovals: { none: { stageId: { in: stageIds }, status: { in: ['APPROVED', 'REJECTED'] as StageStatus[] }, decidedAt: { gte: new Date(Date.now() - 1000) } } },
       AND: [
         { OR: assignmentOrs }
       ]
+    }
+
+    if (!stageStatus || stageStatus === 'SUBMITTED') {
+      where.stageStatus = 'SUBMITTED'
+    } else if (stageStatus !== 'ALL') {
+      where.stageStatus = stageStatus as StageStatus
     }
 
     if (sessionId) where.sessionId = sessionId
@@ -117,7 +119,19 @@ export class ClearanceRepository {
     }
 
     const [data, total] = await Promise.all([
-      db.clearanceRequest.findMany({ where, skip, take: limit, include: { student: { include: { faculty: true, department: true } } }, orderBy: { updatedAt: 'asc' } }),
+      db.clearanceRequest.findMany({
+        where,
+        skip,
+        take: limit,
+        include: {
+          student: { include: { faculty: true, department: true } },
+          currentStage: true,
+          campaign: true,
+          session: true,
+          documents: { include: { documentType: true } },
+        },
+        orderBy: { updatedAt: 'asc' },
+      }),
       db.clearanceRequest.count({ where }),
     ])
     return { data, total }

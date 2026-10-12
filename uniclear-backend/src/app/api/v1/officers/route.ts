@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import multer from 'multer'
 import { OfficersController } from '@/modules/officers/officers.controller'
+import { ClearanceController } from '@/modules/clearance/clearance.controller'
 import { authMiddleware } from '@/core/middleware/auth.middleware'
 import { requireRole, requireTenant } from '@/core/middleware/rbac.middleware'
 
@@ -10,6 +11,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 *
 router.use(authMiddleware, requireTenant)
 
 router.get('/me',                    requireRole('OFFICER'),             OfficersController.getMe)
+router.get('/queue',                 requireRole('OFFICER'),             ClearanceController.getQueue)
 router.get('/stamps',                requireRole('OFFICER'),             OfficersController.getStamps)
 router.post('/stamps',               requireRole('OFFICER'),             upload.single('file'), OfficersController.uploadStamp)
 router.delete('/stamps/:id',         requireRole('OFFICER'),             OfficersController.deleteStamp)

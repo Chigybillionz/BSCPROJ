@@ -20,4 +20,5 @@ export const queueQuerySchema = z.object({
   search: z.string().optional(),
   sessionId: z.string().uuid().optional(),
   campaignId: z.string().uuid().optional(),
+  stageStatus: z.enum(['ALL', 'SUBMITTED', 'PENDING', 'REJECTED']).optional(),
 })

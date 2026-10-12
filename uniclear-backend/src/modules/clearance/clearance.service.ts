@@ -146,7 +146,7 @@ export class ClearanceService {
     return clearance
   }
 
-  static async getQueue(officerUserId: string, universityId: string, opts: { page: number; limit: number; search?: string; sessionId?: string; campaignId?: string }) {
+  static async getQueue(officerUserId: string, universityId: string, opts: { page: number; limit: number; search?: string; sessionId?: string; campaignId?: string; stageStatus?: string }) {
     const officer = await OfficersRepository.findByUserId(officerUserId)
     if (!officer?.stageAssignments?.length) throw new ForbiddenError('You are not assigned to any stage')
 

@@ -54,13 +54,13 @@ Below is the detailed breakdown of every feature required to finish the system a
 
 ### Phase 2: Department Officer Workflow
 
-**Task 2.1: Officer Dashboard & Request Queue**
+**Task 2.1: Officer Dashboard & Request Queue** — ✅ **DONE**
 - **Description:** Clearance officers need a dashboard to see all students who are currently waiting for clearance in their specific department/stage.
 - **Frontend Tasks:**
-  - Create a data table UI for officers (`app/(tenant)/officer/dashboard/page.tsx`).
-  - Show columns: Student Name, Reg Number, Department, and Date Submitted.
+  - [x] Create a data table UI for officers (`app/(tenant)/officer/dashboard/page.tsx`).
+  - [x] Show columns: Student Name, Reg Number, Department, and Date Submitted.
 - **Backend Tasks:**
-  - Create an endpoint `api/officers/queue` that returns only the students whose `currentStageId` matches the officer's assigned stage.
+  - [x] Create an endpoint `api/officers/queue` that returns only the students whose `currentStageId` matches the officer's assigned stage.
 - **Acceptance Criteria:** An officer logs in and sees a list of students waiting for their approval.
 
 **Task 2.2: Document Verification Interface**
