@@ -48,12 +48,13 @@ async function proxy(req: NextRequest, { params }: { params: Promise<{ path: str
   const tenantSlug = cookieStore.get('tenant_slug')?.value
 
   const { path } = await params
-  // Append tenant slug so backend tenantMiddleware can resolve universityId
-  const search = req.nextUrl.search
-  const tenantParam = tenantSlug
-    ? (search ? `${search}&tenant=${tenantSlug}` : `?tenant=${tenantSlug}`)
-    : search
-  const url = `${API_URL}/api/v1/${path.join('/')}${tenantParam}`
+  // Use URLSearchParams to avoid duplicate parameters (e.g. ?tenant=unn&tenant=192)
+  const searchParams = new URLSearchParams(req.nextUrl.search)
+  if (tenantSlug && !searchParams.has('tenant') && !/^\d+$/.test(tenantSlug)) {
+    searchParams.set('tenant', tenantSlug)
+  }
+  const queryStr = searchParams.toString() ? `?${searchParams.toString()}` : ''
+  const url = `${API_URL}/api/v1/${path.join('/')}${queryStr}`
 
   const contentType = req.headers.get('content-type') || ''
   const isMultipart = contentType.includes('multipart/form-data')

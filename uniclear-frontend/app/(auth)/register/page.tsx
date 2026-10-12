@@ -103,6 +103,13 @@ export default function RegisterPage() {
     return fac?.departments ?? []
   }, [selectedFacultyId, faculties])
 
+  // Auto-select faculty if only one is available (e.g. Faculty of Physical Sciences)
+  useEffect(() => {
+    if (faculties && faculties.length > 0 && !selectedFacultyId) {
+      setValue('facultyId', faculties[0].id, { shouldValidate: true })
+    }
+  }, [faculties, selectedFacultyId, setValue])
+
   // Reset department selection when faculty changes
   const handleFacultyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = e.target.value
@@ -266,12 +273,14 @@ export default function RegisterPage() {
               <Select
                 label="Faculty"
                 error={errors.facultyId?.message}
-                placeholder={loadingStructure ? 'Loading faculties...' : 'Select Faculty'}
+                disabled={loadingStructure || !faculties || faculties.length === 0}
+                {...register('facultyId')}
                 value={selectedFacultyId}
                 onChange={handleFacultyChange}
-                disabled={loadingStructure || !faculties || faculties.length === 0}
               >
-                <option value="" disabled>Select Faculty</option>
+                <option value="" disabled>
+                  {loadingStructure ? 'Loading faculties...' : 'Select Faculty'}
+                </option>
                 {faculties?.map(f => (
                   <option key={f.id} value={f.id}>
                     {f.name}
@@ -282,18 +291,15 @@ export default function RegisterPage() {
               <Select
                 label="Department"
                 error={errors.departmentId?.message}
-                placeholder={
-                  !selectedFacultyId
-                    ? 'Select faculty first'
-                    : availableDepartments.length === 0
-                    ? 'No departments found'
-                    : 'Select Department'
-                }
                 disabled={!selectedFacultyId || availableDepartments.length === 0}
                 {...register('departmentId')}
               >
                 <option value="" disabled>
-                  {!selectedFacultyId ? 'Select faculty first' : 'Select Department'}
+                  {!selectedFacultyId 
+                    ? 'Select faculty first' 
+                    : availableDepartments.length === 0 
+                    ? 'No departments found' 
+                    : 'Select Department'}
                 </option>
                 {availableDepartments.map(d => (
                   <option key={d.id} value={d.id}>

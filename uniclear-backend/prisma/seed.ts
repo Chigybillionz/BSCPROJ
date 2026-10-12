@@ -138,6 +138,8 @@ async function main() {
     { name: 'Pure and Industrial Chemistry', id: '00000000-0000-0000-0004-000000000003' },
     { name: 'Geology', id: '00000000-0000-0000-0004-000000000004' },
     { name: 'Nuclear Science', id: '00000000-0000-0000-0004-000000000005' },
+    { name: 'Physics and Astronomy', id: '00000000-0000-0000-0004-000000000006' },
+    { name: 'Science Laboratory Technology', id: '00000000-0000-0000-0004-000000000007' },
   ]
 
   for (const dept of physicalScienceDepts) {
