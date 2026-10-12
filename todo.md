@@ -29,15 +29,15 @@ Below is the detailed breakdown of every feature required to finish the system a
   - [x] Hash the password with `bcryptjs` and save the user as a `STUDENT` role in the database.
 - **Acceptance Criteria:** A student can create an account and immediately log into the system.
 
-**Task 1.2: Document Upload Module**
+**Task 1.2: Document Upload Module** — ✅ **DONE**
 - **Description:** Implement a secure way for students to upload required clearance documents (O-Level, JAMB admission letter, Birth Certificate).
 - **Frontend Tasks:**
-  - Build a drag-and-drop file upload component in the student dashboard.
-  - Ensure the UI matches Figure 3.7 (Document Upload Form) from the proposal.
+  - [x] Build a drag-and-drop file upload component in the student dashboard (`ClearanceSubmissionPanel.tsx`).
+  - [x] Ensure the UI matches Figure 3.7 (Document Upload Form) from the proposal (format hints, dropzone, preview, progress bar).
 - **Backend Tasks:**
-  - Set up an endpoint (e.g., `api/documents/upload`) using `multer` to handle file uploads.
-  - Integrate Cloudinary (preferred) or save files locally to a `/uploads` folder.
-  - Save the document URL and metadata into the `Document` table in the database.
+  - [x] Set up an endpoint (e.g., `api/v1/documents/upload`) using `multer` to handle file uploads.
+  - [x] Integrate local `/uploads` storage provider and Cloudinary option.
+  - [x] Save the document URL and metadata into the `Document` table in the database.
 - **Acceptance Criteria:** A student can upload a PDF or Image, and the file URL is successfully saved to the database.
 
 **Task 1.3: Student Real-Time Tracking Dashboard**
