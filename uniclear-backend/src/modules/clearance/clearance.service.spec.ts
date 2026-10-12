@@ -2,12 +2,14 @@ import { ClearanceService } from './clearance.service'
 import { ClearanceRepository } from './clearance.repository'
 import { DocumentTypesRepository } from '@/modules/document-types/document-types.repository'
 import { DocumentsRepository } from '@/modules/documents/document.repository'
+import { StudentsRepository } from '@/modules/students/students.repository'
 import { db } from '@/lib/db'
-import { ValidationError } from '@/core/errors/AppError'
+import { NotFoundError, ValidationError } from '@/core/errors/AppError'
 
 jest.mock('./clearance.repository')
 jest.mock('@/modules/document-types/document-types.repository')
 jest.mock('@/modules/documents/document.repository')
+jest.mock('@/modules/students/students.repository')
 jest.mock('@/lib/db', () => ({
   db: {
     student: {
@@ -73,6 +75,27 @@ describe('ClearanceService', () => {
       const result = await ClearanceService.submit(mockRequestId, mockUserId, mockUniversityId)
 
       expect(ClearanceRepository.updateStageStatus).toHaveBeenCalledWith(mockRequestId, 'SUBMITTED')
+    })
+  })
+
+  describe('getStatus', () => {
+    it('should return clearance requests for the student', async () => {
+      ;(StudentsRepository.findByUserId as jest.Mock).mockResolvedValue({ id: 'student-1', userId: 'user-1' })
+      ;(ClearanceRepository.findByStudent as jest.Mock).mockResolvedValue([
+        { id: 'req-1', status: 'IN_PROGRESS', stageApprovals: [] },
+      ])
+
+      const result = await ClearanceService.getStatus('user-1', 'univ-1')
+
+      expect(result).toHaveLength(1)
+      expect(result[0].id).toBe('req-1')
+      expect(ClearanceRepository.findByStudent).toHaveBeenCalledWith('student-1', 'univ-1')
+    })
+
+    it('should throw NotFoundError if student profile is not found', async () => {
+      ;(StudentsRepository.findByUserId as jest.Mock).mockResolvedValue(null)
+
+      await expect(ClearanceService.getStatus('bad-user', 'univ-1')).rejects.toThrow(NotFoundError)
     })
   })
 })

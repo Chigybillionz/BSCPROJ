@@ -40,14 +40,14 @@ Below is the detailed breakdown of every feature required to finish the system a
   - [x] Save the document URL and metadata into the `Document` table in the database.
 - **Acceptance Criteria:** A student can upload a PDF or Image, and the file URL is successfully saved to the database.
 
-**Task 1.3: Student Real-Time Tracking Dashboard**
+**Task 1.3: Student Real-Time Tracking Dashboard** — ✅ **DONE**
 - **Description:** Provide a dashboard where the student can see their overall clearance progress across all departments.
 - **Frontend Tasks:**
-  - Build the dashboard UI (Figure 3.9 from proposal).
-  - Create a progress bar showing completion percentage.
-  - Display a list of clearance stages (e.g., Library, Bursary) with status badges: `PENDING`, `APPROVED`, or `REJECTED`.
+  - [x] Build the dashboard UI (Figure 3.9 from proposal).
+  - [x] Create a progress bar showing completion percentage.
+  - [x] Display a list of clearance stages (e.g., Library, Bursary) with status badges: `PENDING`, `APPROVED`, or `REJECTED`.
 - **Backend Tasks:**
-  - Create an endpoint `api/clearance/status` to fetch the student's current stage and all `StageApproval` records.
+  - [x] Create an endpoint `api/clearance/status` to fetch the student's current stage and all `StageApproval` records.
 - **Acceptance Criteria:** The student logs in and instantly sees which departments have cleared them and which are still pending.
 
 ---

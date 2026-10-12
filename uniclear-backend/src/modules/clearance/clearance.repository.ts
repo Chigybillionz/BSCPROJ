@@ -34,14 +34,27 @@ export class ClearanceRepository {
       include: {
         campaign: true,
         session: true,
+        student: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            jambRegNo: true,
+            matricNo: true,
+            level: true,
+            faculty: { select: { id: true, name: true } },
+            department: { select: { id: true, name: true } },
+          },
+        },
         stageApprovals: { include: { stage: true }, orderBy: { decidedAt: 'asc' } },
+        documents: { include: { documentType: true } },
         currentStage: {
           include: {
             documentRequirements: {
-              include: { documentType: true }
-            }
-          }
-        }
+              include: { documentType: true },
+            },
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     })

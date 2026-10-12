@@ -20,7 +20,7 @@ export function ClearanceStepper({ stages, request }: ClearanceStepperProps) {
           const isActive    = request.currentStageId === stage.id
           const isCompleted = approval?.status === 'APPROVED'
           const isRejected  = approval?.status === 'REJECTED'
-          const isSubmitted = isActive && approval?.status === 'SUBMITTED'
+          const isSubmitted = isActive && request.stageStatus === 'SUBMITTED'
           const isLocked    = !isActive && !isCompleted && !isRejected
 
           return (
@@ -63,7 +63,7 @@ export function ClearanceStepper({ stages, request }: ClearanceStepperProps) {
           const isActive    = request.currentStageId === stage.id
           const isCompleted = approval?.status === 'APPROVED'
           const isRejected  = approval?.status === 'REJECTED'
-          const isSubmitted = isActive && approval?.status === 'SUBMITTED'
+          const isSubmitted = isActive && request.stageStatus === 'SUBMITTED'
           const isLocked    = !isActive && !isCompleted && !isRejected
 
           return (
