@@ -63,15 +63,15 @@ Below is the detailed breakdown of every feature required to finish the system a
   - [x] Create an endpoint `api/officers/queue` that returns only the students whose `currentStageId` matches the officer's assigned stage.
 - **Acceptance Criteria:** An officer logs in and sees a list of students waiting for their approval.
 
-**Task 2.2: Document Verification Interface**
+**Task 2.2: Document Verification Interface** — ✅ **DONE**
 - **Description:** The core verification screen where officers review uploaded documents and make a decision.
 - **Frontend Tasks:**
-  - Build a split-screen UI: Document viewer on the left (using `react-pdf`), and student details on the right.
-  - Add two main action buttons: "Approve" (Green) and "Reject" (Red).
-  - If "Reject" is clicked, require the officer to type a reason (Remarks) in a modal.
+  - [x] Build a split-screen UI: Document viewer on the left (using `react-pdf`), and student details on the right.
+  - [x] Add two main action buttons: "Approve" (Green) and "Reject" (Red).
+  - [x] If "Reject" is clicked, require the officer to type a reason (Remarks) in a modal.
 - **Backend Tasks:**
-  - Create `api/clearance/approve` and `api/clearance/reject` endpoints.
-  - Update the `StageApproval` table status and advance the student's `currentStageId` to the next stage in the sequence if approved.
+  - [x] Create `api/clearance/approve` and `api/clearance/reject` endpoints.
+  - [x] Update the `StageApproval` table status and advance the student's `currentStageId` to the next stage in the sequence if approved.
 - **Acceptance Criteria:** Officers can successfully approve a student, moving them to the next stage, or reject them with feedback.
 
 **Task 2.3: Digital Officer Stamps / Signatures**

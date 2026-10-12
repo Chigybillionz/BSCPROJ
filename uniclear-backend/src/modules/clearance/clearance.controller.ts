@@ -43,6 +43,7 @@ export class ClearanceController {
 
   static async approve(req: Request, res: Response, next: NextFunction) {
     try {
+      const requestId = param(req.params.requestId || req.body.requestId || '')
       const { remarks, issuedData } = approveStageSchema.parse(req.body)
       let parsedIssuedData = undefined
       if (issuedData) {
@@ -54,13 +55,13 @@ export class ClearanceController {
 
       if (req.file) {
         const { storage } = await import('@/modules/documents/storage')
-        const fileData = await storage.upload(req.file.buffer, `approvals/${req.universityId}/${req.params.requestId}`, req.file.mimetype)
+        const fileData = await storage.upload(req.file.buffer, `approvals/${req.universityId}/${requestId}`, req.file.mimetype)
         attachmentUrl = fileData.url
         attachmentKey = fileData.key
       }
 
       const result = await ClearanceService.approve(
-        param(req.params.requestId),
+        requestId,
         req.user!.sub,
         req.universityId!,
         remarks,
@@ -75,8 +76,9 @@ export class ClearanceController {
 
   static async reject(req: Request, res: Response, next: NextFunction) {
     try {
+      const requestId = param(req.params.requestId || req.body.requestId || '')
       const { remarks } = rejectStageSchema.parse(req.body)
-      const result = await ClearanceService.reject(param(req.params.requestId), req.user!.sub, req.universityId!, remarks, req.ip)
+      const result = await ClearanceService.reject(requestId, req.user!.sub, req.universityId!, remarks, req.ip)
       return ApiResponse.success(res, result, 'Stage rejected')
     } catch (err) { next(err) }
   }
