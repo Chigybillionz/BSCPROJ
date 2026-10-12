@@ -77,7 +77,7 @@ describe('AuthService', () => {
       firstName: 'Adaeze',
       lastName: 'Nwosu',
       email: 'adaeze@unn.edu.ng',
-      jambRegNo: '98765432AB',
+      jambRegNo: '202210067841FA',
       facultyId: 'fac-1',
       departmentId: 'dept-1',
       password: 'Password@123',
@@ -99,7 +99,7 @@ describe('AuthService', () => {
         id: 'new-student-id',
         universityId: 'uni-1',
         userId: 'new-user-id',
-        jambRegNo: '98765432AB',
+        jambRegNo: '202210067841FA',
         firstName: 'Adaeze',
         lastName: 'Nwosu',
         facultyId: 'fac-1',
@@ -115,7 +115,7 @@ describe('AuthService', () => {
       expect(result.accessToken).toBe('access-token')
       expect(result.refreshToken).toBe('refresh-token')
       expect(result.user.email).toBe('adaeze@unn.edu.ng')
-      expect(result.user.student.jambRegNo).toBe('98765432AB')
+      expect(result.user.student.jambRegNo).toBe('202210067841FA')
       expect(result.user.student.firstName).toBe('Adaeze')
       expect(db.user.create).toHaveBeenCalledWith(expect.objectContaining({
         data: expect.objectContaining({

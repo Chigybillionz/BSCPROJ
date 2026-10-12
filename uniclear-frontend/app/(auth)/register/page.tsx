@@ -21,7 +21,7 @@ const registerSchema = z.object({
   universitySlug:  z.string().min(1, 'University is required'),
   firstName:       z.string().min(2, 'First name must be at least 2 characters').trim(),
   lastName:        z.string().min(2, 'Last name must be at least 2 characters').trim(),
-  jambRegNo:       z.string().min(3, 'JAMB Reg No is required').trim(),
+  jambRegNo:       z.string().trim().regex(/^\d{12}[A-Za-z]{2}$/, 'JAMB Reg No must be 12 digits followed by 2 letters (e.g. 202210067841FA)'),
   facultyId:       z.string().min(1, 'Please select your Faculty'),
   departmentId:    z.string().min(1, 'Please select your Department'),
   email:           z.string().email('Please enter a valid email address').trim().toLowerCase(),
@@ -256,8 +256,13 @@ export default function RegisterPage() {
               <Input
                 label="JAMB Registration Number"
                 placeholder="e.g. 202210067841FA"
+                maxLength={14}
                 error={errors.jambRegNo?.message}
-                {...register('jambRegNo')}
+                {...register('jambRegNo', {
+                  onChange: (e) => {
+                    e.target.value = e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, '')
+                  },
+                })}
               />
               <Input
                 label="Phone Number (Optional)"

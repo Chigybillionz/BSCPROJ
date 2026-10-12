@@ -44,7 +44,11 @@ export const registerSchema = z.object({
   firstName: z.string().min(1, 'First name is required').trim(),
   lastName: z.string().min(1, 'Last name is required').trim(),
   email: z.string().email('Enter a valid email address').trim().toLowerCase(),
-  jambRegNo: z.string().min(3, 'JAMB Registration Number is required').trim(),
+  jambRegNo: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(/^\d{12}[A-Z]{2}$/, 'JAMB Reg No must be 12 digits followed by 2 letters (e.g. 202210067841FA)'),
   facultyId: z.string().min(1, 'Faculty is required'),
   departmentId: z.string().min(1, 'Department is required'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
