@@ -87,13 +87,13 @@ Below is the detailed breakdown of every feature required to finish the system a
 
 ### Phase 3: Administrator Configuration
 
-**Task 3.1: Workflow Configuration UI**
+**Task 3.1: Workflow Configuration UI** — ✅ **DONE**
 - **Description:** Super Admins must be able to define the sequence of clearance (e.g., Library must be cleared before Bursary).
 - **Frontend Tasks:**
-  - Build a drag-and-drop list (using `@dnd-kit/core`) to reorder `ClearanceStage` items.
-  - Create a form to add new stages (e.g., "Medical Centre").
+  - [x] Build a drag-and-drop list (using `@dnd-kit/core`) to reorder `ClearanceStage` items.
+  - [x] Create a form to add new stages (e.g., "Medical Centre").
 - **Backend Tasks:**
-  - Endpoints to create, update, and reorder stages in the `ClearanceStage` table by updating the `orderIndex` field.
+  - [x] Endpoints to create, update, and reorder stages in the `ClearanceStage` table by updating the `orderIndex` field.
 - **Acceptance Criteria:** An admin can add a new stage, change its order, and the system dynamically routes students based on the new sequence.
 
 **Task 3.2: User & Role Management**
