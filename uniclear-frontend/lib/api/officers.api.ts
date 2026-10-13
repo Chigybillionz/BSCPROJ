@@ -12,8 +12,17 @@ export const officersApi = {
     apiClient.get<PaginatedResponse<ClearanceRequest>>('/officers/queue', {
       params: { page, limit, search, sessionId, campaignId, stageStatus }
     }),
-  create: (data: { email: string; firstName: string; lastName: string }) =>
-    apiClient.post<{ success: true; data: Officer }>('/officers', data),
+  create: (data: {
+    email: string
+    firstName: string
+    lastName: string
+    role?: 'OFFICER' | 'ADMIN'
+    stageId?: string
+    facultyId?: string
+    departmentId?: string
+    sessionId?: string
+  }) =>
+    apiClient.post<{ success: true; data: Officer & { inviteLink?: string; tempPassword?: string } }>('/officers', data),
   update: (id: string, data: { firstName?: string; lastName?: string }) =>
     apiClient.patch(`/officers/${id}`, data),
   delete: (id: string) =>

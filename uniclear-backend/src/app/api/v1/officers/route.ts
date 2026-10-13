@@ -15,12 +15,12 @@ router.get('/queue',                 requireRole('OFFICER'),             Clearan
 router.get('/stamps',                requireRole('OFFICER'),             OfficersController.getStamps)
 router.post('/stamps',               requireRole('OFFICER'),             upload.single('file'), OfficersController.uploadStamp)
 router.delete('/stamps/:id',         requireRole('OFFICER'),             OfficersController.deleteStamp)
-router.post('/stage/:stageId/assign',         requireRole('SUPER_ADMIN'), OfficersController.assign)
-router.delete('/assignment/:assignmentId',    requireRole('SUPER_ADMIN'), OfficersController.unassign)
+router.post('/stage/:stageId/assign',         requireRole('SUPER_ADMIN', 'ADMIN'), OfficersController.assign)
+router.delete('/assignment/:assignmentId',    requireRole('SUPER_ADMIN', 'ADMIN'), OfficersController.unassign)
 router.get('/',                      requireRole('SUPER_ADMIN', 'ADMIN'), OfficersController.list)
 router.get('/:id',                   requireRole('SUPER_ADMIN', 'ADMIN'), OfficersController.getById)
-router.post('/',                     requireRole('SUPER_ADMIN'),          OfficersController.create)
-router.patch('/:id',                 requireRole('SUPER_ADMIN'),          OfficersController.update)
-router.delete('/:id',                requireRole('SUPER_ADMIN'),          OfficersController.delete)
+router.post('/',                     requireRole('SUPER_ADMIN', 'ADMIN'), OfficersController.create)
+router.patch('/:id',                 requireRole('SUPER_ADMIN', 'ADMIN'), OfficersController.update)
+router.delete('/:id',                requireRole('SUPER_ADMIN', 'ADMIN'), OfficersController.delete)
 
 export default router

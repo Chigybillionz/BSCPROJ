@@ -96,13 +96,13 @@ Below is the detailed breakdown of every feature required to finish the system a
   - [x] Endpoints to create, update, and reorder stages in the `ClearanceStage` table by updating the `orderIndex` field.
 - **Acceptance Criteria:** An admin can add a new stage, change its order, and the system dynamically routes students based on the new sequence.
 
-**Task 3.2: User & Role Management**
+**Task 3.2: User & Role Management** — ✅ **DONE**
 - **Description:** Admins need to register departmental officers and assign them to specific clearance stages.
 - **Frontend Tasks:**
-  - Create a "Manage Users" data table for admins.
-  - Add a form to create a new user account, select the "OFFICER" role, and select which Stage they manage from a dropdown.
+  - [x] Create a "Manage Users" data table for admins.
+  - [x] Add a form to create a new user account, select the "OFFICER" role, and select which Stage they manage from a dropdown.
 - **Backend Tasks:**
-  - API endpoint to create users and populate the `StageOfficerAssignment` table.
+  - [x] API endpoint to create users and populate the `StageOfficerAssignment` table.
 - **Acceptance Criteria:** Admins can successfully create an officer account and assign them to the "Library" stage.
 
 ---
