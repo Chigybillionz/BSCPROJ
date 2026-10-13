@@ -109,13 +109,13 @@ Below is the detailed breakdown of every feature required to finish the system a
 
 ### Phase 4: Notifications & Reporting
 
-**Task 4.1: Automated Email & In-App Notifications**
+**Task 4.1: Automated Email & In-App Notifications** — ✅ **DONE**
 - **Description:** Keep students informed about their clearance status in real-time to avoid physical visits.
 - **Frontend Tasks:**
-  - Add a Notification Bell icon in the navbar with a dropdown showing recent alerts.
+  - [x] Add a Notification Bell icon in the navbar with a dropdown showing recent alerts.
 - **Backend Tasks:**
-  - Use `nodemailer` to send an email via Mailpit/Resend whenever a student's stage is Approved or Rejected.
-  - Save the alert to the `Notification` database table.
+  - [x] Use `nodemailer` to send an email via Mailpit/Resend whenever a student's stage is Approved or Rejected.
+  - [x] Save the alert to the `Notification` database table.
 - **Acceptance Criteria:** A student receives an email and an in-app alert stating "Your Library Clearance was approved!"
 
 **Task 4.2: Printable Final Clearance Report (PDF)**
