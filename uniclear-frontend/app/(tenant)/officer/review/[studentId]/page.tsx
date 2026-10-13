@@ -47,6 +47,7 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
   const [docRejectReason, setDocRejectReason] = useState('')
   const [selectedDocIdx, setSelectedDocIdx] = useState(0)
   const [stampedFile, setStampedFile] = useState<File | undefined>()
+  const [selectedStampId, setSelectedStampId] = useState<string | undefined>()
   const [docActionPending, setDocActionPending] = useState(false)
 
   // Resilient query: handles both requestId and studentId
@@ -129,7 +130,7 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
       setIssueDataOpen(true)
     } else {
       approve(
-        { requestId: clearance.id, file: stampedFile },
+        { requestId: clearance.id, file: stampedFile, stampId: selectedStampId },
         {
           onSuccess: () => {
             qc.invalidateQueries()
@@ -142,7 +143,7 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
 
   const handleIssueDataSubmit = () => {
     approve(
-      { requestId: clearance.id, file: stampedFile, issuedData },
+      { requestId: clearance.id, file: stampedFile, issuedData, stampId: selectedStampId },
       {
         onSuccess: () => {
           setIssueDataOpen(false)
@@ -332,6 +333,7 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
                       <PdfStampViewer
                         fileUrl={selectedDoc.fileUrl}
                         onSaveStampedFile={file => setStampedFile(file)}
+                        onStampSelect={stamp => setSelectedStampId(stamp?.id)}
                       />
                     </div>
                   ) : (

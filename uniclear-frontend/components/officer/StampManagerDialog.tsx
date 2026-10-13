@@ -203,6 +203,8 @@ export function StampManagerDialog({ stamps, onStampsChange }: { stamps: Officer
                   <p className="text-xs text-center truncate font-medium">{stamp.name}</p>
                   <button 
                     onClick={() => handleDelete(stamp.id)}
+                    title="Delete stamp"
+                    aria-label="Delete stamp"
                     className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     ×

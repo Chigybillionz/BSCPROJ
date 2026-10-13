@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useClearanceStatus } from '@/features/clearance/hooks/useClearance'
 import { useStages } from '@/features/stages/hooks/useStages'
 import { ClearanceStepper } from '@/components/student/ClearanceStepper'
@@ -236,16 +237,38 @@ export default function StudentDashboard() {
                             </Button>
                           </Link>
                         )}
-                        {isApproved && approval?.attachmentUrl && (
-                          <a 
-                            href={approval.attachmentUrl} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-xs text-[var(--color-primary)] font-medium hover:underline p-1"
-                          >
-                            <ExternalLink className="h-3.5 w-3.5" />
-                            <span>Receipt</span>
-                          </a>
+                        {isApproved && (
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {(approval as any)?.stamp && (
+                              <div
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold shadow-2xs"
+                                title={`Officially stamped & endorsed: ${(approval as any).stamp.name}`}
+                              >
+                                <span className="relative w-4.5 h-4.5 rounded-full overflow-hidden bg-white border border-emerald-300 flex items-center justify-center shrink-0">
+                                  <Image
+                                    src={(approval as any).stamp.imageUrl}
+                                    alt={(approval as any).stamp.name}
+                                    fill
+                                    className="object-contain p-0.5"
+                                  />
+                                </span>
+                                <span className="text-[11px] truncate max-w-[130px]">
+                                  {(approval as any).stamp.name}
+                                </span>
+                              </div>
+                            )}
+                            {approval?.attachmentUrl && (
+                              <a
+                                href={approval.attachmentUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-xs text-[var(--color-primary)] font-medium hover:underline p-1"
+                              >
+                                <ExternalLink className="h-3.5 w-3.5" />
+                                <span>Endorsement</span>
+                              </a>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>

@@ -74,13 +74,13 @@ Below is the detailed breakdown of every feature required to finish the system a
   - [x] Update the `StageApproval` table status and advance the student's `currentStageId` to the next stage in the sequence if approved.
 - **Acceptance Criteria:** Officers can successfully approve a student, moving them to the next stage, or reject them with feedback.
 
-**Task 2.3: Digital Officer Stamps / Signatures**
+**Task 2.3: Digital Officer Stamps / Signatures** — ✅ **DONE**
 - **Description:** Officers should be able to append their digital signature/stamp to the student's clearance record upon approval.
 - **Frontend Tasks:**
-  - Allow officers to upload a PNG of their signature/stamp in their profile settings.
+  - [x] Allow officers to upload a PNG of their signature/stamp in their profile settings.
 - **Backend Tasks:**
-  - Save the stamp image URL to the `OfficerStamp` table.
-  - When an officer approves a student, link their stamp ID to the approval record.
+  - [x] Save the stamp image URL to the `OfficerStamp` table.
+  - [x] When an officer approves a student, link their stamp ID to the approval record.
 - **Acceptance Criteria:** Approved stages show a digital stamp as proof of clearance.
 
 ---

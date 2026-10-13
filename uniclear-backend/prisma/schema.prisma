@@ -473,6 +473,7 @@ model StageApproval {
   requestId    String
   stageId      String
   officerId    String
+  stampId      String?
   status       StageStatus
   remarks       String?
   attachmentUrl String?
@@ -484,9 +485,11 @@ model StageApproval {
   stage        ClearanceStage   @relation(fields: [stageId], references: [id])
   officer      User             @relation(fields: [officerId], references: [id], map: "StageApproval_user_fkey")
   officerRef   Officer          @relation(fields: [officerId], references: [userId], map: "StageApproval_officer_fkey")
+  stamp        OfficerStamp?    @relation(fields: [stampId], references: [id], onDelete: SetNull)
 
   @@index([universityId])
   @@index([requestId])
+  @@index([stampId])
 }
 
 // ─────────────────────────────────────────
@@ -503,9 +506,10 @@ model OfficerStamp {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  university   University @relation(fields: [universityId], references: [id], onDelete: Cascade)
-  officer      User       @relation(fields: [officerId], references: [id], onDelete: Cascade, map: "OfficerStamp_user_fkey")
-  officerRef   Officer    @relation(fields: [officerId], references: [userId], onDelete: Cascade, map: "OfficerStamp_officer_fkey")
+  university   University      @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  officer      User            @relation(fields: [officerId], references: [id], onDelete: Cascade, map: "OfficerStamp_user_fkey")
+  officerRef   Officer         @relation(fields: [officerId], references: [userId], onDelete: Cascade, map: "OfficerStamp_officer_fkey")
+  approvals    StageApproval[]
 
   @@index([universityId])
   @@index([officerId])

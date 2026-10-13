@@ -97,6 +97,18 @@ export function ProfileSlideOver({ open, onClose }: ProfileSlideOverProps) {
           <div className="space-y-4">
             <h4 className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wider">Preferences</h4>
             <div className="space-y-2">
+              {user?.role === 'OFFICER' && (
+                <Button 
+                  variant="primary" 
+                  className="w-full justify-start text-left" 
+                  onClick={() => {
+                    onClose()
+                    window.location.href = '/officer/settings'
+                  }}
+                >
+                  Manage Officer Stamps & Signatures
+                </Button>
+              )}
               <Button variant="secondary" className="w-full justify-start text-left" onClick={() => setPasswordOpen(true)}>
                 Change Password
               </Button>

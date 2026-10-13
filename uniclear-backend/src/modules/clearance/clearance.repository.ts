@@ -46,7 +46,7 @@ export class ClearanceRepository {
             department: { select: { id: true, name: true } },
           },
         },
-        stageApprovals: { include: { stage: true }, orderBy: { decidedAt: 'asc' } },
+        stageApprovals: { include: { stage: true, stamp: true }, orderBy: { decidedAt: 'asc' } },
         documents: { include: { documentType: true } },
         currentStage: {
           include: {
@@ -137,14 +137,14 @@ export class ClearanceRepository {
     return { data, total }
   }
 
-  static async createStageApproval(data: { universityId: string; requestId: string; stageId: string; officerId: string; status: StageStatus; remarks?: string; attachmentUrl?: string; attachmentKey?: string; ipAddress?: string }) {
+  static async createStageApproval(data: { universityId: string; requestId: string; stageId: string; officerId: string; stampId?: string; status: StageStatus; remarks?: string; attachmentUrl?: string; attachmentKey?: string; ipAddress?: string }) {
     return db.stageApproval.create({ data })
   }
 
   static async getHistory(requestId: string, universityId: string) {
     return db.stageApproval.findMany({
       where: { requestId, universityId },
-      include: { stage: true, officer: { select: { id: true, email: true } } },
+      include: { stage: true, officer: { select: { id: true, email: true } }, stamp: true },
       orderBy: { decidedAt: 'asc' },
     })
   }

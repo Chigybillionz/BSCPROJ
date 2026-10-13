@@ -44,7 +44,7 @@ export class ClearanceController {
   static async approve(req: Request, res: Response, next: NextFunction) {
     try {
       const requestId = param(req.params.requestId || req.body.requestId || '')
-      const { remarks, issuedData } = approveStageSchema.parse(req.body)
+      const { remarks, issuedData, stampId } = approveStageSchema.parse(req.body)
       let parsedIssuedData = undefined
       if (issuedData) {
         parsedIssuedData = typeof issuedData === 'string' ? JSON.parse(issuedData) : issuedData
@@ -68,7 +68,8 @@ export class ClearanceController {
         attachmentUrl,
         attachmentKey,
         req.ip,
-        parsedIssuedData
+        parsedIssuedData,
+        stampId
       )
       return ApiResponse.success(res, result, 'Stage approved')
     } catch (err) { next(err) }

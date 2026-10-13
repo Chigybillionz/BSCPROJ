@@ -182,6 +182,32 @@ describe('ClearanceService', () => {
       }))
       expect(ClearanceRepository.updateStage).toHaveBeenCalledWith('req-1', 'stage-2', 'IN_PROGRESS')
     })
+
+    it('should link digital stamp to approval record when stampId is provided', async () => {
+      ;(ClearanceRepository.findById as jest.Mock).mockResolvedValue({
+        id: 'req-1',
+        studentId: 'student-1',
+        campaignId: 'camp-1',
+        currentStageId: 'stage-1',
+      })
+      ;(OfficersRepository.findByUserId as jest.Mock).mockResolvedValue({
+        id: 'officer-1',
+        stageAssignments: [{ stageId: 'stage-1' }],
+      })
+      ;(db.clearanceStage.findUnique as jest.Mock).mockResolvedValue({ id: 'stage-1', orderIndex: 1 })
+      ;(StagesRepository.findNext as jest.Mock).mockResolvedValue({ id: 'stage-2', orderIndex: 2 })
+      ;(ClearanceRepository.createStageApproval as jest.Mock).mockResolvedValue({ id: 'appr-1' })
+      ;(ClearanceRepository.updateStage as jest.Mock).mockResolvedValue({ id: 'req-1' })
+
+      await ClearanceService.approve('req-1', 'officer-user', 'univ-1', 'Stamped and verified', undefined, undefined, undefined, undefined, 'stamp-123')
+
+      expect(ClearanceRepository.createStageApproval).toHaveBeenCalledWith(expect.objectContaining({
+        requestId: 'req-1',
+        stageId: 'stage-1',
+        stampId: 'stamp-123',
+        status: 'APPROVED',
+      }))
+    })
   })
 
   describe('reject', () => {

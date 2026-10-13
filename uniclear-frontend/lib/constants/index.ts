@@ -28,6 +28,7 @@ export const ROUTES = {
   officer: {
     dashboard:  '/officer/dashboard',
     queue:      '/officer/queue',
+    settings:   '/officer/settings',
     review:     (id: string) => `/officer/review/${id}`,
   },
   admin: {

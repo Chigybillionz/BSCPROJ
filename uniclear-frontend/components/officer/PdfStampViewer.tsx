@@ -16,9 +16,10 @@ pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
 interface PdfStampViewerProps {
   fileUrl: string
   onSaveStampedFile: (file: File) => void
+  onStampSelect?: (stamp: OfficerStamp | null) => void
 }
 
-export function PdfStampViewer({ fileUrl, onSaveStampedFile }: PdfStampViewerProps) {
+export function PdfStampViewer({ fileUrl, onSaveStampedFile, onStampSelect }: PdfStampViewerProps) {
   const [numPages, setNumPages] = useState<number>()
   const [pageNumber, setPageNumber] = useState<number>(1)
   const [stamps, setStamps] = useState<OfficerStamp[]>([])
@@ -112,7 +113,10 @@ export function PdfStampViewer({ fileUrl, onSaveStampedFile }: PdfStampViewerPro
           stamps.map(stamp => (
             <button
               key={stamp.id}
-              onClick={() => setSelectedStamp(stamp)}
+              onClick={() => {
+                setSelectedStamp(stamp)
+                onStampSelect?.(stamp)
+              }}
               className={`relative h-10 w-24 shrink-0 rounded border-2 transition-all overflow-hidden bg-white ${
                 selectedStamp?.id === stamp.id ? 'border-[var(--color-primary)] ring-2 ring-[var(--color-primary)] ring-opacity-50' : 'border-[var(--color-border)] hover:border-gray-400'
               }`}

@@ -41,8 +41,8 @@ export function useOfficerQueue(page = 1, search?: string, sessionId?: string, c
 export function useApproveStage() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ requestId, remarks, file, issuedData }: { requestId: string; remarks?: string; file?: File; issuedData?: any }) =>
-      clearanceApi.approve(requestId, remarks, file, issuedData),
+    mutationFn: ({ requestId, remarks, file, issuedData, stampId }: { requestId: string; remarks?: string; file?: File; issuedData?: any; stampId?: string }) =>
+      clearanceApi.approve(requestId, remarks, file, issuedData, stampId),
     onSuccess: () => {
       toast.success('Stage approved')
       qc.invalidateQueries({ queryKey: clearanceKeys.queue() })
