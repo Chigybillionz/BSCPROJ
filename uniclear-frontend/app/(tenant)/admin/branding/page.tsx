@@ -110,7 +110,7 @@ export default function AdminBrandingPage() {
       bannerMessage: branding.bannerMessage ?? '',
       footerText:    branding.footerText    ?? '',
     })
-  }, [branding])
+  }, [branding, reset])
 
   return (
     <div className="max-w-2xl space-y-4">

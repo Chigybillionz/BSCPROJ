@@ -87,7 +87,7 @@ export function StampManagerDialog({ stamps, onStampsChange }: { stamps: Officer
       setUploadName('')
       setFile(null)
       toast.success('Stamp uploaded successfully')
-    } catch (err) {
+    } catch {
       toast.error('Failed to upload stamp')
     } finally {
       setUploading(false)
@@ -113,7 +113,7 @@ export function StampManagerDialog({ stamps, onStampsChange }: { stamps: Officer
       if (ctx) ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height)
 
       toast.success('Signature saved successfully')
-    } catch (err) {
+    } catch {
       toast.error('Failed to save signature')
     } finally {
       setUploading(false)
@@ -125,7 +125,7 @@ export function StampManagerDialog({ stamps, onStampsChange }: { stamps: Officer
       await officerStampsApi.delete(id)
       onStampsChange(stamps.filter(s => s.id !== id))
       toast.success('Stamp deleted')
-    } catch (err) {
+    } catch {
       toast.error('Failed to delete stamp')
     }
   }

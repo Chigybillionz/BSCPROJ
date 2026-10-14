@@ -3,7 +3,7 @@
 import { useState, useEffect, Fragment } from 'react'
 import {
   GripVertical, AlertTriangle, X, ChevronRight, ChevronDown,
-  FileText, Plus, Trash2, Search, Settings2, Sparkles, Check
+  FileText, Plus, Trash2, Search, Settings2, Sparkles
 } from 'lucide-react'
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors,

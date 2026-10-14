@@ -4,9 +4,9 @@ import { db } from '@/lib/db'
 jest.mock('@/lib/db', () => ({
   db: {
     student:          { count: jest.fn() },
-    clearanceRequest: { count: jest.fn(), findMany: jest.fn() },
-    clearanceStage:   { findMany: jest.fn() },
-    stageApproval:    { count: jest.fn() },
+    clearanceRequest: { count: jest.fn(), findMany: jest.fn().mockResolvedValue([]), groupBy: jest.fn().mockResolvedValue([]) },
+    clearanceStage:   { findMany: jest.fn().mockResolvedValue([]) },
+    stageApproval:    { count: jest.fn(), groupBy: jest.fn().mockResolvedValue([]) },
   },
 }))
 
@@ -41,10 +41,12 @@ describe('ReportsService', () => {
       ;(db.clearanceStage.findMany as jest.Mock).mockResolvedValue([
         { id: 'stage-1', name: 'Library', orderIndex: 1 },
       ])
-      ;(db.clearanceRequest.count as jest.Mock).mockResolvedValue(10)
-      ;(db.stageApproval.count as jest.Mock)
-        .mockResolvedValueOnce(8)  // approved
-        .mockResolvedValueOnce(2)  // rejected
+      ;(db.clearanceRequest.groupBy as jest.Mock).mockResolvedValue([
+        { currentStageId: 'stage-1', _count: 10 },
+      ])
+      ;(db.stageApproval.groupBy as jest.Mock)
+        .mockResolvedValueOnce([{ stageId: 'stage-1', _count: 8 }])  // approved
+        .mockResolvedValueOnce([{ stageId: 'stage-1', _count: 2 }])  // rejected
 
       const result = await ReportsService.byStage('uni-id')
       expect(result).toHaveLength(1)

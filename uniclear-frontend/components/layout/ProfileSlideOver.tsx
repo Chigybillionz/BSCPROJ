@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { X, User, Shield, Mail } from 'lucide-react'
+import { X, Shield, Mail } from 'lucide-react'
 import { useAuthStore } from '@/store/useAuthStore'
 import { getInitials } from '@/lib/utils/format'
 import { Button } from '@/components/ui/button'

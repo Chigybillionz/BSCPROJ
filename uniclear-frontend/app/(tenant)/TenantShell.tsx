@@ -67,7 +67,7 @@ export function TenantShell({ university, children }: TenantShellProps) {
     if (role === 'STUDENT' && !pathname.startsWith('/student'))   { router.replace(ROUTES.student.dashboard); return }
     if (role === 'OFFICER' && !pathname.startsWith('/officer'))   { router.replace(ROUTES.officer.dashboard); return }
     if ((role === 'ADMIN' || role === 'SUPER_ADMIN') && !pathname.startsWith('/admin')) { router.replace(ROUTES.admin.dashboard); return }
-  }, [user, pathname, rehydrated])
+  }, [user, pathname, rehydrated, router])
 
   if (!rehydrated) return (
     <div className="min-h-screen flex items-center justify-center">

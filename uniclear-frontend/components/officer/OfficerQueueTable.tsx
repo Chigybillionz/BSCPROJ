@@ -98,7 +98,7 @@ export function OfficerQueueTable({
   }
 
   return (
-    <Card padding="none" className="overflow-hidden border border-[var(--color-border)] shadow-sm">
+    <Card padding="sm" className="p-0 overflow-hidden border border-[var(--color-border)] shadow-sm">
       {/* Table Toolbar */}
       <div className="p-4 bg-[var(--color-surface)] border-b border-[var(--color-border)] flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
         <form onSubmit={handleSearchSubmit} className="flex-1 flex items-center gap-2 max-w-md">
@@ -269,7 +269,7 @@ export function OfficerQueueTable({
 
                     {/* Status */}
                     <td className="py-3 px-4">
-                      <StatusBadge status={item.stageStatus || item.status} />
+                      <StatusBadge status={(item.stageStatus || item.status) as any} />
                     </td>
 
                     {/* Action Button */}

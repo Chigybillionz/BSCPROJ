@@ -8,7 +8,7 @@ import { campaignsApi } from '@/lib/api/campaigns.api'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Plus, Upload, Move, Save, Eye, EyeOff, CheckSquare, Square, Trash2 } from 'lucide-react'
+import { Plus, Upload, Save, Eye, EyeOff, Trash2 } from 'lucide-react'
 
 interface DraggableField {
   id: string
@@ -117,7 +117,7 @@ export function CertificateBuilder({ campaign }: { campaign: any }) {
     setFields(prev => prev.map(f => f.id === id ? { ...f, x: newX, y: newY } : f))
   }
 
-  const handlePointerUp = (e: React.PointerEvent, id: string) => {
+  const handlePointerUp = (e: React.PointerEvent, _id: string) => {
     setActiveFieldId(null)
     ;(e.target as HTMLElement).releasePointerCapture(e.pointerId)
   }
@@ -184,7 +184,7 @@ export function CertificateBuilder({ campaign }: { campaign: any }) {
           <div className="flex gap-2">
             {campaign.customCertificateUrl && (
               <Button 
-                variant="destructive" 
+                variant="danger" 
                 size="sm" 
                 onClick={() => campaignsApi.update(campaign.id, { customCertificateUrl: null }).then(() => {
                   toast.success('Template removed')
@@ -197,7 +197,7 @@ export function CertificateBuilder({ campaign }: { campaign: any }) {
             )}
             {!campaign.customCertificateUrl && !hideDefaultText && (
               <Button 
-                variant="outline" 
+                variant="secondary" 
                 size="sm"
                 onClick={() => {
                   setHideDefaultText(true)
@@ -310,7 +310,7 @@ export function CertificateBuilder({ campaign }: { campaign: any }) {
       <Card className="flex flex-col max-h-[800px] overflow-hidden">
         <div className="flex items-center justify-between border-b p-4 bg-white z-10">
           <h2 className="font-semibold text-lg">Coordinate Settings</h2>
-          <Button variant="outline" size="sm" onClick={addField}>
+          <Button variant="secondary" size="sm" onClick={addField}>
             <Plus className="h-4 w-4 mr-1" /> Add Field
           </Button>
         </div>

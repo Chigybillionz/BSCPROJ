@@ -36,15 +36,14 @@ async function doFetch(url: string, method: string, headers: Headers, body: any,
   return fetch(url, {
     method,
     headers: reqHeaders,
-    body,
-    // @ts-expect-error
+    // @ts-expect-error Node.js fetch requires duplex: 'half' for streaming request bodies
     duplex: 'half',
   })
 }
 
 async function proxy(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
   const cookieStore = await cookies()
-  let token = cookieStore.get('access_token')?.value
+  const token = cookieStore.get('access_token')?.value
   const tenantSlug = cookieStore.get('tenant_slug')?.value
 
   const { path } = await params

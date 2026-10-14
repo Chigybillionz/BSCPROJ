@@ -20,7 +20,8 @@ jest.mock('@/lib/db', () => ({
   db: { 
     clearanceStage: { findUnique: jest.fn() }, 
     academicSession: { findFirst: jest.fn() },
-    student: { findUnique: jest.fn(), findFirst: jest.fn() }
+    student: { findUnique: jest.fn(), findFirst: jest.fn() },
+    clearanceRequest: { update: jest.fn().mockResolvedValue({}) }
   } 
 }))
 
@@ -44,7 +45,7 @@ describe('ClearanceService', () => {
     it('should throw ConflictError when clearance already in progress', async () => {
       jest.spyOn(ClearanceRepository, 'findActive').mockResolvedValue(mockClearance as any)
 
-      await expect(ClearanceService.start('student-id', 'uni-id', 'session-id'))
+      await expect(ClearanceService.start('student-id', 'uni-id', 'session-id', 'campaign-id'))
         .rejects.toThrow(ConflictError)
     })
 
@@ -52,7 +53,7 @@ describe('ClearanceService', () => {
       jest.spyOn(ClearanceRepository, 'findActive').mockResolvedValue(null)
       jest.spyOn(StagesRepository, 'findFirst').mockResolvedValue(null)
 
-      await expect(ClearanceService.start('student-id', 'uni-id', 'session-id'))
+      await expect(ClearanceService.start('student-id', 'uni-id', 'session-id', 'campaign-id'))
         .rejects.toThrow(NotFoundError)
     })
 
@@ -63,7 +64,7 @@ describe('ClearanceService', () => {
       jest.spyOn(ClearanceRepository, 'create').mockResolvedValue(mockClearance as any)
       jest.spyOn(ClearanceRepository, 'updateStage').mockResolvedValue(mockClearance as any)
 
-      const result = await ClearanceService.start('student-id', 'uni-id', 'session-id')
+      const result = await ClearanceService.start('student-id', 'uni-id', 'session-id', 'campaign-id')
       expect(result.id).toBe('req-id')
     })
   })
@@ -98,7 +99,12 @@ describe('ClearanceService', () => {
       const spy = jest.spyOn(ClearanceRepository, 'updateStage').mockResolvedValue(mockClearance as any)
 
       await ClearanceService.approve('req-id', 'officer-user-id', 'uni-id')
-      expect(spy).toHaveBeenCalledWith('req-id', null, 'COMPLETED')
+      expect(db.clearanceRequest.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'req-id' },
+          data: expect.objectContaining({ status: 'COMPLETED' }),
+        })
+      )
     })
   })
 

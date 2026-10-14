@@ -18,7 +18,6 @@ import {
   CheckCircle2, 
   Clock, 
   Lock, 
-  AlertCircle, 
   GraduationCap, 
   ShieldCheck, 
   Calendar,

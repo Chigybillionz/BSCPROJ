@@ -37,7 +37,7 @@ async function attemptRefresh(): Promise<string | null> {
       path: '/',
       maxAge: 60 * 60 * 24 * 7,
     })
-  } catch (error) {
+  } catch {
     // Next.js throws an error if cookies are modified within a Server Component.
     // We swallow the error and return the new token so the current request can complete.
     // Client-side requests will automatically refresh the cookie via axios interceptors.
@@ -48,7 +48,7 @@ async function attemptRefresh(): Promise<string | null> {
 
 export async function serverFetch<T>(url: string, options?: RequestInit): Promise<T> {
   const cookieStore = await cookies()
-  let token = cookieStore.get('access_token')?.value
+  const token = cookieStore.get('access_token')?.value
 
   const doFetch = (t: string | undefined) =>
     fetch(`${API_URL}/api/v1${url}`, {

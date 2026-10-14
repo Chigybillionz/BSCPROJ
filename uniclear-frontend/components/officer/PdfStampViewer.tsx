@@ -69,7 +69,7 @@ export function PdfStampViewer({ fileUrl, onSaveStampedFile, onStampSelect }: Pd
       let stampImage
       try {
         stampImage = await pdfDoc.embedPng(stampBytes)
-      } catch (e) {
+      } catch {
         stampImage = await pdfDoc.embedJpg(stampBytes)
       }
 

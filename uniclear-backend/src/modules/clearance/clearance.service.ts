@@ -90,7 +90,7 @@ export class ClearanceService {
 
     if (!nextStage) {
       // Validate issuedData
-      const requiredFields = (clearance.campaign as any).issuedDataFields || []
+      const requiredFields = (clearance.campaign as any)?.issuedDataFields || []
       const providedFields = issuedData ? Object.keys(issuedData) : []
       const missing = requiredFields.filter((f: string) => !providedFields.includes(f) || !issuedData[f])
       if (missing.length > 0) {
