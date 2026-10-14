@@ -7,7 +7,7 @@ export class OfficersRepository {
     const [data, total] = await Promise.all([
       db.officer.findMany({
         where: { universityId }, skip, take: limit,
-        include: { user: { select: { email: true } }, stageAssignments: { include: { stage: true, faculty: true, department: true, session: true } } },
+        include: { user: { select: { id: true, email: true, role: true, isActive: true, createdAt: true } }, stageAssignments: { include: { stage: true, faculty: true, department: true, session: true } } },
         orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
       }),
       db.officer.count({ where: { universityId } }),
@@ -18,7 +18,7 @@ export class OfficersRepository {
   static async findById(id: string, universityId: string) {
     return db.officer.findFirst({
       where: { id, universityId },
-      include: { user: { select: { email: true } }, stageAssignments: { include: { stage: true, faculty: true, department: true, session: true } } },
+      include: { user: { select: { id: true, email: true, role: true, isActive: true, createdAt: true } }, stageAssignments: { include: { stage: true, faculty: true, department: true, session: true } } },
     })
   }
 

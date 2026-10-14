@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "postinstall": "node -e \"const fs=require('fs');try{fs.copyFileSync('./node_modules/pdfjs-dist/build/pdf.worker.min.js','./public/pdf.worker.min.js');console.log('pdf.worker.min.js copied to public/')}catch(e){console.warn('pdfjs worker copy failed:',e.message)}\"",
-    "dev": "NODE_OPTIONS='--max-old-space-size=4096' next dev -p ${PORT:-3000}",
-    "build": "NODE_OPTIONS='--max-old-space-size=4096' next build",
+    "dev": "next dev",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "test": "jest"

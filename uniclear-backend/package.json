@@ -4,7 +4,7 @@
   "description": "UniClear Multi-Tenant University Clearance Platform — Backend API",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "trap 'docker compose down' EXIT INT TERM && docker compose up -d && echo '\n--- Docker Services Running ---' && docker compose ps && echo '\n🔗 Mailpit Inbox: http://localhost:8025' && echo '🗄️  PGAdmin UI: http://localhost:5050' && echo '   ↳ Login: admin@uniclear.com / admin' && echo '   ↳ Add Server: Host=postgres, User=uniclear, Pass=uniclear' && echo '💾 Postgres Database: postgres://localhost:5433 (Or run `npx prisma studio`)' && echo '-------------------------------\n' && nodemon --watch src --ext ts --exec ts-node -r tsconfig-paths/register src/server.ts",
+    "dev": "nodemon --watch src --ext ts --exec ts-node -r tsconfig-paths/register src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
     "prisma:generate": "prisma generate",

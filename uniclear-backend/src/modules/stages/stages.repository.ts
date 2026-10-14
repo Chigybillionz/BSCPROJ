@@ -40,7 +40,7 @@ export class StagesRepository {
     return db.clearanceStage.create({ data })
   }
 
-  static async update(id: string, data: { name?: string; description?: string; scope?: 'UNIVERSITY' | 'FACULTY' | 'DEPARTMENT'; isActive?: boolean }) {
+  static async update(id: string, data: { name?: string; description?: string; scope?: 'UNIVERSITY' | 'FACULTY' | 'DEPARTMENT'; orderIndex?: number; isActive?: boolean }) {
     return db.clearanceStage.update({ where: { id }, data })
   }
 

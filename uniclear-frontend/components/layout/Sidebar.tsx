@@ -32,8 +32,9 @@ const adminNav: NavItem[] = [
 ]
 
 const officerNav: NavItem[] = [
-  { label: 'Dashboard', href: ROUTES.officer.dashboard, icon: LayoutDashboard },
-  { label: 'Queue',     href: ROUTES.officer.queue,     icon: ClipboardList },
+  { label: 'Dashboard',        href: ROUTES.officer.dashboard, icon: LayoutDashboard },
+  { label: 'Queue',            href: ROUTES.officer.queue,     icon: ClipboardList },
+  { label: 'Stamps & Profile', href: ROUTES.officer.settings,  icon: Settings },
 ]
 
 const studentNav: NavItem[] = [

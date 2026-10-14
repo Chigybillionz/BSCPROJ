@@ -1,7 +1,10 @@
 'use client'
 
-import { useState, Fragment } from 'react'
-import { GripVertical, AlertTriangle, X, ChevronRight, ChevronDown, FileText, Plus, Trash2, Search } from 'lucide-react'
+import { useState, useEffect, Fragment } from 'react'
+import {
+  GripVertical, AlertTriangle, X, ChevronRight, ChevronDown,
+  FileText, Plus, Trash2, Search, Settings2, Sparkles, Check
+} from 'lucide-react'
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors,
   type DragEndEvent,
@@ -11,15 +14,31 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useStages, useReorderStages, useCreateStage, useUpdateStage, useAssignDocumentToStage, useRemoveDocumentFromStage, useAssignOfficerToStage, useUnassignOfficerFromStage } from '@/features/stages/hooks/useStages'
+import {
+  useStages, useReorderStages, useCreateStage, useUpdateStage,
+  useDeleteStage, useAssignDocumentToStage, useRemoveDocumentFromStage,
+  useAssignOfficerToStage, useUnassignOfficerFromStage
+} from '@/features/stages/hooks/useStages'
 import { apiClient } from '@/lib/api/client'
 import { structureApi, sessionsApi } from '@/lib/api/misc.api'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Dialog } from '@/components/ui/dialog'
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton'
 import { ErrorState } from '@/components/shared/EmptyState'
 import { cn } from '@/lib/utils/cn'
 import type { ClearanceStage } from '@/types'
 import { toast } from 'sonner'
+
+const STAGE_TEMPLATES = [
+  { name: 'Library Clearance', scope: 'UNIVERSITY' as const, description: 'Confirm return of all library materials and books with zero outstanding fines.' },
+  { name: 'Bursary & Student Accounts', scope: 'UNIVERSITY' as const, description: 'Audit tuition payments, registration receipts, and outstanding university charges.' },
+  { name: 'Departmental Verification', scope: 'DEPARTMENT' as const, description: 'Head of Department validation of degree requirements, departmental dues, and project defense.' },
+  { name: 'Faculty Officer Clearance', scope: 'FACULTY' as const, description: 'Faculty Officer review and validation of faculty records and examination results.' },
+  { name: 'Medical Centre', scope: 'UNIVERSITY' as const, description: 'Medical examination and health center file clearance.' },
+  { name: 'Student Affairs Division', scope: 'UNIVERSITY' as const, description: 'Hostel accommodation clearance and student conduct verification.' },
+  { name: 'Security Department', scope: 'UNIVERSITY' as const, description: 'Verification of student identity card and security clearance.' },
+]
 
 function useOfficers() {
   return useQuery({
@@ -97,10 +116,16 @@ function SearchableSelect({
 
 function StagePanel({ stage, campaignId, onClose }: { stage: ClearanceStage; campaignId: string; onClose: () => void }) {
   const { mutate: update, isPending } = useUpdateStage()
+  const { mutate: deleteStage, isPending: deleting } = useDeleteStage()
   const { mutate: assignDoc, isPending: assigningDoc } = useAssignDocumentToStage()
   const { mutate: removeDoc } = useRemoveDocumentFromStage()
   const { mutate: assignOfficer, isPending: assigningOfficer } = useAssignOfficerToStage()
   const { mutate: unassignOfficer } = useUnassignOfficerFromStage()
+
+  const [editName, setEditName] = useState(stage.name)
+  const [editDesc, setEditDesc] = useState(stage.description || '')
+  const [editScope, setEditScope] = useState<'UNIVERSITY' | 'FACULTY' | 'DEPARTMENT'>(stage.scope || 'UNIVERSITY')
+  const [isEditingDetails, setIsEditingDetails] = useState(false)
 
   const { data: officers = [] } = useOfficers()
   const { data: allDocTypes = [] } = useQuery({
@@ -108,7 +133,6 @@ function StagePanel({ stage, campaignId, onClose }: { stage: ClearanceStage; cam
     queryFn:  () => apiClient.get<{ success: true; data: any[] }>('/document-types').then(r => r.data.data),
   })
   
-  // Fetch campaigns to get current campaign context
   const { data: campaigns = [] } = useQuery({ 
     queryKey: ['campaigns'], 
     queryFn: () => apiClient.get<{ success: true; data: any[] }>('/campaigns').then(r => r.data.data) 
@@ -120,7 +144,6 @@ function StagePanel({ stage, campaignId, onClose }: { stage: ClearanceStage; cam
   const { data: sessions = [] } = useQuery({ queryKey: ['sessions'], queryFn: () => sessionsApi.list().then(r => r.data.data) })
   const qc = useQueryClient()
 
-  // Filter faculties and departments if the campaign has eligibility rules
   const hasRules = campaign?.eligibilityRules && campaign.eligibilityRules.length > 0
   
   const allowedFacultyIds = hasRules 
@@ -176,20 +199,47 @@ function StagePanel({ stage, campaignId, onClose }: { stage: ClearanceStage; cam
     )
   }
 
+  const handleSaveDetails = () => {
+    if (!editName.trim()) return
+    update({
+      id: stage.id,
+      data: {
+        name: editName.trim(),
+        description: editDesc.trim() || undefined,
+        scope: editScope,
+      }
+    }, {
+      onSuccess: () => setIsEditingDetails(false)
+    })
+  }
+
+  const handleDeleteStage = () => {
+    if (window.confirm(`Are you sure you want to delete stage "${stage.name}"? This action cannot be undone.`)) {
+      deleteStage(stage.id, {
+        onSuccess: () => onClose()
+      })
+    }
+  }
+
   const assignedIds = new Set(stage.documentRequirements.map(r => r.documentTypeId))
   const unassigned  = allDocTypes.filter((d: any) => !assignedIds.has(d.id))
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end" onClick={onClose}>
       <div
-        className="w-full max-w-sm h-full bg-[var(--color-surface)] border-l border-[var(--color-border)] shadow-[var(--shadow-lg)] flex flex-col"
+        className="w-full max-w-md h-full bg-[var(--color-surface)] border-l border-[var(--color-border)] shadow-[var(--shadow-lg)] flex flex-col"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--color-border)]">
           <div>
-            <p className="text-sm font-semibold text-[var(--color-text)]">{stage.name}</p>
-            <p className="text-xs text-[var(--color-muted)]">Stage {stage.orderIndex}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-semibold text-[var(--color-text)]">{stage.name}</p>
+              <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
+                Stage {stage.orderIndex}
+              </span>
+            </div>
+            <p className="text-xs text-[var(--color-muted)] mt-0.5">Scope: {stage.scope || 'UNIVERSITY'}</p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded hover:bg-[var(--color-bg)] text-[var(--color-muted)]">
             <X className="h-4 w-4" />
@@ -197,16 +247,78 @@ function StagePanel({ stage, campaignId, onClose }: { stage: ClearanceStage; cam
         </div>
 
         <div className="flex-1 overflow-y-auto p-5 space-y-6">
+          {/* General Details & Editing */}
+          <div className="space-y-3 p-3.5 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)]/50">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wide">Stage Details</p>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs h-7 px-2"
+                onClick={() => setIsEditingDetails(!isEditingDetails)}
+              >
+                {isEditingDetails ? 'Cancel' : 'Edit Details'}
+              </Button>
+            </div>
+
+            {isEditingDetails ? (
+              <div className="space-y-3 pt-2">
+                <div>
+                  <label className="text-xs font-medium text-gray-700">Stage Name</label>
+                  <Input
+                    value={editName}
+                    onChange={e => setEditName(e.target.value)}
+                    placeholder="Stage Name"
+                    className="mt-1 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-700">Scope</label>
+                  <select
+                    value={editScope}
+                    onChange={e => setEditScope(e.target.value as any)}
+                    className="mt-1 w-full text-xs rounded border border-gray-300 bg-white p-2 text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="UNIVERSITY">UNIVERSITY (All students)</option>
+                    <option value="FACULTY">FACULTY (Specific faculties)</option>
+                    <option value="DEPARTMENT">DEPARTMENT (Specific departments)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-700">Description</label>
+                  <textarea
+                    value={editDesc}
+                    onChange={e => setEditDesc(e.target.value)}
+                    placeholder="Instructions for students and clearance officers"
+                    rows={2}
+                    className="mt-1 w-full text-xs rounded border border-gray-300 bg-white p-2 text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="flex justify-end gap-2 pt-1">
+                  <Button size="sm" onClick={handleSaveDetails} loading={isPending} className="text-xs">
+                    Save Changes
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <p className="text-xs text-gray-600 italic">
+                  {stage.description || 'No description provided for this stage.'}
+                </p>
+              </div>
+            )}
+          </div>
+
           {/* Status toggle */}
           <div>
-            <p className="text-xs font-medium text-[var(--color-muted)] uppercase tracking-wide mb-2">Status</p>
+            <p className="text-xs font-medium text-[var(--color-muted)] uppercase tracking-wide mb-2">Stage Status</p>
             <div className="flex items-center justify-between p-3 rounded-[var(--radius-md)] border border-[var(--color-border)]">
               <div>
                 <p className="text-sm font-medium text-[var(--color-text)]">
                   {stage.isActive ? 'Active' : 'Inactive'}
                 </p>
                 <p className="text-xs text-[var(--color-muted)]">
-                  {stage.isActive ? 'Students can submit to this stage' : 'Stage is disabled'}
+                  {stage.isActive ? 'Students can submit to this stage' : 'Stage is disabled for clearance'}
                 </p>
               </div>
               <Button
@@ -220,84 +332,77 @@ function StagePanel({ stage, campaignId, onClose }: { stage: ClearanceStage; cam
             </div>
           </div>
 
-            {/* Officer assignments */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-medium text-[var(--color-muted)] uppercase tracking-wide">Officer Assignments</p>
-                {(() => {
-                  const hasUniversal = stage.officerAssignments?.some((a: any) => !a.faculty)
-                  const coveredFaculties = new Set(stage.officerAssignments?.filter((a: any) => a.faculty).map((a: any) => a.faculty.id)).size
-                  const totalFaculties = faculties.length
-                  const isFullyCovered = hasUniversal || (totalFaculties > 0 && coveredFaculties >= totalFaculties)
-                  
-                  return (
-                    <span className={cn("text-[10px] font-medium px-2 py-0.5 rounded-full", isFullyCovered ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700")}>
-                      {isFullyCovered ? "100% Coverage" : `Coverage: ${coveredFaculties}/${totalFaculties} Faculties`}
-                    </span>
-                  )
-                })()}
-              </div>
+          {/* Officer assignments */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-medium text-[var(--color-muted)] uppercase tracking-wide">Officer Assignments</p>
+              {(() => {
+                const hasUniversal = stage.officerAssignments?.some((a: any) => !a.faculty)
+                const coveredFaculties = new Set(stage.officerAssignments?.filter((a: any) => a.faculty).map((a: any) => a.faculty.id)).size
+                const totalFaculties = faculties.length
+                const isFullyCovered = hasUniversal || (totalFaculties > 0 && coveredFaculties >= totalFaculties)
+                
+                return (
+                  <span className={cn("text-[10px] font-medium px-2 py-0.5 rounded-full", isFullyCovered ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700")}>
+                    {isFullyCovered ? "100% Coverage" : `Coverage: ${coveredFaculties}/${totalFaculties} Faculties`}
+                  </span>
+                )
+              })()}
+            </div>
 
-              {(!stage.officerAssignments || stage.officerAssignments.length === 0) ? (
-                <p className="text-xs text-[var(--color-muted)] mb-3">No officers assigned. Students will be stuck at this stage.</p>
-              ) : (
-                <>
-                  {stage.officerAssignments.length > 5 && (
-                    <div className="relative mb-2">
-                      <Search className="absolute left-2.5 top-1.5 h-3.5 w-3.5 text-gray-400" />
-                      <input 
-                        type="text" 
-                        value={assignmentSearch}
-                        onChange={e => setAssignmentSearch(e.target.value)}
-                        placeholder="Filter assignments by name, email, faculty, or department..." 
-                        className="w-full text-xs pl-8 pr-3 py-1.5 border border-gray-200 rounded focus:outline-none focus:border-blue-400 bg-gray-50/50"
-                      />
-                    </div>
-                  )}
-                  <div className="space-y-2 mb-4 max-h-[400px] overflow-y-auto custom-scrollbar pr-1">
-                    {stage.officerAssignments
-                      .filter((a: any) => {
-                        if (!assignmentSearch) return true
-                        const q = assignmentSearch.toLowerCase()
-                        const email = officers.find((o: any) => o.id === a.officerId)?.user?.email || ''
-                        return (
-                          a.officer.firstName.toLowerCase().includes(q) ||
-                          a.officer.lastName.toLowerCase().includes(q) ||
-                          email.toLowerCase().includes(q) ||
-                          a.faculty?.name.toLowerCase().includes(q) ||
-                          a.department?.name.toLowerCase().includes(q)
-                        )
-                      })
-                      .map((a: any) => {
-                        const officerEmail = officers.find((o: any) => o.id === a.officerId)?.user?.email
-                        return (
-                          <div key={a.id} className="flex flex-col gap-1 p-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)]">
-                            <div className="flex justify-between items-center">
-                              <div className="min-w-0">
-                                <p className="text-sm font-medium text-[var(--color-text)] truncate">{a.officer.firstName} {a.officer.lastName}</p>
-                                {officerEmail && <p className="text-xs text-[var(--color-muted)] truncate">{officerEmail}</p>}
-                                <p className="text-xs text-[var(--color-muted)] mt-1">
-                                  {a.faculty ? `Faculty: ${a.faculty.name}` : 'All Faculties'}
-                                  {a.department ? `, Dept: ${a.department.name}` : ''}
-                                </p>
-                              </div>
-                              <button onClick={() => unassignOfficer(a.id)} className="p-1.5 rounded hover:bg-red-50 text-[var(--color-muted)] hover:text-red-500 transition-colors shrink-0 ml-2">
-                                <X className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    {assignmentSearch && stage.officerAssignments.length > 0 && stage.officerAssignments.filter((a: any) => {
-                        const q = assignmentSearch.toLowerCase()
-                        const email = officers.find((o: any) => o.id === a.officerId)?.user?.email || ''
-                        return a.officer.firstName.toLowerCase().includes(q) || a.officer.lastName.toLowerCase().includes(q) || email.toLowerCase().includes(q) || a.faculty?.name.toLowerCase().includes(q) || a.department?.name.toLowerCase().includes(q)
-                    }).length === 0 && (
-                      <p className="text-xs text-center text-gray-400 py-4">No assignments match your search.</p>
-                    )}
+            {(!stage.officerAssignments || stage.officerAssignments.length === 0) ? (
+              <p className="text-xs text-[var(--color-muted)] mb-3">No officers assigned. Students will be stuck at this stage.</p>
+            ) : (
+              <>
+                {stage.officerAssignments.length > 5 && (
+                  <div className="relative mb-2">
+                    <Search className="absolute left-2.5 top-1.5 h-3.5 w-3.5 text-gray-400" />
+                    <input 
+                      type="text" 
+                      value={assignmentSearch}
+                      onChange={e => setAssignmentSearch(e.target.value)}
+                      placeholder="Filter assignments by name, email, faculty, or department..." 
+                      className="w-full text-xs pl-8 pr-3 py-1.5 border border-gray-200 rounded focus:outline-none focus:border-blue-400 bg-gray-50/50"
+                    />
                   </div>
-                </>
-              )}
+                )}
+                <div className="space-y-2 mb-4 max-h-[300px] overflow-y-auto custom-scrollbar pr-1">
+                  {stage.officerAssignments
+                    .filter((a: any) => {
+                      if (!assignmentSearch) return true
+                      const q = assignmentSearch.toLowerCase()
+                      const email = officers.find((o: any) => o.id === a.officerId)?.user?.email || ''
+                      return (
+                        a.officer.firstName.toLowerCase().includes(q) ||
+                        a.officer.lastName.toLowerCase().includes(q) ||
+                        email.toLowerCase().includes(q) ||
+                        a.faculty?.name.toLowerCase().includes(q) ||
+                        a.department?.name.toLowerCase().includes(q)
+                      )
+                    })
+                    .map((a: any) => {
+                      const officerEmail = officers.find((o: any) => o.id === a.officerId)?.user?.email
+                      return (
+                        <div key={a.id} className="flex flex-col gap-1 p-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)]">
+                          <div className="flex justify-between items-center">
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-[var(--color-text)] truncate">{a.officer.firstName} {a.officer.lastName}</p>
+                              {officerEmail && <p className="text-xs text-[var(--color-muted)] truncate">{officerEmail}</p>}
+                              <p className="text-xs text-[var(--color-muted)] mt-1">
+                                {a.faculty ? `Faculty: ${a.faculty.name}` : 'All Faculties'}
+                                {a.department ? `, Dept: ${a.department.name}` : ''}
+                              </p>
+                            </div>
+                            <button onClick={() => unassignOfficer(a.id)} className="p-1.5 rounded hover:bg-red-50 text-[var(--color-muted)] hover:text-red-500 transition-colors shrink-0 ml-2">
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                </div>
+              </>
+            )}
 
             {/* Toggle Views */}
             <div className="flex gap-2 border-b border-[var(--color-border)] mb-4">
@@ -499,9 +604,6 @@ function StagePanel({ stage, campaignId, onClose }: { stage: ClearanceStage; cam
                       <span className="text-xs text-[var(--color-text)] truncate">{d.name}</span>
                     </button>
                   ))}
-                  {docSearch && unassigned.filter((d: any) => d.name.toLowerCase().includes(docSearch.toLowerCase())).length === 0 && (
-                    <p className="text-xs text-center text-gray-400 py-2">No matches found</p>
-                  )}
                 </div>
               </div>
             )}
@@ -534,13 +636,35 @@ function StagePanel({ stage, campaignId, onClose }: { stage: ClearanceStage; cam
               )}
             </div>
           </div>
+
+          {/* Delete Danger Zone */}
+          <div className="pt-4 border-t border-[var(--color-border)]">
+            <p className="text-xs font-semibold text-red-600 uppercase tracking-wide mb-2">Danger Zone</p>
+            <Button
+              variant="danger"
+              size="sm"
+              loading={deleting}
+              onClick={handleDeleteStage}
+              className="w-full text-xs"
+            >
+              <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Delete Clearance Stage
+            </Button>
+          </div>
         </div>
       </div>
     </div>
   )
 }
 
-function SortableStage({ stage, onSelect }: { stage: ClearanceStage; onSelect: () => void }) {
+function SortableStage({
+  stage,
+  onSelect,
+  onDelete
+}: {
+  stage: ClearanceStage
+  onSelect: () => void
+  onDelete: (e: React.MouseEvent) => void
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: stage.id })
 
   return (
@@ -548,56 +672,113 @@ function SortableStage({ stage, onSelect }: { stage: ClearanceStage; onSelect: (
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={cn(
-        'flex items-center gap-3 p-4 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius-md)] shadow-[var(--shadow-sm)] cursor-pointer hover:border-[var(--color-primary)] transition-colors',
-        isDragging && 'opacity-50 shadow-[var(--shadow-lg)]',
-        !stage.isActive && 'opacity-60'
+        'group flex items-center gap-3 p-4 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius-md)] shadow-[var(--shadow-sm)] cursor-pointer hover:border-[var(--color-primary)] transition-all',
+        isDragging && 'opacity-60 shadow-xl border-blue-500 scale-[1.01] z-30',
+        !stage.isActive && 'opacity-65 bg-gray-50/50'
       )}
       onClick={onSelect}
     >
       <button
         {...attributes} {...listeners}
-        className="text-[var(--color-muted)] cursor-grab active:cursor-grabbing touch-none p-1"
+        className="text-[var(--color-muted)] hover:text-[var(--color-primary)] cursor-grab active:cursor-grabbing touch-none p-1.5 rounded hover:bg-gray-100 transition-colors shrink-0"
         aria-label="Drag to reorder"
         onClick={e => e.stopPropagation()}
       >
-        <GripVertical className="h-4 w-4" />
+        <GripVertical className="h-5 w-5" />
       </button>
 
-      <div className="h-6 w-6 rounded-full bg-[var(--color-primary)] text-white text-xs font-bold flex items-center justify-center shrink-0">
+      <div className="h-8 w-8 rounded-full bg-[var(--color-primary)] text-white text-xs font-bold flex items-center justify-center shrink-0 shadow-sm">
         {stage.orderIndex}
       </div>
 
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-[var(--color-text)]">{stage.name}</p>
-        <p className="text-xs text-[var(--color-muted)]">
-          {stage.officerAssignments && stage.officerAssignments.length > 0 ? `${stage.officerAssignments.length} officer(s) assigned` : (
-            <span className="text-[var(--color-pending)] flex items-center gap-1">
-              <AlertTriangle className="h-3 w-3" /> No officer assigned
-            </span>
-          )}
-        </p>
+        <div className="flex items-center gap-2 flex-wrap">
+          <p className="text-sm font-semibold text-[var(--color-text)]">{stage.name}</p>
+          <span className={cn(
+            'text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full',
+            stage.scope === 'DEPARTMENT' ? 'bg-purple-100 text-purple-700' :
+            stage.scope === 'FACULTY' ? 'bg-blue-100 text-blue-700' :
+            'bg-gray-100 text-gray-700'
+          )}>
+            {stage.scope || 'UNIVERSITY'}
+          </span>
+        </div>
+        
+        {stage.description && (
+          <p className="text-xs text-[var(--color-muted)] truncate max-w-md mt-0.5">{stage.description}</p>
+        )}
+
+        <div className="flex items-center gap-3 text-xs text-[var(--color-muted)] mt-1.5 flex-wrap">
+          <span>
+            {stage.officerAssignments && stage.officerAssignments.length > 0 ? (
+              <span className="text-emerald-700 font-medium">✓ {stage.officerAssignments.length} officer(s) assigned</span>
+            ) : (
+              <span className="text-amber-600 font-medium flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3 inline" /> No officer assigned
+              </span>
+            )}
+          </span>
+          <span className="text-gray-300">•</span>
+          <span>
+            {stage.documentRequirements && stage.documentRequirements.length > 0 ? (
+              <span className="text-gray-600 font-medium">{stage.documentRequirements.length} required document(s)</span>
+            ) : (
+              <span className="text-gray-400">No documents required</span>
+            )}
+          </span>
+        </div>
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
         <span className={cn(
-          'text-xs px-2 py-0.5 rounded-full font-medium',
-          stage.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500'
+          'text-xs px-2.5 py-0.5 rounded-full font-medium',
+          stage.isActive ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-gray-100 text-gray-500'
         )}>
           {stage.isActive ? 'Active' : 'Inactive'}
         </span>
-        <ChevronRight className="h-4 w-4 text-[var(--color-muted)]" />
+        <button
+          onClick={onDelete}
+          title="Delete stage"
+          className="p-1.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+        <ChevronRight className="h-4 w-4 text-[var(--color-muted)] group-hover:text-[var(--color-primary)] transition-colors" />
       </div>
     </div>
   )
 }
 
-export function StageBuilder({ campaignId }: { campaignId: string }) {
-  const { data: stages, isLoading, isError, refetch } = useStages(campaignId)
-  const { mutate: reorder } = useReorderStages(campaignId)
-  const { mutate: createStage, isPending: creating } = useCreateStage(campaignId)
+export function StageBuilder({ campaignId: initialCampaignId }: { campaignId?: string }) {
+  const { data: campaigns = [], isLoading: loadingCampaigns } = useQuery({
+    queryKey: ['campaigns'],
+    queryFn: () => apiClient.get<{ success: true; data: any[] }>('/campaigns').then(r => r.data.data),
+  })
+
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>(initialCampaignId || '')
+
+  useEffect(() => {
+    if (!selectedCampaignId && campaigns.length > 0) {
+      const active = campaigns.find((c: any) => c.isActive) || campaigns[0]
+      if (active) setSelectedCampaignId(active.id)
+    }
+  }, [campaigns, selectedCampaignId])
+
+  const campaignId = initialCampaignId || selectedCampaignId
+
+  const { data: stages, isLoading, isError, refetch } = useStages(campaignId || undefined)
+  const { mutate: reorder } = useReorderStages(campaignId || undefined)
+  const { mutate: createStage, isPending: creating } = useCreateStage(campaignId || undefined)
+  const { mutate: deleteStage } = useDeleteStage()
+
   const [items, setItems] = useState<ClearanceStage[]>([])
   const [selected, setSelected] = useState<ClearanceStage | null>(null)
+  
+  // Add Stage Modal state
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [newStageName, setNewStageName] = useState('')
+  const [newStageScope, setNewStageScope] = useState<'UNIVERSITY' | 'FACULTY' | 'DEPARTMENT'>('UNIVERSITY')
+  const [newStageDesc, setNewStageDesc] = useState('')
 
   const synced = items.length 
     ? items.map(item => {
@@ -605,6 +786,7 @@ export function StageBuilder({ campaignId }: { campaignId: string }) {
         return latest ? { ...latest, orderIndex: item.orderIndex } : item
       }) 
     : (stages ?? [])
+
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -614,51 +796,260 @@ export function StageBuilder({ campaignId }: { campaignId: string }) {
     const newIndex = synced.findIndex(s => s.id === over.id)
     const reordered = arrayMove(synced, oldIndex, newIndex).map((s, i) => ({ ...s, orderIndex: i + 1 }))
     setItems(reordered)
-    reorder(reordered.map(s => s.id))
-  }
-
-  const handleCreate = () => {
-    if (!newStageName.trim()) return
-    createStage({ name: newStageName }, {
+    reorder(reordered.map(s => s.id), {
       onSuccess: () => {
-        setNewStageName('')
-        setItems([]) // Force resync with server data
+        toast.success('Clearance workflow order updated')
       }
     })
   }
 
-  if (isLoading) return <LoadingSkeleton rows={4} />
-  if (isError)   return <ErrorState onRetry={() => refetch()} />
+  const handleCreateStage = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newStageName.trim() || !campaignId) return
+    createStage({
+      name: newStageName.trim(),
+      description: newStageDesc.trim() || undefined,
+      scope: newStageScope,
+      campaignId,
+    }, {
+      onSuccess: () => {
+        setNewStageName('')
+        setNewStageDesc('')
+        setNewStageScope('UNIVERSITY')
+        setAddDialogOpen(false)
+        setItems([])
+      }
+    })
+  }
 
-  // Keep selected stage in sync with latest data
+  const handleApplyTemplate = (tmpl: typeof STAGE_TEMPLATES[number]) => {
+    setNewStageName(tmpl.name)
+    setNewStageScope(tmpl.scope)
+    setNewStageDesc(tmpl.description)
+  }
+
+  if (loadingCampaigns || (campaignId && isLoading)) {
+    return <LoadingSkeleton rows={5} />
+  }
+
+  if (isError) {
+    return <ErrorState onRetry={() => refetch()} />
+  }
+
+  if (campaigns.length === 0) {
+    return (
+      <div className="p-8 text-center border border-dashed rounded-xl bg-white space-y-3">
+        <Sparkles className="h-8 w-8 text-blue-500 mx-auto" />
+        <h3 className="text-base font-semibold text-gray-900">No Clearance Campaigns Found</h3>
+        <p className="text-sm text-gray-500 max-w-md mx-auto">
+          Please create a Clearance Campaign first before defining workflow stages.
+        </p>
+      </div>
+    )
+  }
+
   const selectedStage = selected ? (synced.find(s => s.id === selected.id) ?? selected) : null
 
   return (
-    <>
-      <div className="flex gap-2 mb-4">
-        <input 
-          type="text" 
-          placeholder="New stage name (e.g. Department Review)" 
-          className="flex-1 px-3 py-2 text-sm border border-[var(--color-border)] rounded-[var(--radius-md)] bg-[var(--color-surface)]"
-          value={newStageName}
-          onChange={e => setNewStageName(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handleCreate()}
-        />
-        <Button onClick={handleCreate} disabled={!newStageName.trim()} loading={creating}>
-          <Plus className="h-4 w-4 mr-2" /> Add Stage
+    <div className="space-y-6">
+      {/* Campaign selector bar and Add Stage CTA */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border border-gray-200 bg-white shadow-xs">
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide shrink-0">Clearance Campaign:</span>
+          <select
+            value={campaignId}
+            onChange={e => {
+              setSelectedCampaignId(e.target.value)
+              setItems([])
+            }}
+            className="text-sm font-semibold border border-gray-200 rounded-lg px-3 py-1.5 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {campaigns.map((c: any) => (
+              <option key={c.id} value={c.id}>
+                {c.name} {c.isActive ? '• Active' : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <Button onClick={() => setAddDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white shrink-0">
+          <Plus className="h-4 w-4 mr-1.5" /> Add Clearance Stage
         </Button>
       </div>
 
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={synced.map(s => s.id)} strategy={verticalListSortingStrategy}>
-          <div className="space-y-2">
-            {synced.map(stage => (
-              <SortableStage key={stage.id} stage={stage} onSelect={() => setSelected(stage)} />
-            ))}
-          </div>
-        </SortableContext>
-      </DndContext>
+      {/* KPI Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="p-4 bg-white border border-gray-200 rounded-xl shadow-xs">
+          <p className="text-xs text-gray-500 font-medium">Total Stages</p>
+          <p className="text-2xl font-bold text-gray-900 mt-1">{synced.length}</p>
+        </div>
+        <div className="p-4 bg-white border border-gray-200 rounded-xl shadow-xs">
+          <p className="text-xs text-gray-500 font-medium">Active Stages</p>
+          <p className="text-2xl font-bold text-emerald-600 mt-1">{synced.filter(s => s.isActive).length}</p>
+        </div>
+        <div className="p-4 bg-white border border-gray-200 rounded-xl shadow-xs">
+          <p className="text-xs text-gray-500 font-medium">Officers Assigned</p>
+          <p className="text-2xl font-bold text-blue-600 mt-1">
+            {synced.reduce((acc, s) => acc + (s.officerAssignments?.length || 0), 0)}
+          </p>
+        </div>
+        <div className="p-4 bg-white border border-gray-200 rounded-xl shadow-xs">
+          <p className="text-xs text-gray-500 font-medium">Required Documents</p>
+          <p className="text-2xl font-bold text-purple-600 mt-1">
+            {synced.reduce((acc, s) => acc + (s.documentRequirements?.length || 0), 0)}
+          </p>
+        </div>
+      </div>
 
+      {/* Visual Pipeline Progression Banner */}
+      <div className="p-4 bg-gradient-to-r from-blue-50/80 via-indigo-50/40 to-slate-50 border border-blue-100 rounded-xl">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <Settings2 className="h-4 w-4 text-blue-700" />
+            <span className="text-xs font-semibold text-blue-900 uppercase tracking-wide">Dynamic Clearance Sequence</span>
+          </div>
+          <span className="text-[11px] font-medium text-blue-700 bg-blue-100/70 px-2.5 py-0.5 rounded-full">
+            Linear Progression
+          </span>
+        </div>
+        <p className="text-xs text-gray-600 mb-3">
+          Students are routed strictly in this sequence. Drag stages to reorder; order updates dynamically route existing and incoming clearances.
+        </p>
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs custom-scrollbar">
+          {synced.map((s, idx) => (
+            <div key={s.id} className="flex items-center shrink-0">
+              <div className="flex items-center gap-1.5 bg-white border border-gray-200 px-2.5 py-1 rounded-lg shadow-2xs font-medium text-gray-800">
+                <span className="h-4 w-4 rounded-full bg-blue-600 text-white text-[10px] flex items-center justify-center font-bold">
+                  {s.orderIndex}
+                </span>
+                <span className="truncate max-w-[120px]">{s.name}</span>
+              </div>
+              {idx < synced.length - 1 && <ChevronRight className="h-3.5 w-3.5 text-blue-400 mx-1 shrink-0" />}
+            </div>
+          ))}
+          {synced.length > 0 && (
+            <>
+              <ChevronRight className="h-3.5 w-3.5 text-emerald-500 mx-1 shrink-0" />
+              <div className="flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-800 px-2.5 py-1 rounded-lg font-semibold shrink-0">
+                <span>🎓 Complete & Issued</span>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Sortable Stages List */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-gray-900">Sequence Stages ({synced.length})</h3>
+          <span className="text-xs text-gray-500">Drag items to rearrange sequence</span>
+        </div>
+
+        {synced.length === 0 ? (
+          <div className="p-8 text-center border border-dashed rounded-xl bg-white space-y-3">
+            <p className="text-sm text-gray-500">No clearance stages defined for this campaign.</p>
+            <Button size="sm" onClick={() => setAddDialogOpen(true)} className="bg-blue-600 text-white">
+              <Plus className="h-4 w-4 mr-1" /> Add First Stage
+            </Button>
+          </div>
+        ) : (
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={synced.map(s => s.id)} strategy={verticalListSortingStrategy}>
+              <div className="space-y-2.5">
+                {synced.map(stage => (
+                  <SortableStage
+                    key={stage.id}
+                    stage={stage}
+                    onSelect={() => setSelected(stage)}
+                    onDelete={(e) => {
+                      e.stopPropagation()
+                      if (window.confirm(`Delete stage "${stage.name}"?`)) {
+                        deleteStage(stage.id)
+                      }
+                    }}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+        )}
+      </div>
+
+      {/* Add Stage Dialog */}
+      <Dialog open={addDialogOpen} onClose={() => setAddDialogOpen(false)} title="Add Clearance Stage" className="max-w-lg">
+        <form onSubmit={handleCreateStage} className="space-y-4">
+          <div>
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">
+              Quick Presets
+            </label>
+            <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+              {STAGE_TEMPLATES.map((tmpl) => (
+                <button
+                  type="button"
+                  key={tmpl.name}
+                  onClick={() => handleApplyTemplate(tmpl)}
+                  className={cn(
+                    "text-xs px-2.5 py-1 rounded-full border transition-colors",
+                    newStageName === tmpl.name
+                      ? "bg-blue-50 border-blue-400 text-blue-700 font-medium"
+                      : "bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100"
+                  )}
+                >
+                  {tmpl.name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <label htmlFor="stageName" className="text-xs font-medium text-gray-700">Stage Name *</label>
+            <Input
+              id="stageName"
+              value={newStageName}
+              onChange={e => setNewStageName(e.target.value)}
+              placeholder="e.g. Medical Centre"
+              required
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label htmlFor="stageScope" className="text-xs font-medium text-gray-700">Administrative Scope</label>
+            <select
+              id="stageScope"
+              value={newStageScope}
+              onChange={e => setNewStageScope(e.target.value as any)}
+              className="w-full text-sm rounded border border-gray-300 bg-white p-2 text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="UNIVERSITY">UNIVERSITY — Applies universally across all faculties & departments</option>
+              <option value="FACULTY">FACULTY — Handled by faculty officers</option>
+              <option value="DEPARTMENT">DEPARTMENT — Handled by departmental officers</option>
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <label htmlFor="stageDesc" className="text-xs font-medium text-gray-700">Student Instructions / Description</label>
+            <textarea
+              id="stageDesc"
+              value={newStageDesc}
+              onChange={e => setNewStageDesc(e.target.value)}
+              placeholder="Provide instructions for students regarding this stage..."
+              rows={2}
+              className="w-full text-sm rounded border border-gray-300 bg-white p-2 text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="ghost" onClick={() => setAddDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" loading={creating} disabled={!newStageName.trim()} className="bg-blue-600 text-white">
+              Create Stage
+            </Button>
+          </div>
+        </form>
+      </Dialog>
+
+      {/* Stage Detail Drawer / Slideover */}
       {selectedStage && (
         <StagePanel
           stage={selectedStage}
@@ -666,6 +1057,6 @@ export function StageBuilder({ campaignId }: { campaignId: string }) {
           onClose={() => setSelected(null)}
         />
       )}
-    </>
+    </div>
   )
 }

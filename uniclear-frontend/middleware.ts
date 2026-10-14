@@ -4,15 +4,17 @@ export function middleware(req: NextRequest) {
   const res = NextResponse.next()
   const host = req.headers.get('host') ?? ''
 
-  // Prod: unn.uniclear.ng subdomain takes priority
+  // Ignore IP addresses (e.g. 192.168.x.x, 127.0.0.1) and localhost
+  const isIp = /^(\d{1,3}\.){3}\d{1,3}/.test(host)
+  const isLocal = host.includes('localhost') || isIp
   const subdomain = host.split('.')[0]
-  const fromSubdomain = host.includes('.') && subdomain !== 'www' && subdomain !== 'localhost'
+  const fromSubdomain = !isLocal && host.includes('.') && subdomain !== 'www'
     ? subdomain : null
 
   // Dev fallback: ?tenant=unn in URL (only on first visit / login page)
   const fromParam = req.nextUrl.searchParams.get('tenant')
 
-  const slug = fromSubdomain ?? fromParam
+  const slug = fromParam ?? fromSubdomain
 
   if (slug) {
     res.cookies.set('tenant_slug', slug, { path: '/', sameSite: 'lax', maxAge: 60 * 60 * 24 * 7 })

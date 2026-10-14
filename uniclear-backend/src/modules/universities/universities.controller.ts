@@ -26,6 +26,26 @@ export class UniversitiesController {
     } catch (err) { next(err) }
   }
 
+  static async getPublicList(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { db } = await import('@/lib/db')
+      const data = await db.university.findMany({
+        where: { isActive: true },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          abbreviation: true,
+          logoUrl: true,
+          primaryColor: true,
+          accentColor: true,
+        },
+        orderBy: { name: 'asc' },
+      })
+      return ApiResponse.success(res, data)
+    } catch (err) { next(err) }
+  }
+
   static async getMe(req: Request, res: Response, next: NextFunction) {
     try {
       const uni = await UniversitiesService.getById(req.universityId!)

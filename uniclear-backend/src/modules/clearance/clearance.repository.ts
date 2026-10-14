@@ -34,14 +34,27 @@ export class ClearanceRepository {
       include: {
         campaign: true,
         session: true,
-        stageApprovals: { include: { stage: true }, orderBy: { decidedAt: 'asc' } },
+        student: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            jambRegNo: true,
+            matricNo: true,
+            level: true,
+            faculty: { select: { id: true, name: true } },
+            department: { select: { id: true, name: true } },
+          },
+        },
+        stageApprovals: { include: { stage: true, stamp: true }, orderBy: { decidedAt: 'asc' } },
+        documents: { include: { documentType: true } },
         currentStage: {
           include: {
             documentRequirements: {
-              include: { documentType: true }
-            }
-          }
-        }
+              include: { documentType: true },
+            },
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     })
@@ -62,8 +75,8 @@ export class ClearanceRepository {
     return db.clearanceRequest.update({ where: { id }, data: { stageStatus } })
   }
 
-  static async findOfficerQueue(universityId: string, assignments: any[], opts: { page: number; limit: number; search?: string; sessionId?: string; campaignId?: string }) {
-    const { page, limit, search, sessionId, campaignId } = opts
+  static async findOfficerQueue(universityId: string, assignments: any[], opts: { page: number; limit: number; search?: string; sessionId?: string; campaignId?: string; stageStatus?: string }) {
+    const { page, limit, search, sessionId, campaignId, stageStatus } = opts
     const skip = (page - 1) * limit
 
     const assignmentOrs = assignments.map(a => {
@@ -76,16 +89,18 @@ export class ClearanceRepository {
       return cond
     })
 
-    const stageIds = [...new Set(assignments.map(a => a.stageId))]
-
     const where: any = {
       universityId,
       status: 'IN_PROGRESS',
-      stageStatus: 'SUBMITTED',
-      stageApprovals: { none: { stageId: { in: stageIds }, status: { in: ['APPROVED', 'REJECTED'] as StageStatus[] }, decidedAt: { gte: new Date(Date.now() - 1000) } } },
       AND: [
         { OR: assignmentOrs }
       ]
+    }
+
+    if (!stageStatus || stageStatus === 'SUBMITTED') {
+      where.stageStatus = 'SUBMITTED'
+    } else if (stageStatus !== 'ALL') {
+      where.stageStatus = stageStatus as StageStatus
     }
 
     if (sessionId) where.sessionId = sessionId
@@ -104,20 +119,32 @@ export class ClearanceRepository {
     }
 
     const [data, total] = await Promise.all([
-      db.clearanceRequest.findMany({ where, skip, take: limit, include: { student: { include: { faculty: true, department: true } } }, orderBy: { updatedAt: 'asc' } }),
+      db.clearanceRequest.findMany({
+        where,
+        skip,
+        take: limit,
+        include: {
+          student: { include: { faculty: true, department: true } },
+          currentStage: true,
+          campaign: true,
+          session: true,
+          documents: { include: { documentType: true } },
+        },
+        orderBy: { updatedAt: 'asc' },
+      }),
       db.clearanceRequest.count({ where }),
     ])
     return { data, total }
   }
 
-  static async createStageApproval(data: { universityId: string; requestId: string; stageId: string; officerId: string; status: StageStatus; remarks?: string; attachmentUrl?: string; attachmentKey?: string; ipAddress?: string }) {
+  static async createStageApproval(data: { universityId: string; requestId: string; stageId: string; officerId: string; stampId?: string; status: StageStatus; remarks?: string; attachmentUrl?: string; attachmentKey?: string; ipAddress?: string }) {
     return db.stageApproval.create({ data })
   }
 
   static async getHistory(requestId: string, universityId: string) {
     return db.stageApproval.findMany({
       where: { requestId, universityId },
-      include: { stage: true, officer: { select: { id: true, email: true } } },
+      include: { stage: true, officer: { select: { id: true, email: true } }, stamp: true },
       orderBy: { decidedAt: 'asc' },
     })
   }

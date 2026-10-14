@@ -4,7 +4,13 @@ import { ConflictError, NotFoundError, TierLimitError } from '@/core/errors/AppE
 import { db } from '@/lib/db'
 
 jest.mock('./officers.repository')
-jest.mock('@/lib/db', () => ({ db: { user: { findUnique: jest.fn(), create: jest.fn() }, contractPlan: { findUnique: jest.fn() } } }))
+jest.mock('@/lib/db', () => ({
+  db: {
+    user: { findUnique: jest.fn(), create: jest.fn() },
+    contractPlan: { findUnique: jest.fn() },
+    passwordResetToken: { deleteMany: jest.fn(), create: jest.fn() },
+  },
+}))
 
 const mockOfficer = {
   id: 'officer-id', universityId: 'uni-id', userId: 'user-id',
@@ -44,6 +50,46 @@ describe('OfficersService', () => {
 
       await expect(OfficersService.create('uni-id', { email: 'exists@uni.ng', firstName: 'A', lastName: 'B' }))
         .rejects.toThrow(ConflictError)
+    })
+
+    it('should create officer and assign to stage when stageId is provided', async () => {
+      ;(db.contractPlan.findUnique as jest.Mock).mockResolvedValue({ tier: 'STANDARD' })
+      jest.spyOn(OfficersRepository, 'count').mockResolvedValue(0)
+      ;(db.user.findUnique as jest.Mock).mockResolvedValue(null)
+      ;(db.user.create as jest.Mock).mockResolvedValue({ id: 'user-1', email: 'officer@uni.ng', role: 'OFFICER', isActive: true })
+      jest.spyOn(OfficersRepository, 'create').mockResolvedValue(mockOfficer as any)
+      const assignSpy = jest.spyOn(OfficersRepository, 'assign').mockResolvedValue({ id: 'assignment-1', stageId: 'stage-1', officerId: 'officer-id' } as any)
+
+      const result = await OfficersService.create('uni-id', {
+        email: 'officer@uni.ng',
+        firstName: 'Ada',
+        lastName: 'Obi',
+        role: 'OFFICER',
+        stageId: 'stage-1',
+      })
+
+      expect(result.firstName).toBe('Ada')
+      expect(assignSpy).toHaveBeenCalledWith('uni-id', 'stage-1', 'officer-id', undefined, undefined, undefined)
+      expect(result.stageAssignments).toHaveLength(1)
+    })
+
+    it('should create user with ADMIN role when specified', async () => {
+      ;(db.contractPlan.findUnique as jest.Mock).mockResolvedValue({ tier: 'STANDARD' })
+      jest.spyOn(OfficersRepository, 'count').mockResolvedValue(0)
+      ;(db.user.findUnique as jest.Mock).mockResolvedValue(null)
+      ;(db.user.create as jest.Mock).mockResolvedValue({ id: 'user-admin', email: 'admin@uni.ng', role: 'ADMIN', isActive: true })
+      jest.spyOn(OfficersRepository, 'create').mockResolvedValue(mockOfficer as any)
+
+      await OfficersService.create('uni-id', {
+        email: 'admin@uni.ng',
+        firstName: 'Super',
+        lastName: 'Admin',
+        role: 'ADMIN',
+      })
+
+      expect(db.user.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ role: 'ADMIN' })
+      }))
     })
   })
 

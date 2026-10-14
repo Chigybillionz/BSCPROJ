@@ -38,34 +38,102 @@ export class AuthService {
     }
   }
 
-  static async register(data: { universitySlug: string, jambRegNo: string, email: string, password: string }): Promise<LoginResponse> {
+  static async register(data: {
+    universitySlug: string
+    firstName: string
+    lastName: string
+    email: string
+    jambRegNo: string
+    facultyId: string
+    departmentId: string
+    password: string
+    phone?: string
+    level?: string
+  }): Promise<LoginResponse> {
     const { db } = await import('@/lib/db')
-    const university = await db.university.findUnique({ where: { slug: data.universitySlug } })
-    if (!university) throw new NotFoundError('University not found')
+    const university = await db.university.findFirst({
+      where: {
+        OR: [{ slug: data.universitySlug }, { id: data.universitySlug }],
+        isActive: true,
+      },
+    })
+    if (!university) throw new NotFoundError('University not found or inactive')
 
-    const studentRecord = await db.student.findUnique({ where: { universityId_jambRegNo: { universityId: university.id, jambRegNo: data.jambRegNo } } })
-    if (!studentRecord) throw new AuthError('You are not on the admission list. Please contact the registry.')
-    if (studentRecord.userId) throw new AuthError('An account has already been claimed for this JAMB Reg No.')
+    // Verify Faculty exists in this university
+    const faculty = await db.faculty.findFirst({
+      where: { id: data.facultyId, universityId: university.id },
+    })
+    if (!faculty) throw new ValidationError('Invalid faculty selected for this university')
 
-    const existingUser = await db.user.findUnique({ where: { email: data.email } })
-    if (existingUser) throw new AuthError('Email is already in use.')
+    // Verify Department exists in this faculty
+    const department = await db.department.findFirst({
+      where: { id: data.departmentId, facultyId: data.facultyId },
+    })
+    if (!department) throw new ValidationError('Invalid department selected for this faculty')
+
+    // Check if email already in use
+    const normalizedEmail = data.email.toLowerCase().trim()
+    const existingUser = await db.user.findUnique({ where: { email: normalizedEmail } })
+    if (existingUser) throw new AuthError('An account with this email address already exists.')
+
+    // Check if JAMB Reg No is already claimed
+    const normalizedJamb = data.jambRegNo.trim()
+    const studentRecord = await db.student.findUnique({
+      where: {
+        universityId_jambRegNo: {
+          universityId: university.id,
+          jambRegNo: normalizedJamb,
+        },
+      },
+    })
+
+    if (studentRecord && studentRecord.userId) {
+      throw new AuthError('An account has already been registered for this JAMB Registration Number.')
+    }
 
     const hash = await bcrypt.hash(data.password, 12)
     const user = await db.user.create({
       data: {
-        email: data.email,
+        email: normalizedEmail,
         passwordHash: hash,
         role: 'STUDENT',
         universityId: university.id,
         passwordSetAt: new Date(),
         isActive: true,
-      }
+      },
     })
 
-    await db.student.update({
-      where: { id: studentRecord.id },
-      data: { userId: user.id }
-    })
+    let student
+    if (studentRecord) {
+      student = await db.student.update({
+        where: { id: studentRecord.id },
+        data: {
+          userId: user.id,
+          firstName: data.firstName.trim(),
+          lastName: data.lastName.trim(),
+          facultyId: data.facultyId,
+          departmentId: data.departmentId,
+          phone: data.phone || studentRecord.phone,
+          level: data.level || studentRecord.level || '100',
+        },
+        include: { faculty: true, department: true },
+      })
+    } else {
+      student = await db.student.create({
+        data: {
+          universityId: university.id,
+          userId: user.id,
+          jambRegNo: normalizedJamb,
+          firstName: data.firstName.trim(),
+          lastName: data.lastName.trim(),
+          facultyId: data.facultyId,
+          departmentId: data.departmentId,
+          phone: data.phone,
+          level: data.level || '100',
+        },
+        include: { faculty: true, department: true },
+      })
+    }
 
     const accessToken = signAccessToken({ sub: user.id, universityId: university.id, role: user.role })
     const refreshToken = signRefreshToken({ sub: user.id })
@@ -81,8 +149,18 @@ export class AuthService {
         role: user.role, 
         universityId: university.id, 
         universitySlug: university.slug,
-        student: studentRecord
-      } 
+        student: {
+          id: student.id,
+          firstName: student.firstName,
+          lastName: student.lastName,
+          jambRegNo: student.jambRegNo,
+          facultyId: student.facultyId,
+          departmentId: student.departmentId,
+          level: student.level,
+          faculty: student.faculty ? { id: student.faculty.id, name: student.faculty.name } : null,
+          department: student.department ? { id: student.department.id, name: student.department.name } : null,
+        },
+      },
     }
   }
 

@@ -8,6 +8,7 @@ export const startClearanceSchema = z.object({
 export const approveStageSchema = z.object({
   remarks: z.string().optional(),
   issuedData: z.union([z.string(), z.record(z.any())]).optional(),
+  stampId: z.string().uuid().optional(),
 })
 
 export const rejectStageSchema = z.object({
@@ -20,4 +21,5 @@ export const queueQuerySchema = z.object({
   search: z.string().optional(),
   sessionId: z.string().uuid().optional(),
   campaignId: z.string().uuid().optional(),
+  stageStatus: z.enum(['ALL', 'SUBMITTED', 'PENDING', 'REJECTED']).optional(),
 })

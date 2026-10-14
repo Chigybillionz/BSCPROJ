@@ -20,7 +20,16 @@ export class OfficersService {
     return officer
   }
 
-  static async create(universityId: string, data: { email: string; firstName: string; lastName: string }) {
+  static async create(universityId: string, data: {
+    email: string
+    firstName: string
+    lastName: string
+    role?: 'OFFICER' | 'ADMIN'
+    stageId?: string
+    facultyId?: string
+    departmentId?: string
+    sessionId?: string
+  }) {
     const contract = await db.contractPlan.findUnique({ where: { universityId } })
     const tier = contract?.tier ?? 'TRIAL'
     const limit = TIER_LIMITS[tier].maxOfficers
@@ -30,9 +39,10 @@ export class OfficersService {
     const existing = await db.user.findUnique({ where: { email: data.email } })
     if (existing) throw new ConflictError('Email already in use')
 
+    const role = data.role ?? 'OFFICER'
     const tempHash = await bcrypt.hash(Math.random().toString(36), 12)
     const user = await db.user.create({
-      data: { email: data.email, passwordHash: tempHash, role: 'OFFICER', universityId },
+      data: { email: data.email, passwordHash: tempHash, role, universityId },
     })
 
     const token = crypto.randomBytes(32).toString('hex')
@@ -44,14 +54,33 @@ export class OfficersService {
     await sendInviteEmail({
       to: data.email,
       name: `${data.firstName} ${data.lastName}`,
-      role: 'Officer',
+      role: role === 'ADMIN' ? 'Administrator' : 'Officer',
       inviteLink,
       tempPassword,
     })
 
     logger.info({ email: data.email, inviteLink }, 'Officer invite created')
     const officer = await OfficersRepository.create(universityId, user.id, { firstName: data.firstName, lastName: data.lastName })
-    return { ...officer, inviteLink, tempPassword }
+
+    let stageAssignment = null
+    if (data.stageId) {
+      stageAssignment = await OfficersRepository.assign(
+        universityId,
+        data.stageId,
+        officer.id,
+        data.facultyId,
+        data.departmentId,
+        data.sessionId
+      )
+    }
+
+    return {
+      ...officer,
+      user: { id: user.id, email: user.email, role: user.role, isActive: user.isActive },
+      stageAssignments: stageAssignment ? [stageAssignment] : [],
+      inviteLink,
+      tempPassword,
+    }
   }
 
   static async update(id: string, universityId: string, data: { firstName?: string; lastName?: string }) {

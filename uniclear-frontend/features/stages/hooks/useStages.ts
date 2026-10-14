@@ -29,10 +29,10 @@ export function useReorderStages(campaignId?: string) {
 export function useCreateStage(campaignId?: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: { name: string; description?: string; campaignId?: string }) => stagesApi.create({ ...data, campaignId }),
+    mutationFn: (data: { name: string; description?: string; campaignId?: string; scope?: 'UNIVERSITY' | 'FACULTY' | 'DEPARTMENT' }) => stagesApi.create({ ...data, campaignId: data.campaignId || campaignId }),
     onSuccess:  () => {
       toast.success('Stage created')
-      qc.invalidateQueries({ queryKey: stageKeys.all(campaignId) })
+      qc.invalidateQueries({ queryKey: ['stages'] })
     },
     onError: (e: any) => toast.error(e.response?.data?.message ?? 'Failed to create stage'),
   })
@@ -47,6 +47,18 @@ export function useUpdateStage() {
       qc.invalidateQueries({ queryKey: ['stages'] })
     },
     onError: (e: any) => toast.error(e.response?.data?.message ?? 'Update failed'),
+  })
+}
+
+export function useDeleteStage() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => stagesApi.delete(id),
+    onSuccess: () => {
+      toast.success('Stage deleted')
+      qc.invalidateQueries({ queryKey: ['stages'] })
+    },
+    onError: (e: any) => toast.error(e.response?.data?.message ?? 'Failed to delete stage'),
   })
 }
 

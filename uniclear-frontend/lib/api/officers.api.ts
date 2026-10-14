@@ -1,5 +1,5 @@
 import { apiClient } from './client'
-import type { Officer, PaginatedResponse } from '@/types'
+import type { Officer, PaginatedResponse, ClearanceRequest } from '@/types'
 
 export const officersApi = {
   list: (page = 1, limit = 20, stageId?: string) =>
@@ -8,8 +8,21 @@ export const officersApi = {
     ),
   getMe: () =>
     apiClient.get<{ success: true; data: Officer }>('/officers/me'),
-  create: (data: { email: string; firstName: string; lastName: string }) =>
-    apiClient.post<{ success: true; data: Officer }>('/officers', data),
+  getQueue: (page = 1, limit = 20, search?: string, sessionId?: string, campaignId?: string, stageStatus?: string) =>
+    apiClient.get<PaginatedResponse<ClearanceRequest>>('/officers/queue', {
+      params: { page, limit, search, sessionId, campaignId, stageStatus }
+    }),
+  create: (data: {
+    email: string
+    firstName: string
+    lastName: string
+    role?: 'OFFICER' | 'ADMIN'
+    stageId?: string
+    facultyId?: string
+    departmentId?: string
+    sessionId?: string
+  }) =>
+    apiClient.post<{ success: true; data: Officer & { inviteLink?: string; tempPassword?: string } }>('/officers', data),
   update: (id: string, data: { firstName?: string; lastName?: string }) =>
     apiClient.patch(`/officers/${id}`, data),
   delete: (id: string) =>
