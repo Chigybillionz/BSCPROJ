@@ -282,7 +282,7 @@ function VerifyContent() {
               {/* Actions */}
               <div className="pt-2 flex flex-col sm:flex-row gap-3">
                 <Button 
-                  variant="outline" 
+                  variant="secondary" 
                   className="w-full gap-2 text-xs"
                   onClick={() => window.print()}
                 >
