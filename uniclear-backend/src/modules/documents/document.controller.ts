@@ -7,7 +7,7 @@ import { param } from '@/lib/utils/param'
 export class DocumentsController {
   static async getByRequest(req: Request, res: Response, next: NextFunction) {
     try {
-      const docs = await DocumentsService.getByRequest(param(req.params.requestId), req.universityId!)
+      const docs = await DocumentsService.getByRequest(param(req.params.requestId), req.universityId!, req.user?.sub, req.user?.role)
       return ApiResponse.success(res, docs)
     } catch (err) { next(err) }
   }
@@ -33,7 +33,7 @@ export class DocumentsController {
 
   static async delete(req: Request, res: Response, next: NextFunction) {
     try {
-      await DocumentsService.delete(param(req.params.id), req.universityId!)
+      await DocumentsService.delete(param(req.params.id), req.universityId!, req.user?.sub, req.user?.role)
       return ApiResponse.noContent(res)
     } catch (err) { next(err) }
   }
@@ -55,7 +55,7 @@ export class DocumentsController {
 
   static async getSignedUrl(req: Request, res: Response, next: NextFunction) {
     try {
-      const url = await DocumentsService.getSignedUrl(param(req.params.id), req.universityId!)
+      const url = await DocumentsService.getSignedUrl(param(req.params.id), req.universityId!, req.user?.sub, req.user?.role)
       return ApiResponse.success(res, { url })
     } catch (err) { next(err) }
   }

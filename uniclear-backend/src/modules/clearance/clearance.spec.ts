@@ -16,18 +16,24 @@ jest.mock('@/modules/document-types/document-types.repository')
 jest.mock('@/modules/documents/document.repository')
 jest.mock('@/modules/students/students.repository')
 jest.mock('@/core/events/EventBus', () => ({ eventBus: { emit: jest.fn() } }))
-jest.mock('@/lib/db', () => ({ 
-  db: { 
+jest.mock('@/lib/db', () => {
+  const dbMock: any = { 
     clearanceStage: { findUnique: jest.fn() }, 
+    clearanceCampaign: { findFirst: jest.fn().mockResolvedValue({ id: 'camp-id', isActive: true, eligibilityRules: [] }) },
     academicSession: { findFirst: jest.fn() },
     student: { findUnique: jest.fn(), findFirst: jest.fn() },
-    clearanceRequest: { update: jest.fn().mockResolvedValue({}) }
-  } 
-}))
+    clearanceRequest: { 
+      update: jest.fn().mockResolvedValue({}),
+      findUnique: jest.fn().mockResolvedValue({ currentStageId: 'stage-id', stageStatus: 'SUBMITTED' })
+    },
+    $transaction: jest.fn(async (fn: any) => fn(dbMock)),
+  }
+  return { db: dbMock }
+})
 
 const mockClearance = {
   id: 'req-id', universityId: 'uni-id', studentId: 'student-user-id',
-  sessionId: 'session-id', currentStageId: 'stage-id', status: 'IN_PROGRESS',
+  sessionId: 'session-id', currentStageId: 'stage-id', status: 'IN_PROGRESS', stageStatus: 'SUBMITTED',
   student: { userId: 'student-user-id', id: 'student-id' },
   stageApprovals: [], documents: [],
 }
@@ -87,7 +93,7 @@ describe('ClearanceService', () => {
       jest.spyOn(ClearanceRepository, 'updateStage').mockResolvedValue(mockClearance as any)
 
       const result = await ClearanceService.approve('req-id', 'officer-user-id', 'uni-id', 'Good work')
-      expect(result.id).toBe('req-id')
+      expect(result!.id).toBe('req-id')
     })
 
     it('should mark as COMPLETED when last stage approved', async () => {

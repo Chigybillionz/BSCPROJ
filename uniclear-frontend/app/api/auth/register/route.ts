@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 
-const API_URL = process.env.API_URL || 'http://localhost:5001'
+const API_URL = process.env.API_URL || 'http://localhost:5000'
 
 export async function POST(req: NextRequest) {
   try {

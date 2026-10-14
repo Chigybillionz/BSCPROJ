@@ -76,7 +76,7 @@ export class ReportsService {
 
     const approvalWhere: any = { universityId }
     if (campaignId) approvalWhere.stage = { campaignId }
-    if (sessionId) approvalWhere.clearanceRequest = { sessionId }
+    if (sessionId) approvalWhere.request = { sessionId }
 
     // Single query per metric instead of 3 per stage (eliminates N+1)
     const [pendingCounts, approvedCounts, rejectedCounts] = await Promise.all([

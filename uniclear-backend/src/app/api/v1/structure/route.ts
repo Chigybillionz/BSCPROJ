@@ -80,6 +80,12 @@ router.post('/faculties', authMiddleware, requireTenant, requireRole('SUPER_ADMI
 
 router.delete('/faculties/:id', authMiddleware, requireTenant, requireRole('SUPER_ADMIN'), async (req, res, next) => {
   try {
+    const faculty = await db.faculty.findFirst({
+      where: { id: req.params.id, universityId: req.universityId! },
+    })
+    if (!faculty) {
+      return ApiResponse.error(res, 'Faculty not found', 404)
+    }
     await db.faculty.delete({ where: { id: req.params.id } })
     return ApiResponse.success(res, { deleted: true })
   } catch (err) { next(err) }
@@ -88,6 +94,12 @@ router.delete('/faculties/:id', authMiddleware, requireTenant, requireRole('SUPE
 router.post('/departments', authMiddleware, requireTenant, requireRole('SUPER_ADMIN'), async (req, res, next) => {
   try {
     const { name, facultyId, availableLevels } = req.body
+    const faculty = await db.faculty.findFirst({
+      where: { id: facultyId, universityId: req.universityId! },
+    })
+    if (!faculty) {
+      return ApiResponse.error(res, 'Faculty not found in this university', 404)
+    }
     const data = await db.department.create({ 
       data: { 
         name, 
@@ -101,6 +113,12 @@ router.post('/departments', authMiddleware, requireTenant, requireRole('SUPER_AD
 
 router.delete('/departments/:id', authMiddleware, requireTenant, requireRole('SUPER_ADMIN'), async (req, res, next) => {
   try {
+    const dept = await db.department.findFirst({
+      where: { id: req.params.id, faculty: { universityId: req.universityId! } },
+    })
+    if (!dept) {
+      return ApiResponse.error(res, 'Department not found', 404)
+    }
     await db.department.delete({ where: { id: req.params.id } })
     return ApiResponse.success(res, { deleted: true })
   } catch (err) { next(err) }

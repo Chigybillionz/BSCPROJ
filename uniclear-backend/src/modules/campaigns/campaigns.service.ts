@@ -1,5 +1,5 @@
 import { CampaignsRepository } from './campaigns.repository'
-import { NotFoundError } from '@/core/errors/AppError'
+import { NotFoundError, ValidationError } from '@/core/errors/AppError'
 
 import { StudentsRepository } from '@/modules/students/students.repository'
 
@@ -67,6 +67,15 @@ export class CampaignsService {
 
   static async uploadCertificateTemplate(id: string, universityId: string, file: Express.Multer.File) {
     const campaign = await CampaignsService.getById(id, universityId)
+    const allowedMimes = ['application/pdf', 'image/png', 'image/jpeg']
+    if (!allowedMimes.includes(file.mimetype)) {
+      throw new ValidationError('Invalid certificate template format. Only PDF, PNG, and JPEG are allowed')
+    }
+    const MAX_SIZE = 10 * 1024 * 1024 // 10MB
+    if (file.size > MAX_SIZE) {
+      throw new ValidationError('Certificate template exceeds maximum allowed size (10MB)')
+    }
+
     const { storage } = await import('@/modules/documents/storage')
     const { url } = await storage.upload(file.buffer, `campaigns/${universityId}/${id}/cert-template-${Date.now()}`, file.mimetype)
     

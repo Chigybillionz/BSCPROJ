@@ -11,7 +11,12 @@ export function requireRole(...roles: Role[]) {
 }
 
 export function requireTenant(req: Request, res: Response, next: NextFunction) {
-  if (req.universityId) return next()
+  if (req.universityId) {
+    if (req.user && req.user.role !== 'PLATFORM_OWNER' && req.user.universityId && req.user.universityId !== req.universityId) {
+      return next(new ForbiddenError('Cross-tenant access forbidden'))
+    }
+    return next()
+  }
   if (req.user?.universityId) {
     req.universityId = req.user.universityId
     return next()

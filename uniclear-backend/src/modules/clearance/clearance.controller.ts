@@ -94,14 +94,14 @@ export class ClearanceController {
 
   static async getHistory(req: Request, res: Response, next: NextFunction) {
     try {
-      const history = await ClearanceService.getHistory(param(req.params.requestId), req.universityId!)
+      const history = await ClearanceService.getHistory(param(req.params.requestId), req.universityId!, req.user?.sub, req.user?.role)
       return ApiResponse.success(res, history)
     } catch (err) { next(err) }
   }
 
   static async getCertificate(req: Request, res: Response, next: NextFunction) {
     try {
-      const clearance = await ClearanceService.getCertificate(param(req.params.requestId), req.universityId!)
+      const clearance = await ClearanceService.getCertificate(param(req.params.requestId), req.universityId!, req.user?.sub, req.user?.role)
       return ApiResponse.success(res, clearance)
     } catch (err) { next(err) }
   }

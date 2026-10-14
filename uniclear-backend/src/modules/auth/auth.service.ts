@@ -193,10 +193,11 @@ export class AuthService {
 
     const hash = await bcrypt.hash(password, 12)
     await AuthRepository.updatePassword(userId, hash)
+    await AuthRepository.deleteAllUserRefreshTokens(userId)
   }
 
   static async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
-    const user = await AuthRepository.findUserByEmail(userId)
+    const user = await AuthRepository.findUserWithPasswordById(userId)
     if (!user) throw new NotFoundError('User not found')
 
     const valid = await bcrypt.compare(currentPassword, user.passwordHash)
@@ -204,6 +205,7 @@ export class AuthService {
 
     const hash = await bcrypt.hash(newPassword, 12)
     await AuthRepository.updatePassword(userId, hash)
+    await AuthRepository.deleteAllUserRefreshTokens(userId)
   }
 
   static async forgotPassword(email: string): Promise<void> {
@@ -235,6 +237,7 @@ export class AuthService {
     const hash = await bcrypt.hash(password, 12)
     await AuthRepository.updatePassword(record.userId, hash)
     await AuthRepository.markPasswordResetTokenUsed(record.id)
+    await AuthRepository.deleteAllUserRefreshTokens(record.userId)
   }
 
   static async getMe(userId: string) {

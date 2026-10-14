@@ -18,8 +18,6 @@ export function middleware(req: NextRequest) {
 
   if (slug) {
     res.cookies.set('tenant_slug', slug, { path: '/', sameSite: 'lax', maxAge: 60 * 60 * 24 * 7 })
-  } else {
-    res.cookies.delete('tenant_slug')
   }
 
   return res

@@ -93,6 +93,15 @@ export class OfficersController {
   static async uploadStamp(req: Request, res: Response, next: NextFunction) {
     try {
       if (!req.file) throw new ValidationError('No image uploaded')
+      const allowedMimes = ['image/png', 'image/jpeg', 'image/webp']
+      if (!allowedMimes.includes(req.file.mimetype)) {
+        throw new ValidationError('Invalid stamp file format. Only PNG, JPEG, and WebP are allowed')
+      }
+      const MAX_SIZE = 5 * 1024 * 1024 // 5MB
+      if (req.file.size > MAX_SIZE) {
+        throw new ValidationError('Stamp image exceeds maximum allowed size (5MB)')
+      }
+
       const { name } = req.body
       if (!name) throw new ValidationError('Stamp name is required')
       
@@ -113,7 +122,7 @@ export class OfficersController {
   static async deleteStamp(req: Request, res: Response, next: NextFunction) {
     try {
       const stamp = await db.officerStamp.findUnique({ where: { id: req.params.id } })
-      if (!stamp || stamp.officerId !== req.user!.sub) throw new NotFoundError('Stamp not found')
+      if (!stamp || stamp.officerId !== req.user!.sub || stamp.universityId !== req.universityId) throw new NotFoundError('Stamp not found')
       await storage.delete(stamp.imageKey)
       await db.officerStamp.delete({ where: { id: req.params.id } })
       return ApiResponse.noContent(res)

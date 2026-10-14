@@ -25,6 +25,8 @@ export function PdfStampViewer({ fileUrl, onSaveStampedFile, onStampSelect }: Pd
   const [stamps, setStamps] = useState<OfficerStamp[]>([])
   const [selectedStamp, setSelectedStamp] = useState<OfficerStamp | null>(null)
   
+  const isImage = /\.(jpe?g|png|webp)($|\?)/i.test(fileUrl)
+
   // To track where the stamp is placed
   const [stampPosition, setStampPosition] = useState<{ x: number, y: number } | null>(null)
   const pageRef = useRef<HTMLDivElement>(null)
@@ -39,7 +41,7 @@ export function PdfStampViewer({ fileUrl, onSaveStampedFile, onStampSelect }: Pd
     setNumPages(numPages)
   }
 
-  // When clicking on the PDF Canvas
+  // When clicking on the Document Canvas
   const handlePageClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!selectedStamp || !pageRef.current) return
     const rect = pageRef.current.getBoundingClientRect()
@@ -59,9 +61,32 @@ export function PdfStampViewer({ fileUrl, onSaveStampedFile, onStampSelect }: Pd
     try {
       toast.loading('Baking stamp into document...', { id: 'stamp' })
       
-      // 1. Fetch original PDF
-      const existingPdfBytes = await fetch(fileUrl).then(res => res.arrayBuffer())
-      const pdfDoc = await PDFDocument.load(existingPdfBytes)
+      const fileBytes = await fetch(fileUrl).then(res => res.arrayBuffer())
+      let pdfDoc: PDFDocument
+      let currentPage: any
+      let width: number
+      let height: number
+
+      if (isImage) {
+        pdfDoc = await PDFDocument.create()
+        let docImage
+        try {
+          docImage = await pdfDoc.embedPng(fileBytes)
+        } catch {
+          docImage = await pdfDoc.embedJpg(fileBytes)
+        }
+        currentPage = pdfDoc.addPage([docImage.width, docImage.height])
+        width = docImage.width
+        height = docImage.height
+        currentPage.drawImage(docImage, { x: 0, y: 0, width, height })
+      } else {
+        pdfDoc = await PDFDocument.load(fileBytes)
+        const pages = pdfDoc.getPages()
+        currentPage = pages[pageNumber - 1]
+        const size = currentPage.getSize()
+        width = size.width
+        height = size.height
+      }
 
       // 2. Fetch Stamp Image
       const stampBytes = await fetch(selectedStamp.imageUrl).then(res => res.arrayBuffer())
@@ -73,15 +98,10 @@ export function PdfStampViewer({ fileUrl, onSaveStampedFile, onStampSelect }: Pd
         stampImage = await pdfDoc.embedJpg(stampBytes)
       }
 
-      // 3. Get the correct page
-      const pages = pdfDoc.getPages()
-      const currentPage = pages[pageNumber - 1]
-      const { width, height } = currentPage.getSize()
-
       // Calculate stamp dimensions (scale down if necessary)
       const stampDims = stampImage.scale(0.3) // Scale down to 30%
 
-      // 4. Draw Image
+      // 3. Draw Image
       currentPage.drawImage(stampImage, {
         x: stampPosition.x * width - (stampDims.width / 2),
         y: stampPosition.y * height - (stampDims.height / 2),
@@ -89,7 +109,7 @@ export function PdfStampViewer({ fileUrl, onSaveStampedFile, onStampSelect }: Pd
         height: stampDims.height,
       })
 
-      // 5. Serialize PDF to bytes (a Uint8Array)
+      // 4. Serialize PDF to bytes (a Uint8Array)
       const pdfBytes = await pdfDoc.save()
       const blob = new Blob([pdfBytes as unknown as BlobPart], { type: 'application/pdf' })
       const file = new File([blob], 'signed_document.pdf', { type: 'application/pdf' })
@@ -139,14 +159,23 @@ export function PdfStampViewer({ fileUrl, onSaveStampedFile, onStampSelect }: Pd
           ref={pageRef} 
           className="relative bg-white shadow-xl"
         >
-          <Document file={fileUrl} onLoadSuccess={onDocumentLoadSuccess}>
-            <Page 
-              pageNumber={pageNumber} 
-              width={600}
-              renderTextLayer={false}
-              renderAnnotationLayer={false}
+          {isImage ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img 
+              src={fileUrl} 
+              alt="Document Preview" 
+              className="w-[600px] h-auto object-contain block select-none pointer-events-none" 
             />
-          </Document>
+          ) : (
+            <Document file={fileUrl} onLoadSuccess={onDocumentLoadSuccess}>
+              <Page 
+                pageNumber={pageNumber} 
+                width={600}
+                renderTextLayer={false}
+                renderAnnotationLayer={false}
+              />
+            </Document>
+          )}
 
           {/* Transparent overlay to capture stamp placement clicks */}
           {selectedStamp && (
@@ -176,9 +205,15 @@ export function PdfStampViewer({ fileUrl, onSaveStampedFile, onStampSelect }: Pd
 
       <div className="bg-[var(--color-bg)] border-t border-[var(--color-border)] p-3 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-4">
-          <Button disabled={pageNumber <= 1} onClick={() => setPageNumber(p => p - 1)} variant="secondary" size="sm">Prev Page</Button>
-          <span className="text-sm font-medium">Page {pageNumber} of {numPages || '--'}</span>
-          <Button disabled={pageNumber >= (numPages || 1)} onClick={() => setPageNumber(p => p + 1)} variant="secondary" size="sm">Next Page</Button>
+          {!isImage ? (
+            <>
+              <Button disabled={pageNumber <= 1} onClick={() => setPageNumber(p => p - 1)} variant="secondary" size="sm">Prev Page</Button>
+              <span className="text-sm font-medium">Page {pageNumber} of {numPages || '--'}</span>
+              <Button disabled={pageNumber >= (numPages || 1)} onClick={() => setPageNumber(p => p + 1)} variant="secondary" size="sm">Next Page</Button>
+            </>
+          ) : (
+            <span className="text-sm font-medium text-[var(--color-muted)]">Image Document (1 page)</span>
+          )}
         </div>
         
         {stampPosition && (

@@ -7,7 +7,9 @@ export const apiClient = axios.create({
   withCredentials: true,
 })
 
-// Silent token refresh on 401
+let refreshPromise: Promise<any> | null = null
+
+// Silent token refresh on 401 with mutex to prevent race conditions on token rotation
 apiClient.interceptors.response.use(
   res => res,
   async error => {
@@ -21,10 +23,18 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401 && !original._retry) {
       original._retry = true
       try {
-        await axios.post('/api/v1/auth/refresh', {}, { withCredentials: true })
+        if (!refreshPromise) {
+          refreshPromise = axios.post('/api/auth/refresh', {}, { withCredentials: true })
+            .finally(() => {
+              refreshPromise = null
+            })
+        }
+        await refreshPromise
         return apiClient(original)
       } catch {
-        if (typeof window !== 'undefined') window.location.href = '/login'
+        if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+          window.location.href = '/login'
+        }
       }
     }
 

@@ -1,6 +1,6 @@
 import { StagesService } from './stages.service'
 import { StagesRepository } from './stages.repository'
-import { NotFoundError, TierLimitError } from '@/core/errors/AppError'
+import { NotFoundError, TierLimitError, ValidationError } from '@/core/errors/AppError'
 import { db } from '@/lib/db'
 
 jest.mock('./stages.repository')
@@ -9,6 +9,7 @@ jest.mock('@/lib/db', () => ({
     contractPlan: { findUnique: jest.fn() },
     clearanceCampaign: { findFirst: jest.fn() },
     clearanceStage: { findFirst: jest.fn(), findMany: jest.fn() },
+    clearanceRequest: { count: jest.fn().mockResolvedValue(0) },
   },
 }))
 
@@ -131,6 +132,20 @@ describe('StagesService', () => {
     it('should throw NotFoundError when stage not found', async () => {
       jest.spyOn(StagesRepository, 'findById').mockResolvedValue(null)
       await expect(StagesService.delete('bad-id', 'uni-id')).rejects.toThrow(NotFoundError)
+    })
+
+    it('should throw ValidationError when active clearance requests exist at this stage', async () => {
+      jest.spyOn(StagesRepository, 'findById').mockResolvedValue(mockStage as any)
+      ;(db.clearanceRequest.count as jest.Mock).mockResolvedValue(2)
+      await expect(StagesService.delete('stage-id', 'uni-id')).rejects.toThrow(ValidationError)
+    })
+
+    it('should delete stage when no active requests exist', async () => {
+      jest.spyOn(StagesRepository, 'findById').mockResolvedValue(mockStage as any)
+      ;(db.clearanceRequest.count as jest.Mock).mockResolvedValue(0)
+      const spy = jest.spyOn(StagesRepository, 'delete').mockResolvedValue(mockStage as any)
+      await StagesService.delete('stage-id', 'uni-id')
+      expect(spy).toHaveBeenCalledWith('stage-id')
     })
   })
 })

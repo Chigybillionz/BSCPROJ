@@ -3,15 +3,26 @@ import { AuditService } from '@/modules/audit/audit.service'
 import { NotificationsService } from '@/modules/notifications/notification.service'
 import { db } from '@/lib/db'
 
+async function getStudentUserId(studentId: string): Promise<string | null> {
+  const s = await db.student.findUnique({ where: { id: studentId }, select: { userId: true } })
+  return s?.userId ?? null
+}
+
 export function registerListeners() {
   // ── Clearance started ──────────────────────────────────────────
   eventBus.on('clearance.started', async ({ clearanceId, studentId, universityId }) => {
-    await AuditService.log({ universityId, actorId: studentId, action: 'CLEARANCE_STARTED', targetId: clearanceId, targetType: 'ClearanceRequest' })
+    const actorId = await getStudentUserId(studentId)
+    if (actorId) {
+      await AuditService.log({ universityId, actorId, action: 'CLEARANCE_STARTED', targetId: clearanceId, targetType: 'ClearanceRequest' })
+    }
   })
 
   // ── Stage submitted ────────────────────────────────────────────
   eventBus.on('stage.submitted', async ({ requestId, stageId, studentId, universityId }) => {
-    await AuditService.log({ universityId, actorId: studentId, action: 'STAGE_SUBMITTED', targetId: requestId, targetType: 'ClearanceRequest', metadata: { stageId } })
+    const actorId = await getStudentUserId(studentId)
+    if (actorId) {
+      await AuditService.log({ universityId, actorId, action: 'STAGE_SUBMITTED', targetId: requestId, targetType: 'ClearanceRequest', metadata: { stageId } })
+    }
 
     // Notify officer
     const stage = await db.clearanceStage.findUnique({ where: { id: stageId }, include: { officerAssignments: { include: { officer: true } } } })
@@ -90,16 +101,20 @@ export function registerListeners() {
 
   // ── Clearance complete ─────────────────────────────────────────
   eventBus.on('clearance.complete', async ({ requestId, studentId, universityId }) => {
-    await AuditService.log({ universityId, actorId: studentId, action: 'CLEARANCE_COMPLETED', targetId: requestId, targetType: 'ClearanceRequest' })
-
     const student = await db.student.findUnique({ where: { id: studentId }, include: { user: true } })
-    const targetUserId = student?.userId || studentId
+    const targetUserId = student?.userId || null
 
-    await NotificationsService.send(
-      universityId, targetUserId, 'CLEARANCE_COMPLETE',
-      '🎉 Clearance Complete!',
-      'Congratulations! All your clearance stages have been approved. Your certificate is ready for download.'
-    )
+    if (targetUserId) {
+      await AuditService.log({ universityId, actorId: targetUserId, action: 'CLEARANCE_COMPLETED', targetId: requestId, targetType: 'ClearanceRequest' })
+    }
+
+    if (targetUserId) {
+      await NotificationsService.send(
+        universityId, targetUserId, 'CLEARANCE_COMPLETE',
+        '🎉 Clearance Complete!',
+        'Congratulations! All your clearance stages have been approved. Your certificate is ready for download.'
+      )
+    }
 
     if (student?.user?.email) {
       const { sendClearanceStatusEmail } = await import('@/modules/notifications/channels/email.channel')
@@ -116,6 +131,9 @@ export function registerListeners() {
 
   // ── Document uploaded ──────────────────────────────────────────
   eventBus.on('document.uploaded', async ({ documentId, studentId, universityId }) => {
-    await AuditService.log({ universityId, actorId: studentId, action: 'DOCUMENT_UPLOADED', targetId: documentId, targetType: 'Document' })
+    const actorId = await getStudentUserId(studentId)
+    if (actorId) {
+      await AuditService.log({ universityId, actorId, action: 'DOCUMENT_UPLOADED', targetId: documentId, targetType: 'Document' })
+    }
   })
 }

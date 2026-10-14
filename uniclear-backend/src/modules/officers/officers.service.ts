@@ -40,7 +40,8 @@ export class OfficersService {
     if (existing) throw new ConflictError('Email already in use')
 
     const role = data.role ?? 'OFFICER'
-    const tempHash = await bcrypt.hash(Math.random().toString(36), 12)
+    const tempPassword = crypto.randomBytes(4).toString('hex')
+    const tempHash = await bcrypt.hash(tempPassword, 12)
     const user = await db.user.create({
       data: { email: data.email, passwordHash: tempHash, role, universityId },
     })
@@ -48,7 +49,6 @@ export class OfficersService {
     const token = crypto.randomBytes(32).toString('hex')
     await AuthRepository.saveInviteToken(user.id, token, new Date(Date.now() + 7 * 24 * 60 * 60 * 1000))
 
-    const tempPassword = crypto.randomBytes(4).toString('hex')
     const inviteLink = `${env.APP_URL}/set-password?token=${token}`
 
     await sendInviteEmail({

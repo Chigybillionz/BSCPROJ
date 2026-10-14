@@ -2,11 +2,20 @@ import path from 'path'
 import { DocumentsRepository } from './document.repository'
 import { storage } from './storage'
 import { eventBus } from '@/core/events/EventBus'
-import { NotFoundError, ValidationError } from '@/core/errors/AppError'
+import { NotFoundError, ValidationError, ForbiddenError } from '@/core/errors/AppError'
 import { db } from '@/lib/db'
 
 export class DocumentsService {
-  static async getByRequest(requestId: string, universityId: string) {
+  static async getByRequest(requestId: string, universityId: string, userId?: string, role?: string) {
+    if (role === 'STUDENT') {
+      const clearance = await db.clearanceRequest.findUnique({
+        where: { id: requestId },
+        include: { student: true }
+      })
+      if (!clearance || clearance.student.userId !== userId) {
+        throw new ForbiddenError('You do not have permission to view these documents')
+      }
+    }
     return DocumentsRepository.findByRequest(requestId, universityId)
   }
 
@@ -63,9 +72,22 @@ export class DocumentsService {
     return document
   }
 
-  static async delete(id: string, universityId: string) {
+  static async delete(id: string, universityId: string, userId?: string, role?: string) {
     const doc = await DocumentsRepository.findById(id, universityId)
     if (!doc) throw new NotFoundError('Document not found')
+
+    if (role === 'STUDENT' && (doc as any).student?.userId !== userId) {
+      throw new ForbiddenError('You do not have permission to delete this document')
+    }
+
+    if (doc.status === 'APPROVED') {
+      throw new ValidationError('Cannot delete an already approved document')
+    }
+
+    if ((doc as any).request?.status === 'COMPLETED') {
+      throw new ValidationError('Cannot delete documents from a completed clearance')
+    }
+
     await storage.delete(doc.fileKey)
     return DocumentsRepository.delete(id)
   }
@@ -84,9 +106,14 @@ export class DocumentsService {
     return DocumentsRepository.updateStatus(id, 'REJECTED', reason.trim())
   }
 
-  static async getSignedUrl(id: string, universityId: string) {
+  static async getSignedUrl(id: string, universityId: string, userId?: string, role?: string) {
     const doc = await DocumentsRepository.findById(id, universityId)
     if (!doc) throw new NotFoundError('Document not found')
+
+    if (role === 'STUDENT' && (doc as any).student?.userId !== userId) {
+      throw new ForbiddenError('You do not have permission to view this document')
+    }
+
     return storage.getSignedUrl(doc.fileKey)
   }
 }
