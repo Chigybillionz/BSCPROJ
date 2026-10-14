@@ -40,4 +40,7 @@ export const clearanceApi = {
 
   getCertificate: (requestId: string) =>
     apiClient.get(`/clearance/${requestId}/certificate`),
+
+  verify: (clearanceNumber: string) =>
+    apiClient.get<{ success: true; data: any }>(`/clearance/verify/${encodeURIComponent(clearanceNumber)}`),
 }

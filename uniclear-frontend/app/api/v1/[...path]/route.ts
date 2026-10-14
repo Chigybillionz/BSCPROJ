@@ -89,6 +89,18 @@ async function proxy(req: NextRequest, { params }: { params: Promise<{ path: str
   }
 
   const resContentType = res.headers.get('content-type') ?? ''
+  if (resContentType.includes('text/csv')) {
+    const csvText = await res.text()
+    const contentDisposition = res.headers.get('content-disposition') || 'attachment; filename="clearance-report.csv"'
+    return new NextResponse(csvText, {
+      status: res.status,
+      headers: {
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': contentDisposition,
+      },
+    })
+  }
+
   const resBody = resContentType.includes('application/json') ? await res.json() : await res.text()
   return NextResponse.json(resBody, { status: res.status })
 }

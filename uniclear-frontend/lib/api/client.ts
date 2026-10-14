@@ -32,7 +32,7 @@ apiClient.interceptors.response.use(
         await refreshPromise
         return apiClient(original)
       } catch {
-        if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+        if (typeof window !== 'undefined' && window.location.pathname !== '/login' && !window.location.pathname.startsWith('/verify')) {
           window.location.href = '/login'
         }
       }

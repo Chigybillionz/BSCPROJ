@@ -262,4 +262,75 @@ export class ClearanceService {
     }
     return clearance
   }
+
+  static async verify(clearanceNumber: string) {
+    if (!clearanceNumber || typeof clearanceNumber !== 'string' || !clearanceNumber.trim()) {
+      throw new ValidationError('Clearance number is required')
+    }
+
+    const clearance = await db.clearanceRequest.findUnique({
+      where: { clearanceNumber: clearanceNumber.trim() },
+      include: {
+        student: {
+          include: {
+            faculty: { select: { id: true, name: true } },
+            department: { select: { id: true, name: true } },
+          },
+        },
+        session: { select: { id: true, name: true } },
+        campaign: { select: { id: true, name: true, issuesCertificate: true, issuesClearanceSlip: true } },
+        university: { select: { id: true, name: true, slug: true, logoUrl: true, primaryColor: true } },
+        stageApprovals: {
+          where: { status: 'APPROVED' },
+          include: {
+            stage: { select: { id: true, name: true, orderIndex: true } },
+          },
+          orderBy: { decidedAt: 'asc' },
+        },
+      },
+    })
+
+    if (!clearance || clearance.status !== 'COMPLETED') {
+      throw new NotFoundError('No valid completed clearance record found for this clearance number')
+    }
+
+    const maskString = (val?: string | null) => {
+      if (!val) return 'N/A'
+      if (val.length <= 4) return val
+      return `${val.substring(0, 3)}***${val.substring(val.length - 2)}`
+    }
+
+    return {
+      isValid: true,
+      clearanceNumber: clearance.clearanceNumber,
+      status: clearance.status,
+      completedAt: clearance.completedAt,
+      student: {
+        firstName: clearance.student.firstName,
+        lastName: clearance.student.lastName,
+        fullName: `${clearance.student.firstName} ${clearance.student.lastName}`.trim(),
+        jambRegNo: clearance.student.jambRegNo,
+        matricNo: clearance.student.matricNo,
+        maskedJambRegNo: maskString(clearance.student.jambRegNo),
+        maskedMatricNo: maskString(clearance.student.matricNo),
+        faculty: clearance.student.faculty?.name || 'N/A',
+        department: clearance.student.department?.name || 'N/A',
+      },
+      university: {
+        id: clearance.university.id,
+        name: clearance.university.name,
+        slug: clearance.university.slug,
+        logoUrl: clearance.university.logoUrl,
+        primaryColor: clearance.university.primaryColor,
+      },
+      session: clearance.session.name,
+      campaign: clearance.campaign.name,
+      stages: clearance.stageApprovals.map(approval => ({
+        stageName: approval.stage.name,
+        approvedAt: approval.decidedAt,
+      })),
+      issuedData: clearance.issuedData,
+    }
+  }
 }
+

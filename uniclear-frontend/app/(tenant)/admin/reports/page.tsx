@@ -67,7 +67,7 @@ export default async function AdminReportsPage({ searchParams }: { searchParams:
         <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
           <h2 className="text-sm font-semibold text-[var(--color-text)]">Campaign Reports</h2>
           <a 
-            href={`/api/reports/export${sessionId ? `?sessionId=${sessionId}` : ''}`} 
+            href={`/api/v1/reports/export?format=csv${sessionId ? `&sessionId=${sessionId}` : ''}`} 
             target="_blank" 
             download
             className="inline-flex items-center justify-center font-medium rounded-md text-xs px-3 py-1.5 gap-1.5 border border-[var(--color-border)] hover:bg-[var(--color-bg)]"

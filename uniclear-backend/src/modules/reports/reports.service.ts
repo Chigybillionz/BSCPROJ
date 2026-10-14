@@ -118,6 +118,7 @@ export class ReportsService {
       include: {
         student: { include: { faculty: true, department: true } },
         session: true,
+        campaign: true,
         stageApprovals: { include: { stage: true }, orderBy: { decidedAt: 'asc' } },
       },
       orderBy: { createdAt: 'desc' },

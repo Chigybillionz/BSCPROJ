@@ -115,6 +115,18 @@ export default function CertificatePage() {
         >
           <Download className="h-4 w-4 mr-2" /> Download PDF Certificate
         </Button>
+
+        {clearance.clearanceNumber && (
+          <div className="pt-1">
+            <Link 
+              href={`/verify?number=${encodeURIComponent(clearance.clearanceNumber)}`}
+              target="_blank"
+              className="inline-flex items-center text-xs text-[var(--color-primary)] hover:underline font-medium"
+            >
+              Verify Certificate Online ↗
+            </Link>
+          </div>
+        )}
       </Card>
 
       <div className="text-center">
