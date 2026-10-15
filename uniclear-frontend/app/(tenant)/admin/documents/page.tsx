@@ -39,8 +39,8 @@ export default function AdminDocumentsPage() {
     queryFn:  () => documentTypesApi.list().then(r => r.data.data),
   })
 
-  const addForm  = useForm<FormData>({ resolver: zodResolver(schema), defaultValues: { isRequired: true, maxFileSizeMB: 5 } })
-  const editForm = useForm<FormData>({ resolver: zodResolver(schema) })
+  const addForm  = useForm({ resolver: zodResolver(schema), defaultValues: { isRequired: true, maxFileSizeMB: 5 } })
+  const editForm = useForm({ resolver: zodResolver(schema) })
 
   const { mutate: create, isPending: creating } = useMutation({
     mutationFn: (d: FormData) => documentTypesApi.create({ ...d, allowedFormats: formats }),

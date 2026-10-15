@@ -3,6 +3,9 @@ import { UniversitiesRepository } from './universities.repository'
 import { ConflictError, NotFoundError } from '@/core/errors/AppError'
 
 jest.mock('./universities.repository')
+jest.mock('@/modules/notifications/channels/email.channel', () => ({
+  sendInviteEmail: jest.fn().mockResolvedValue({}),
+}))
 jest.mock('@/modules/auth/auth.repository', () => ({
   AuthRepository: {
     saveInviteToken: jest.fn().mockResolvedValue({}),

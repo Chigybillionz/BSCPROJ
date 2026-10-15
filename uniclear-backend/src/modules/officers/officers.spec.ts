@@ -4,6 +4,9 @@ import { ConflictError, NotFoundError, TierLimitError } from '@/core/errors/AppE
 import { db } from '@/lib/db'
 
 jest.mock('./officers.repository')
+jest.mock('@/modules/notifications/channels/email.channel', () => ({
+  sendInviteEmail: jest.fn().mockResolvedValue({}),
+}))
 jest.mock('@/lib/db', () => ({
   db: {
     user: { findUnique: jest.fn(), create: jest.fn() },

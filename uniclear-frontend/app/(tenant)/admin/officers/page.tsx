@@ -17,7 +17,7 @@ import { InviteResultDialog } from '@/components/shared/InviteResultDialog'
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton'
 import { EmptyState, ErrorState } from '@/components/shared/EmptyState'
 import {
-  UserCircle, AlertTriangle, Pencil, Trash2, Shield, Plus,
+  UserCircle, AlertTriangle, Pencil, Trash2, Shield,
   Search, CheckCircle2, UserPlus, Layers, X
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
@@ -83,7 +83,7 @@ export default function AdminOfficersPage() {
     queryFn: () => structureApi.departments().then(r => r.data.data),
   })
 
-  const inviteForm = useForm<InviteUserForm>({
+  const inviteForm = useForm({
     resolver: zodResolver(inviteUserSchema),
     defaultValues: {
       firstName: '',

@@ -20,7 +20,7 @@ export class DocumentsRepository {
   }
 
   static async findById(id: string, universityId: string) {
-    return db.document.findFirst({ where: { id, universityId }, include: { documentType: true } })
+    return db.document.findFirst({ where: { id, universityId }, include: { documentType: true, student: true, request: true } })
   }
 
   static async findExisting(requestId: string, documentTypeId: string) {

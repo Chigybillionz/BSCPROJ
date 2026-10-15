@@ -14,8 +14,8 @@ jest.mock('@/modules/documents/document.repository')
 jest.mock('@/modules/students/students.repository')
 jest.mock('@/modules/officers/officers.repository')
 jest.mock('@/modules/stages/stages.repository')
-jest.mock('@/lib/db', () => ({
-  db: {
+jest.mock('@/lib/db', () => {
+  const dbMock: any = {
     student: {
       findUnique: jest.fn(),
     },
@@ -24,9 +24,12 @@ jest.mock('@/lib/db', () => ({
     },
     clearanceRequest: {
       update: jest.fn(),
+      findUnique: jest.fn().mockResolvedValue({ currentStageId: 'stage-1', stageStatus: 'SUBMITTED' }),
     },
-  },
-}))
+    $transaction: jest.fn(async (fn: any) => fn(dbMock)),
+  }
+  return { db: dbMock }
+})
 
 describe('ClearanceService', () => {
   describe('submit', () => {
@@ -145,6 +148,8 @@ describe('ClearanceService', () => {
       ;(ClearanceRepository.findById as jest.Mock).mockResolvedValue({
         id: 'req-1',
         currentStageId: 'stage-1',
+        stageStatus: 'SUBMITTED',
+        student: { id: 'student-1' },
       })
       ;(OfficersRepository.findByUserId as jest.Mock).mockResolvedValue({
         id: 'officer-1',
@@ -162,6 +167,8 @@ describe('ClearanceService', () => {
         studentId: 'student-1',
         campaignId: 'camp-1',
         currentStageId: 'stage-1',
+        stageStatus: 'SUBMITTED',
+        student: { id: 'student-1' },
       })
       ;(OfficersRepository.findByUserId as jest.Mock).mockResolvedValue({
         id: 'officer-1',
@@ -179,8 +186,8 @@ describe('ClearanceService', () => {
         stageId: 'stage-1',
         status: 'APPROVED',
         remarks: 'Documents verified',
-      }))
-      expect(ClearanceRepository.updateStage).toHaveBeenCalledWith('req-1', 'stage-2', 'IN_PROGRESS')
+      }), expect.anything())
+      expect(ClearanceRepository.updateStage).toHaveBeenCalledWith('req-1', 'stage-2', 'IN_PROGRESS', expect.anything())
     })
 
     it('should link digital stamp to approval record when stampId is provided', async () => {
@@ -189,6 +196,8 @@ describe('ClearanceService', () => {
         studentId: 'student-1',
         campaignId: 'camp-1',
         currentStageId: 'stage-1',
+        stageStatus: 'SUBMITTED',
+        student: { id: 'student-1' },
       })
       ;(OfficersRepository.findByUserId as jest.Mock).mockResolvedValue({
         id: 'officer-1',
@@ -206,7 +215,7 @@ describe('ClearanceService', () => {
         stageId: 'stage-1',
         stampId: 'stamp-123',
         status: 'APPROVED',
-      }))
+      }), expect.anything())
     })
   })
 
@@ -216,6 +225,8 @@ describe('ClearanceService', () => {
         id: 'req-1',
         studentId: 'student-1',
         currentStageId: 'stage-1',
+        stageStatus: 'SUBMITTED',
+        student: { id: 'student-1' },
       })
       ;(OfficersRepository.findByUserId as jest.Mock).mockResolvedValue({
         id: 'officer-1',

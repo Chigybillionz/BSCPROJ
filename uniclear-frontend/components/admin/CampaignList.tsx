@@ -169,20 +169,6 @@ export function CampaignList({ initialSessions = [] }: { initialSessions?: any[]
     onError: (e: any) => toast.error(e.response?.data?.message ?? e.message ?? 'Failed to create campaign'),
   })
 
-  const getFacultyColor = (id: string) => {
-    let hash = 0;
-    for (let i = 0; i < id.length; i++) hash = id.charCodeAt(i) + ((hash << 5) - hash);
-    const h = Math.abs(hash) % 360;
-    return `hsl(${h}, 70%, 90%)`;
-  };
-
-  const getFacultyTextColor = (id: string) => {
-    let hash = 0;
-    for (let i = 0; i < id.length; i++) hash = id.charCodeAt(i) + ((hash << 5) - hash);
-    const h = Math.abs(hash) % 360;
-    return `hsl(${h}, 80%, 30%)`;
-  };
-
   const { mutate: toggle } = useMutation({
     mutationFn: (id: string) => campaignsApi.toggle(id),
     onSuccess: () => {
@@ -291,7 +277,7 @@ export function CampaignList({ initialSessions = [] }: { initialSessions?: any[]
               <div className="flex justify-between items-center mb-2">
                 <div>
                   <p className="text-sm font-semibold">Eligibility Scopes</p>
-                  <p className="text-xs text-[var(--color-muted)]">Create logical groups. E.g. "Science 400L" as one group, and "Arts 100L" as another. If empty, everyone is eligible.</p>
+                  <p className="text-xs text-[var(--color-muted)]">Create logical groups. E.g. &quot;Science 400L&quot; as one group, and &quot;Arts 100L&quot; as another. If empty, everyone is eligible.</p>
                 </div>
                 <Button size="sm" variant="secondary" onClick={() => setTargetGroups([...targetGroups, { id: Math.random().toString(), faculties: [], departments: [], levels: [] }])}>
                   <Plus className="h-3 w-3 mr-1" /> Add Scope

@@ -24,7 +24,11 @@ export class AuthRepository {
     })
   }
 
-
+  static async findUserWithPasswordById(id: string) {
+    return db.user.findUnique({
+      where: { id },
+    })
+  }
 
   static async updatePassword(userId: string, passwordHash: string) {
     return db.user.update({

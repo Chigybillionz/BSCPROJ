@@ -244,9 +244,14 @@ export async function generateClearanceSlipPDF(data: {
     }
   }
 
-  // Footer note
-  const footer = 'This slip is computer generated and serves as proof of clearance.'
-  page.drawText(footer, { x: width / 2 - (hFont.widthOfTextAtSize(footer, 10) / 2), y: 30, size: 10, font: hFont, color: rgb(0.5, 0.5, 0.5) })
+  // Footer note and verification reference
+  if (data.clearanceNumber) {
+    const verifyNote = `Verify authenticity at: /verify?number=${data.clearanceNumber}`
+    page.drawText(verifyNote, { x: width / 2 - (hFont.widthOfTextAtSize(verifyNote, 9) / 2), y: 44, size: 9, font: hFont, color: rgb(0.1, 0.3, 0.5) })
+  }
+
+  const footer = 'This slip is computer generated and serves as official proof of clearance.'
+  page.drawText(footer, { x: width / 2 - (hFont.widthOfTextAtSize(footer, 10) / 2), y: 28, size: 10, font: hFont, color: rgb(0.5, 0.5, 0.5) })
 
   const pdfBytes = await pdfDoc.save()
   const blob = new Blob([pdfBytes as unknown as BlobPart], { type: 'application/pdf' })

@@ -1,6 +1,6 @@
 import { db } from '@/lib/db'
 import { StagesRepository } from './stages.repository'
-import { NotFoundError, TierLimitError } from '@/core/errors/AppError'
+import { NotFoundError, TierLimitError, ValidationError } from '@/core/errors/AppError'
 import { TIER_LIMITS } from '@/lib/constants/tiers'
 
 export class StagesService {
@@ -85,6 +85,12 @@ export class StagesService {
 
   static async delete(id: string, universityId: string) {
     await StagesService.getById(id, universityId)
+    const activeRequests = await db.clearanceRequest.count({
+      where: { currentStageId: id, status: 'IN_PROGRESS' }
+    })
+    if (activeRequests > 0) {
+      throw new ValidationError(`Cannot delete stage: ${activeRequests} clearance request(s) are actively at this stage. Deactivate the stage instead.`)
+    }
     return StagesRepository.delete(id)
   }
 }

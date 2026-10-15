@@ -5,7 +5,7 @@ jest.mock('@/lib/db', () => ({
   db: {
     student:          { count: jest.fn() },
     clearanceRequest: { count: jest.fn(), findMany: jest.fn().mockResolvedValue([]), groupBy: jest.fn().mockResolvedValue([]) },
-    clearanceStage:   { findMany: jest.fn() },
+    clearanceStage:   { findMany: jest.fn().mockResolvedValue([]) },
     stageApproval:    { count: jest.fn(), groupBy: jest.fn().mockResolvedValue([]) },
   },
 }))

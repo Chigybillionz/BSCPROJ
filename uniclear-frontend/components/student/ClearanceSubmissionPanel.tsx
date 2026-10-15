@@ -116,10 +116,11 @@ export function ClearanceSubmissionPanel({
           const isDragOver = dragOverId === req.documentTypeId
           const isCurrentUploading = uploadingId === req.documentTypeId
           const isDocRejected = doc?.status === 'REJECTED'
-          const allowedFormats = req.documentType.allowedFormats && req.documentType.allowedFormats.length > 0 
-            ? req.documentType.allowedFormats 
+          const docType = req.documentType as any
+          const allowedFormats: string[] = docType?.allowedFormats && docType.allowedFormats.length > 0 
+            ? docType.allowedFormats 
             : ['pdf', 'jpg', 'png']
-          const maxSizeMB = req.documentType.maxFileSizeMB || 5
+          const maxSizeMB: number = docType?.maxFileSizeMB || 5
 
           return (
             <div 
@@ -141,7 +142,7 @@ export function ClearanceSubmissionPanel({
                       {req.isRequired && <span className="text-red-500 font-bold">*</span>}
                     </span>
                     <p className="text-xs text-[var(--color-muted)]">
-                      Allowed: {allowedFormats.map(f => f.toUpperCase()).join(', ')} • Max {maxSizeMB}MB
+                      Allowed: {allowedFormats.map((f: string) => f.toUpperCase()).join(', ')} • Max {maxSizeMB}MB
                     </p>
                   </div>
                 </div>
@@ -252,7 +253,7 @@ export function ClearanceSubmissionPanel({
                     id={`file-input-${req.id}`}
                     type="file" 
                     className="hidden" 
-                    accept={allowedFormats.map(f => `.${f}`).join(',')}
+                    accept={allowedFormats.map((f: string) => `.${f}`).join(',')}
                     onChange={(e) => handleFileChange(e, req.documentTypeId)}
                     disabled={isCurrentUploading}
                     data-testid={`file-input-${req.documentTypeId}`}

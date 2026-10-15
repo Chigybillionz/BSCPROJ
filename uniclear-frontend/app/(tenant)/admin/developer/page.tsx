@@ -16,20 +16,12 @@ export default function DeveloperSettingsPage() {
   const { user } = useAuthStore()
   const [showKey, setShowKey] = useState(false)
 
-  // Only allow Super Admins or Admins
-  if (user?.role !== 'SUPER_ADMIN' && user?.role !== 'ADMIN') {
-    return (
-      <div className="flex flex-col items-center justify-center h-96 text-center">
-        <ShieldAlert className="h-12 w-12 text-red-500 mb-4" />
-        <h2 className="text-xl font-bold">Access Denied</h2>
-        <p className="text-[var(--color-muted)]">You do not have permission to view Developer Settings.</p>
-      </div>
-    )
-  }
+  const hasAccess = user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN'
 
-  const { data, isLoading } = useQuery({
+  const { data } = useQuery({
     queryKey: ['developer', 'api-key'],
-    queryFn: () => universitiesApi.getApiKey().then(res => res.data.data)
+    queryFn: () => universitiesApi.getApiKey().then(res => res.data.data),
+    enabled: hasAccess,
   })
 
   const { mutate: generateKey, isPending } = useMutation({
@@ -43,6 +35,17 @@ export default function DeveloperSettingsPage() {
       toast.error(err.response?.data?.message || 'Failed to generate key')
     }
   })
+
+  // Only allow Super Admins or Admins
+  if (!hasAccess) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 text-center">
+        <ShieldAlert className="h-12 w-12 text-red-500 mb-4" />
+        <h2 className="text-xl font-bold">Access Denied</h2>
+        <p className="text-[var(--color-muted)]">You do not have permission to view Developer Settings.</p>
+      </div>
+    )
+  }
 
   const handleCopy = () => {
     if (data?.apiKey) {

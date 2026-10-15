@@ -1,7 +1,7 @@
 import { serverFetch } from '@/lib/api/server'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card } from '@/components/ui/card'
-import { Users, CheckCircle, Clock, AlertTriangle, Layers } from 'lucide-react'
+import { Users, CheckCircle, Clock } from 'lucide-react'
 import { DashboardSessionFilter } from '@/components/admin/DashboardSessionFilter'
 import Link from 'next/link'
 
@@ -20,15 +20,6 @@ async function getSummary(sessionId?: string) {
     if (err instanceof Error && err.message === 'NEXT_REDIRECT') throw err
     console.error('Dashboard summary fetch error:', err)
     return { totalStudents: 0, totalClearances: 0, completed: 0, inProgress: 0, completionRate: '0', avgProcessingDays: 0, departmentRates: [] }
-  }
-}
-
-async function getStageBreakdown(campaignId?: string) {
-  try {
-    return await serverFetch<{ stage: { name: string }; pending: number; approved: number; rejected: number }[]>(`/reports/by-stage${campaignId ? `?campaignId=${campaignId}` : ''}`)
-  } catch (err) {
-    if (err instanceof Error && err.message === 'NEXT_REDIRECT') throw err
-    return []
   }
 }
 
@@ -53,12 +44,13 @@ async function getSessions() {
   }
 }
 
-export default async function AdminDashboard({ searchParams }: { searchParams: { sessionId?: string } }) {
+export default async function AdminDashboard({ searchParams }: { searchParams: Promise<{ sessionId?: string }> }) {
+  const resolvedParams = await searchParams
   const sessions = await getSessions()
   const activeSessionId = sessions.find((s: any) => s.isActive)?.id
   
   // If no sessionId in URL, default to active session. Use 'all' if user explicitly wants global.
-  let sessionId = searchParams.sessionId
+  let sessionId = resolvedParams?.sessionId
   if (sessionId === undefined && activeSessionId) {
     sessionId = activeSessionId
   } else if (sessionId === 'all') {
@@ -103,7 +95,7 @@ export default async function AdminDashboard({ searchParams }: { searchParams: {
             <h2 className="text-sm font-semibold text-[var(--color-text)]">Active Campaigns</h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-            {campaigns.map(campaign => (
+            {campaigns.map((campaign: any) => (
               <Link key={campaign.id} href={`/admin/campaigns/${campaign.id}`}>
                 <div className="border border-[var(--color-border)] hover:border-[var(--color-primary)] transition-colors rounded-lg p-3 bg-[var(--color-bg-secondary)] cursor-pointer group">
                   <div className="flex justify-between items-start mb-2">

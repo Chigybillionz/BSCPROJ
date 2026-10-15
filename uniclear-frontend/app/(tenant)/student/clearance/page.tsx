@@ -12,8 +12,7 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton'
 import { CalendarDays, ArrowRight, FolderKanban } from 'lucide-react'
-import { ErrorState, EmptyState } from '@/components/shared/EmptyState'
-import { formatDate } from '@/lib/utils/format'
+import { EmptyState } from '@/components/shared/EmptyState'
 import { ROUTES } from '@/lib/constants'
 
 export default function StudentClearancePage() {

@@ -91,10 +91,22 @@ export interface ClearanceCampaign {
 export interface ClearanceStage {
   id: string
   name: string
+  description?: string | null
+  scope?: 'UNIVERSITY' | 'FACULTY' | 'DEPARTMENT'
   campaignId: string
   orderIndex: number
   isActive: boolean
-  documentRequirements: { id: string; documentTypeId: string; isRequired: boolean; documentType: { id: string; name: string } }[]
+  documentRequirements: {
+    id: string
+    documentTypeId: string
+    isRequired: boolean
+    documentType: {
+      id: string
+      name: string
+      allowedFormats?: string[]
+      maxFileSizeMB?: number
+    }
+  }[]
   officerAssignments?: {
     id: string
     officerId: string
@@ -125,7 +137,20 @@ export interface ClearanceRequest {
   status: ClearanceStatus
   stageStatus: 'PENDING' | 'SUBMITTED' | 'REJECTED'
   currentStageId: string | null
-  currentStage?: { name: string; documentRequirements?: { id: string; documentTypeId: string; isRequired: boolean; documentType: { id: string; name: string } }[] } | null
+  currentStage?: {
+    name: string
+    documentRequirements?: {
+      id: string
+      documentTypeId: string
+      isRequired: boolean
+      documentType: {
+        id: string
+        name: string
+        allowedFormats?: string[]
+        maxFileSizeMB?: number
+      }
+    }[]
+  } | null
   student?: { firstName: string; lastName: string; matricNo: string | null; jambRegNo: string; department?: { name: string } | null; faculty?: { name: string } | null } | null
   completedAt?: string | null
   clearanceNumber: string | null
@@ -158,6 +183,7 @@ export interface Document {
   fileSizeMB: number
   mimeType: string
   status: ClearanceStatus
+  rejectionReason?: string | null
   uploadedAt: string
 }
 

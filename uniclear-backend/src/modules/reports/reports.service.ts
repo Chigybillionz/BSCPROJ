@@ -13,10 +13,10 @@ export class ReportsService {
       db.clearanceRequest.count({ where: { ...clearanceWhere, status: 'IN_PROGRESS' } }),
     ])
 
-    const completedRequests = await db.clearanceRequest.findMany({
+    const completedRequests = (await db.clearanceRequest.findMany({
       where: { ...clearanceWhere, status: 'COMPLETED', completedAt: { not: null } },
       select: { createdAt: true, completedAt: true }
-    })
+    })) || []
     
     let totalMs = 0
     completedRequests.forEach(req => {
@@ -25,10 +25,10 @@ export class ReportsService {
     const avgMs = completedRequests.length ? totalMs / completedRequests.length : 0
     const avgDays = (avgMs / (1000 * 60 * 60 * 24)).toFixed(1)
 
-    const deptClearances = await db.clearanceRequest.findMany({
+    const deptClearances = (await db.clearanceRequest.findMany({
       where: clearanceWhere,
       select: { status: true, student: { select: { department: { select: { id: true, name: true } } } } }
-    })
+    })) || []
 
     const deptStats: Record<string, { name: string, total: number, completed: number }> = {}
     deptClearances.forEach(req => {
@@ -76,7 +76,7 @@ export class ReportsService {
 
     const approvalWhere: any = { universityId }
     if (campaignId) approvalWhere.stage = { campaignId }
-    if (sessionId) approvalWhere.clearanceRequest = { sessionId }
+    if (sessionId) approvalWhere.request = { sessionId }
 
     // Single query per metric instead of 3 per stage (eliminates N+1)
     const [pendingCounts, approvedCounts, rejectedCounts] = await Promise.all([
@@ -118,6 +118,7 @@ export class ReportsService {
       include: {
         student: { include: { faculty: true, department: true } },
         session: true,
+        campaign: true,
         stageApprovals: { include: { stage: true }, orderBy: { decidedAt: 'asc' } },
       },
       orderBy: { createdAt: 'desc' },

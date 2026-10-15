@@ -94,30 +94,23 @@ export class ClearanceController {
 
   static async getHistory(req: Request, res: Response, next: NextFunction) {
     try {
-      const history = await ClearanceService.getHistory(param(req.params.requestId), req.universityId!)
+      const history = await ClearanceService.getHistory(param(req.params.requestId), req.universityId!, req.user?.sub, req.user?.role)
       return ApiResponse.success(res, history)
     } catch (err) { next(err) }
   }
 
   static async getCertificate(req: Request, res: Response, next: NextFunction) {
     try {
-      if (req.query.format === 'pdf' || req.query.download === 'true') {
-        const { pdfBytes, fileName } = await ClearanceService.generateCertificatePdf(param(req.params.requestId), req.universityId!)
-        res.setHeader('Content-Type', 'application/pdf')
-        res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`)
-        return res.send(Buffer.from(pdfBytes))
-      }
-      const clearance = await ClearanceService.getCertificate(param(req.params.requestId), req.universityId!)
+      const clearance = await ClearanceService.getCertificate(param(req.params.requestId), req.universityId!, req.user?.sub, req.user?.role)
       return ApiResponse.success(res, clearance)
     } catch (err) { next(err) }
   }
 
-  static async downloadCertificatePdf(req: Request, res: Response, next: NextFunction) {
+  static async verify(req: Request, res: Response, next: NextFunction) {
     try {
-      const { pdfBytes, fileName } = await ClearanceService.generateCertificatePdf(param(req.params.requestId), req.universityId!)
-      res.setHeader('Content-Type', 'application/pdf')
-      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`)
-      return res.send(Buffer.from(pdfBytes))
+      const clearanceNumber = param(req.params.clearanceNumber)
+      const data = await ClearanceService.verify(clearanceNumber)
+      return ApiResponse.success(res, data, 'Clearance record verified successfully')
     } catch (err) { next(err) }
   }
 }

@@ -111,8 +111,8 @@ export class ClearanceRepository {
     return db.clearanceRequest.create({ data })
   }
 
-  static async updateStage(id: string, currentStageId: string | null, status: ClearanceStatus) {
-    return db.clearanceRequest.update({ 
+  static async updateStage(id: string, currentStageId: string | null, status: ClearanceStatus, client: any = db) {
+    return client.clearanceRequest.update({ 
       where: { id }, 
       data: { currentStageId, status, stageStatus: 'PENDING', completedAt: status === 'COMPLETED' ? new Date() : undefined } 
     })
@@ -184,8 +184,8 @@ export class ClearanceRepository {
     return { data, total }
   }
 
-  static async createStageApproval(data: { universityId: string; requestId: string; stageId: string; officerId: string; stampId?: string; status: StageStatus; remarks?: string; attachmentUrl?: string; attachmentKey?: string; ipAddress?: string }) {
-    return db.stageApproval.create({ data })
+  static async createStageApproval(data: { universityId: string; requestId: string; stageId: string; officerId: string; stampId?: string; status: StageStatus; remarks?: string; attachmentUrl?: string; attachmentKey?: string; ipAddress?: string }, client: any = db) {
+    return client.stageApproval.create({ data })
   }
 
   static async getHistory(requestId: string, universityId: string) {

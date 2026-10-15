@@ -3,10 +3,10 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { Card } from '@/components/ui/card'
 import { DashboardSessionFilter } from '@/components/admin/DashboardSessionFilter'
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
 import { Download } from 'lucide-react'
 
-export default async function AdminReportsPage({ searchParams }: { searchParams: { sessionId?: string } }) {
+export default async function AdminReportsPage({ searchParams }: { searchParams: Promise<{ sessionId?: string }> }) {
+  const resolvedParams = await searchParams
   let sessions: any[] = []
   try {
     sessions = await serverFetch<any>('/sessions').then(res => Array.isArray(res) ? res : res.data || [])
@@ -17,7 +17,7 @@ export default async function AdminReportsPage({ searchParams }: { searchParams:
   
   const activeSessionId = sessions.find((s: any) => s.isActive)?.id
 
-  let sessionId = searchParams.sessionId
+  let sessionId = resolvedParams?.sessionId
   if (sessionId === undefined && activeSessionId) {
     sessionId = activeSessionId
   } else if (sessionId === 'all') {
@@ -67,7 +67,7 @@ export default async function AdminReportsPage({ searchParams }: { searchParams:
         <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
           <h2 className="text-sm font-semibold text-[var(--color-text)]">Campaign Reports</h2>
           <a 
-            href={`/api/reports/export${sessionId ? `?sessionId=${sessionId}` : ''}`} 
+            href={`/api/v1/reports/export?format=csv${sessionId ? `&sessionId=${sessionId}` : ''}`} 
             target="_blank" 
             download
             className="inline-flex items-center justify-center font-medium rounded-md text-xs px-3 py-1.5 gap-1.5 border border-[var(--color-border)] hover:bg-[var(--color-bg)]"

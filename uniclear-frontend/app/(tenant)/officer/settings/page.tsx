@@ -127,8 +127,9 @@ export default function OfficerSettingsPage() {
   }
 
   const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    if (!isDrawing || !canvasRef.current) return
-    const ctx = canvasRef.current.getContext('2d')
+    const canvas = canvasRef.current
+    if (!isDrawing || !canvas) return
+    const ctx = canvas.getContext('2d')
     if (!ctx) return
 
     let x, y

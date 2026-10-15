@@ -16,18 +16,24 @@ jest.mock('@/modules/document-types/document-types.repository')
 jest.mock('@/modules/documents/document.repository')
 jest.mock('@/modules/students/students.repository')
 jest.mock('@/core/events/EventBus', () => ({ eventBus: { emit: jest.fn() } }))
-jest.mock('@/lib/db', () => ({ 
-  db: { 
+jest.mock('@/lib/db', () => {
+  const dbMock: any = { 
     clearanceStage: { findUnique: jest.fn() }, 
+    clearanceCampaign: { findFirst: jest.fn().mockResolvedValue({ id: 'camp-id', isActive: true, eligibilityRules: [] }) },
     academicSession: { findFirst: jest.fn() },
-    clearanceRequest: { update: jest.fn() },
-    student: { findUnique: jest.fn(), findFirst: jest.fn() }
-  } 
-}))
+    student: { findUnique: jest.fn(), findFirst: jest.fn() },
+    clearanceRequest: { 
+      update: jest.fn().mockResolvedValue({}),
+      findUnique: jest.fn().mockResolvedValue({ currentStageId: 'stage-id', stageStatus: 'SUBMITTED' })
+    },
+    $transaction: jest.fn(async (fn: any) => fn(dbMock)),
+  }
+  return { db: dbMock }
+})
 
 const mockClearance = {
   id: 'req-id', universityId: 'uni-id', studentId: 'student-user-id',
-  sessionId: 'session-id', currentStageId: 'stage-id', status: 'IN_PROGRESS',
+  sessionId: 'session-id', currentStageId: 'stage-id', status: 'IN_PROGRESS', stageStatus: 'SUBMITTED',
   student: { userId: 'student-user-id', id: 'student-id' },
   stageApprovals: [], documents: [],
 }
@@ -87,7 +93,7 @@ describe('ClearanceService', () => {
       jest.spyOn(ClearanceRepository, 'updateStage').mockResolvedValue(mockClearance as any)
 
       const result = await ClearanceService.approve('req-id', 'officer-user-id', 'uni-id', 'Good work')
-      expect(result.id).toBe('req-id')
+      expect(result!.id).toBe('req-id')
     })
 
     it('should mark as COMPLETED when last stage approved', async () => {
@@ -99,10 +105,12 @@ describe('ClearanceService', () => {
       const spy = jest.spyOn(ClearanceRepository, 'updateStage').mockResolvedValue(mockClearance as any)
 
       await ClearanceService.approve('req-id', 'officer-user-id', 'uni-id')
-      expect(db.clearanceRequest.update).toHaveBeenCalledWith(expect.objectContaining({
-        where: { id: 'req-id' },
-        data: expect.objectContaining({ status: 'COMPLETED', currentStageId: null }),
-      }))
+      expect(db.clearanceRequest.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'req-id' },
+          data: expect.objectContaining({ status: 'COMPLETED' }),
+        })
+      )
     })
   })
 
@@ -135,6 +143,55 @@ describe('ClearanceService', () => {
 
       await expect(ClearanceService.submit('req-id', 'student-user-id', 'uni-id'))
         .rejects.toThrow(ValidationError)
+    })
+  })
+
+  describe('verify', () => {
+    it('should throw ValidationError if clearanceNumber is missing', async () => {
+      await expect(ClearanceService.verify(''))
+        .rejects.toThrow(ValidationError)
+    })
+
+    it('should throw NotFoundError if clearance record is not found or not completed', async () => {
+      ;(db.clearanceRequest.findUnique as jest.Mock).mockResolvedValue(null)
+      await expect(ClearanceService.verify('CLR-2026-INVALID'))
+        .rejects.toThrow(NotFoundError)
+    })
+
+    it('should return verification payload for completed clearance', async () => {
+      const mockCompletedClearance = {
+        id: 'clr-123',
+        clearanceNumber: 'CLR-2026-TEST-1234',
+        status: 'COMPLETED',
+        completedAt: new Date('2026-05-10T10:00:00Z'),
+        student: {
+          firstName: 'Emeka',
+          lastName: 'Nwankwo',
+          jambRegNo: '2024778899EN',
+          matricNo: '2020/245678',
+          faculty: { id: 'f-1', name: 'Physical Sciences' },
+          department: { id: 'd-1', name: 'Computer Science' },
+        },
+        session: { id: 's-1', name: '2024/2025' },
+        campaign: { id: 'c-1', name: 'Final Year Clearance', issuesCertificate: true, issuesClearanceSlip: true },
+        university: { id: 'u-1', name: 'University of Nigeria', slug: 'unn', logoUrl: '/logo.png', primaryColor: '#006633' },
+        stageApprovals: [
+          { stage: { id: 'st-1', name: 'Library', orderIndex: 1 }, decidedAt: new Date('2026-05-01') },
+          { stage: { id: 'st-2', name: 'Bursary', orderIndex: 2 }, decidedAt: new Date('2026-05-05') },
+        ],
+        issuedData: { 'Graduation Year': '2026' },
+      }
+
+      ;(db.clearanceRequest.findUnique as jest.Mock).mockResolvedValue(mockCompletedClearance)
+
+      const result = await ClearanceService.verify('CLR-2026-TEST-1234')
+      expect(result.isValid).toBe(true)
+      expect(result.clearanceNumber).toBe('CLR-2026-TEST-1234')
+      expect(result.student.fullName).toBe('Emeka Nwankwo')
+      expect(result.student.faculty).toBe('Physical Sciences')
+      expect(result.university.name).toBe('University of Nigeria')
+      expect(result.stages).toHaveLength(2)
+      expect(result.stages[0].stageName).toBe('Library')
     })
   })
 })

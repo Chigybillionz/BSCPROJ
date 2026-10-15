@@ -4,7 +4,6 @@ import { Card } from '@/components/ui/card'
 import { Users, CheckCircle, Clock, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { ROUTES } from '@/lib/constants'
 
 async function getSummary(campaignId: string) {
   try {
@@ -44,8 +43,8 @@ async function getCampaign(campaignId: string) {
   }
 }
 
-export default async function CampaignDetailsPage({ params }: { params: { id: string } }) {
-  const campaignId = params.id
+export default async function CampaignDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id: campaignId } = await params
   const [summary, stages, campaign] = await Promise.all([
     getSummary(campaignId),
     getStageBreakdown(campaignId),

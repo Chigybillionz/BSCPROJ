@@ -36,15 +36,14 @@ async function doFetch(url: string, method: string, headers: Headers, body: any,
   return fetch(url, {
     method,
     headers: reqHeaders,
-    body,
-    // @ts-expect-error
+    // @ts-expect-error Node.js fetch requires duplex: 'half' for streaming request bodies
     duplex: 'half',
   })
 }
 
 async function proxy(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
   const cookieStore = await cookies()
-  let token = cookieStore.get('access_token')?.value
+  const token = cookieStore.get('access_token')?.value
   const tenantSlug = cookieStore.get('tenant_slug')?.value
 
   const { path } = await params
@@ -90,13 +89,16 @@ async function proxy(req: NextRequest, { params }: { params: Promise<{ path: str
   }
 
   const resContentType = res.headers.get('content-type') ?? ''
-  if (resContentType.includes('application/pdf') || resContentType.includes('octet-stream')) {
-    const arrayBuffer = await res.arrayBuffer()
-    const responseHeaders = new Headers()
-    responseHeaders.set('Content-Type', resContentType)
-    const disposition = res.headers.get('content-disposition')
-    if (disposition) responseHeaders.set('Content-Disposition', disposition)
-    return new NextResponse(arrayBuffer, { status: res.status, headers: responseHeaders })
+  if (resContentType.includes('text/csv')) {
+    const csvText = await res.text()
+    const contentDisposition = res.headers.get('content-disposition') || 'attachment; filename="clearance-report.csv"'
+    return new NextResponse(csvText, {
+      status: res.status,
+      headers: {
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': contentDisposition,
+      },
+    })
   }
 
   const resBody = resContentType.includes('application/json') ? await res.json() : await res.text()

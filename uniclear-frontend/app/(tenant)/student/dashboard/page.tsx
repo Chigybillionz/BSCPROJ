@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
+import { useTenantStore } from '@/store/useTenantStore'
 import { useClearanceStatus } from '@/features/clearance/hooks/useClearance'
 import { useStages } from '@/features/stages/hooks/useStages'
 import { ClearanceStepper } from '@/components/student/ClearanceStepper'
@@ -21,7 +22,6 @@ import {
   CheckCircle2, 
   Clock, 
   Lock, 
-  AlertCircle, 
   GraduationCap, 
   ShieldCheck, 
   Calendar,
@@ -32,6 +32,7 @@ import {
 import Link from 'next/link'
 
 export default function StudentDashboard() {
+  const tenant = useTenantStore()
   const { data: clearances, isLoading: loadingClearance } = useClearanceStatus()
   const { data: stages, isLoading: loadingStages } = useStages()
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
@@ -377,7 +378,7 @@ export default function StudentDashboard() {
                           generateClearanceSlipPDF({
                             studentName: `${clearance.student?.firstName} ${clearance.student?.lastName}`,
                             jambRegNo: clearance.student?.jambRegNo || 'N/A',
-                            universityName: clearance.universityId || 'University of Nigeria, Nsukka',
+                            universityName: tenant.name || 'University of Nigeria, Nsukka',
                             campaignName: clearance.campaign?.name || 'Clearance',
                             completedAt: clearance.completedAt ? new Date(clearance.completedAt).toLocaleDateString() : new Date().toLocaleDateString(),
                             clearanceNumber: clearance.clearanceNumber,
