@@ -118,13 +118,13 @@ Below is the detailed breakdown of every feature required to finish the system a
   - [x] Save the alert to the `Notification` database table.
 - **Acceptance Criteria:** A student receives an email and an in-app alert stating "Your Library Clearance was approved!"
 
-**Task 4.2: Printable Final Clearance Report (PDF)**
+**Task 4.2: Printable Final Clearance Report (PDF)** — ✅ **DONE**
 - **Description:** Once a student clears all stages, generate an official digitally signed PDF certificate.
 - **Frontend Tasks:**
-  - Show a "Download Clearance Certificate" button on the student dashboard if their status is `COMPLETED`.
+  - [x] Show a "Download Clearance Certificate" button on the student dashboard if their status is `COMPLETED`.
 - **Backend Tasks:**
-  - Use `pdf-lib` to dynamically generate a PDF.
-  - Inject the student's name, passport photo, Reg Number, and all the digital stamps from the officers who approved them.
+  - [x] Use `pdf-lib` to dynamically generate a PDF.
+  - [x] Inject the student's name, passport photo, Reg Number, and all the digital stamps from the officers who approved them.
 - **Acceptance Criteria:** Student can download a visually appealing, official PDF proving they have been fully cleared.
 
 ---

@@ -64,6 +64,22 @@ export async function sendInviteEmail(payload: InviteEmailPayload): Promise<void
   }
 }
 
+function buildInviteHtml(payload: InviteEmailPayload): string {
+  return `
+    <div style="font-family:sans-serif;max-width:600px;margin:auto;padding:24px;border:1px solid #e2e8f0;border-radius:8px">
+      <h2 style="color:#0f172a">Welcome to UniClear</h2>
+      <p style="color:#334155;font-size:14px">You have been invited to join UniClear as <strong>${payload.role}</strong>.</p>
+      ${payload.tempPassword ? `<p style="color:#334155;font-size:14px">Temporary password: <code>${payload.tempPassword}</code></p>` : ''}
+      <div style="margin:24px 0">
+        <a href="${payload.inviteLink}" style="background:#1B4F72;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:600">
+          Accept Invitation
+        </a>
+      </div>
+      <p style="color:#64748b;font-size:12px">Or copy this link: ${payload.inviteLink}</p>
+    </div>
+  `
+}
+
 export interface ClearanceStatusEmailPayload {
   to: string
   studentName: string

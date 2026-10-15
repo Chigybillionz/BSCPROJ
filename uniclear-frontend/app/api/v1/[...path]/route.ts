@@ -90,6 +90,15 @@ async function proxy(req: NextRequest, { params }: { params: Promise<{ path: str
   }
 
   const resContentType = res.headers.get('content-type') ?? ''
+  if (resContentType.includes('application/pdf') || resContentType.includes('octet-stream')) {
+    const arrayBuffer = await res.arrayBuffer()
+    const responseHeaders = new Headers()
+    responseHeaders.set('Content-Type', resContentType)
+    const disposition = res.headers.get('content-disposition')
+    if (disposition) responseHeaders.set('Content-Disposition', disposition)
+    return new NextResponse(arrayBuffer, { status: res.status, headers: responseHeaders })
+  }
+
   const resBody = resContentType.includes('application/json') ? await res.json() : await res.text()
   return NextResponse.json(resBody, { status: res.status })
 }

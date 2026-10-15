@@ -1,4 +1,5 @@
 import { ClearanceRepository } from './clearance.repository'
+import { CertificateGenerator } from './certificate.generator'
 import { StagesRepository } from '@/modules/stages/stages.repository'
 import { DocumentTypesRepository } from '@/modules/document-types/document-types.repository'
 import { DocumentsRepository } from '@/modules/documents/document.repository'
@@ -90,7 +91,7 @@ export class ClearanceService {
 
     if (!nextStage) {
       // Validate issuedData
-      const requiredFields = (clearance.campaign as any).issuedDataFields || []
+      const requiredFields = (clearance.campaign as any)?.issuedDataFields || []
       const providedFields = issuedData ? Object.keys(issuedData) : []
       const missing = requiredFields.filter((f: string) => !providedFields.includes(f) || !issuedData[f])
       if (missing.length > 0) {
@@ -165,9 +166,17 @@ export class ClearanceService {
   }
 
   static async getCertificate(requestId: string, universityId: string) {
-    const clearance = await ClearanceRepository.findById(requestId, universityId)
+    const clearance = await ClearanceRepository.findForCertificate(requestId, universityId)
     if (!clearance) throw new NotFoundError('Clearance request not found')
     if (clearance.status !== 'COMPLETED') throw new ValidationError('Clearance not yet completed')
     return clearance
+  }
+
+  static async generateCertificatePdf(requestId: string, universityId: string) {
+    const clearance = await this.getCertificate(requestId, universityId)
+    const pdfBytes = await CertificateGenerator.generate(clearance as any)
+    const safeRef = clearance.student.jambRegNo || clearance.student.matricNo || 'student'
+    const fileName = `Clearance_Certificate_${safeRef.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`
+    return { pdfBytes, fileName }
   }
 }

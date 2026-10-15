@@ -40,4 +40,20 @@ export const clearanceApi = {
 
   getCertificate: (requestId: string) =>
     apiClient.get(`/clearance/${requestId}/certificate`),
+
+  downloadCertificatePdf: async (requestId: string, filename = 'Clearance_Certificate.pdf') => {
+    const res = await apiClient.get(`/clearance/${requestId}/certificate/pdf`, {
+      responseType: 'blob',
+    })
+    const blob = new Blob([res.data], { type: 'application/pdf' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    setTimeout(() => window.URL.revokeObjectURL(url), 1000)
+    return true
+  },
 }
