@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
+import { BrandLogo } from '@/components/shared/BrandLogo'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -44,14 +44,13 @@ export default function LoginPage() {
         {/* overlay darkens the image when present */}
         <div className="absolute inset-0 login-bg-overlay" />
         <div className="max-w-sm text-center relative z-10">
-          {logoUrl
-            ? <Image src={logoUrl} alt={name ?? ''} width={80} height={80} className="rounded-xl mx-auto mb-6 object-cover" />
-            : (
-              <div className="h-20 w-20 rounded-xl bg-white/20 mx-auto mb-6 flex items-center justify-center text-3xl font-bold">
-                {name?.[0] ?? 'U'}
-              </div>
-            )
-          }
+          <BrandLogo
+            logoUrl={logoUrl}
+            alt={name || 'UniClear'}
+            size={80}
+            priority
+            className="h-20 w-20 rounded-2xl mx-auto mb-6 ring-1 ring-white/25 shadow-lg"
+          />
           <h1 className="text-3xl font-bold mb-3">{name || 'UniClear'}</h1>
           <p className="text-white/80 text-base leading-relaxed">
             University Clearance Management Portal.<br />
@@ -64,12 +63,12 @@ export default function LoginPage() {
       <div className="flex-1 flex items-center justify-center p-6 bg-[var(--color-bg)]">
         <div className="w-full max-w-sm">
           <div className="lg:hidden text-center mb-8">
-            <div
-              className="h-14 w-14 rounded-xl mx-auto mb-3 flex items-center justify-center text-white text-2xl font-bold"
-              style={{ backgroundColor: primaryColor }}
-            >
-              {name?.[0] ?? 'U'}
-            </div>
+            <BrandLogo
+              logoUrl={logoUrl}
+              alt={name || 'UniClear'}
+              size={64}
+              className="h-16 w-16 rounded-2xl mx-auto mb-3 ring-1 ring-black/5 shadow-sm"
+            />
             <h2 className="text-lg font-semibold text-[var(--color-text)]">{name || 'UniClear'}</h2>
           </div>
 

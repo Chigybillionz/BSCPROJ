@@ -11,8 +11,8 @@ import { authApi } from '@/lib/api/auth.api'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useTenantStore } from '@/store/useTenantStore'
-import Image from 'next/image'
 import { MailCheck } from 'lucide-react'
+import { BrandLogo } from '@/components/shared/BrandLogo'
 
 const schema = z.object({
   email: z.string().email('Enter a valid email'),
@@ -41,10 +41,13 @@ export default function ForgotPasswordPage() {
         style={{ background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})` }}
       >
         <div className="max-w-sm text-center">
-          {logoUrl
-            ? <Image src={logoUrl} alt={name ?? ''} width={80} height={80} className="rounded-xl mx-auto mb-6 object-cover" />
-            : <div className="h-20 w-20 rounded-xl bg-white/20 mx-auto mb-6 flex items-center justify-center text-3xl font-bold">{name?.[0] ?? 'U'}</div>
-          }
+          <BrandLogo
+            logoUrl={logoUrl}
+            alt={name || 'UniClear'}
+            size={80}
+            priority
+            className="h-20 w-20 rounded-2xl mx-auto mb-6 ring-1 ring-white/25 shadow-lg"
+          />
           <h1 className="text-3xl font-bold mb-3">{name || 'UniClear'}</h1>
           <p className="text-white/80 text-base leading-relaxed">
             University Clearance Management Portal.<br />
@@ -56,6 +59,17 @@ export default function ForgotPasswordPage() {
       {/* Right form */}
       <div className="flex-1 flex items-center justify-center p-6 bg-[var(--color-bg)]">
         <div className="w-full max-w-sm">
+          {/* Mobile branding header */}
+          <div className="lg:hidden text-center mb-8">
+            <BrandLogo
+              logoUrl={logoUrl}
+              alt={name || 'UniClear'}
+              size={64}
+              className="h-16 w-16 rounded-2xl mx-auto mb-3 ring-1 ring-black/5 shadow-sm"
+            />
+            <h2 className="text-lg font-semibold text-[var(--color-text)]">{name || 'UniClear'}</h2>
+          </div>
+
           {sent ? (
             <div className="text-center space-y-4">
               <MailCheck className="h-12 w-12 text-[var(--color-approved)] mx-auto" />
