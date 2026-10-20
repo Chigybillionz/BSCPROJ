@@ -1,8 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -12,10 +11,11 @@ import { Select } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { useRegister } from '@/features/auth/hooks/useRegister'
 import { useTenantStore } from '@/store/useTenantStore'
+import { BrandLogo } from '@/components/shared/BrandLogo'
 import { structureApi } from '@/lib/api/structure.api'
 import { apiClient } from '@/lib/api/client'
 import { Faculty, Department } from '@/types'
-import { Eye, EyeOff, GraduationCap, School, CheckCircle2 } from 'lucide-react'
+import { GraduationCap, School, CheckCircle2 } from 'lucide-react'
 
 const registerSchema = z.object({
   universitySlug:  z.string().min(1, 'University is required'),
@@ -36,8 +36,6 @@ const registerSchema = z.object({
 type RegisterFormValues = z.infer<typeof registerSchema>
 
 export default function RegisterPage() {
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   // Tenant branding from store / CSS variables
   const tenantName    = useTenantStore(s => s.name)
@@ -147,19 +145,13 @@ export default function RegisterPage() {
         <div className="absolute inset-0 login-bg-image" />
         <div className="absolute inset-0 login-bg-overlay" />
         <div className="max-w-md text-center relative z-10 px-4">
-          {tenantLogo ? (
-            <Image
-              src={tenantLogo}
-              alt={currentUniName}
-              width={88}
-              height={88}
-              className="rounded-2xl mx-auto mb-6 object-cover shadow-lg border-2 border-white/20"
-            />
-          ) : (
-            <div className="h-20 w-20 rounded-2xl bg-white/20 backdrop-blur-md mx-auto mb-6 flex items-center justify-center text-3xl font-bold shadow-lg">
-              <GraduationCap className="h-10 w-10 text-white" />
-            </div>
-          )}
+          <BrandLogo
+            logoUrl={tenantLogo}
+            alt={currentUniName}
+            size={88}
+            priority
+            className="h-[88px] w-[88px] rounded-2xl mx-auto mb-6 ring-1 ring-white/25 shadow-lg"
+          />
           <h1 className="text-3xl font-extrabold tracking-tight mb-3">
             {currentUniName}
           </h1>
@@ -190,12 +182,12 @@ export default function RegisterPage() {
         <div className="w-full max-w-xl py-6">
           {/* Mobile branding header */}
           <div className="lg:hidden text-center mb-6">
-            <div
-              className="h-14 w-14 rounded-xl mx-auto mb-3 flex items-center justify-center text-white text-2xl font-bold shadow-md"
-              style={{ backgroundColor: primaryColor }}
-            >
-              <GraduationCap className="h-7 w-7 text-white" />
-            </div>
+            <BrandLogo
+              logoUrl={tenantLogo}
+              alt={currentUniName}
+              size={64}
+              className="h-16 w-16 rounded-2xl mx-auto mb-3 ring-1 ring-black/5 shadow-sm"
+            />
             <h2 className="text-xl font-bold text-[var(--color-text)]">{currentUniName}</h2>
           </div>
 
@@ -325,41 +317,20 @@ export default function RegisterPage() {
 
             {/* Password & Confirm Password */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="relative">
-                <Input
-                  label="Password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Min 8 characters"
-                  error={errors.password?.message}
-                  {...register('password')}
-                />
-                <button
-                  type="button"
-                  tabIndex={-1}
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-9 text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-
-              <div className="relative">
-                <Input
-                  label="Confirm Password"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  placeholder="Re-enter password"
-                  error={errors.confirmPassword?.message}
-                  {...register('confirmPassword')}
-                />
-                <button
-                  type="button"
-                  tabIndex={-1}
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-9 text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors"
-                >
-                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
+              <Input
+                label="Password"
+                type="password"
+                placeholder="Min 8 characters"
+                error={errors.password?.message}
+                {...register('password')}
+              />
+              <Input
+                label="Confirm Password"
+                type="password"
+                placeholder="Re-enter password"
+                error={errors.confirmPassword?.message}
+                {...register('confirmPassword')}
+              />
             </div>
 
             {/* Submit Button */}

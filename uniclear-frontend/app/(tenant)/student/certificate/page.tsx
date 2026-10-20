@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton'
 import { Lock, PartyPopper, Download } from 'lucide-react'
 import { ErrorState, EmptyState } from '@/components/shared/EmptyState'
+import { BrandLogo } from '@/components/shared/BrandLogo'
 import { formatDate } from '@/lib/utils/format'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { toast } from 'sonner'
@@ -57,12 +58,12 @@ export default function CertificatePage() {
 
       {/* Certificate card */}
       <Card className="border-2 border-[var(--color-primary)] text-center space-y-4 py-8">
-        <div
-          className="h-16 w-16 rounded-xl mx-auto flex items-center justify-center text-white text-2xl font-bold"
-          style={{ backgroundColor: tenant.primaryColor }}
-        >
-          {tenant.name?.[0] ?? 'U'}
-        </div>
+        <BrandLogo
+          logoUrl={tenant.logoUrl}
+          alt={tenant.name || 'UniClear'}
+          size={64}
+          className="h-16 w-16 rounded-xl mx-auto ring-1 ring-black/5"
+        />
 
         <div>
           <p className="text-xs text-[var(--color-muted)] uppercase tracking-wide">University Clearance Certificate</p>

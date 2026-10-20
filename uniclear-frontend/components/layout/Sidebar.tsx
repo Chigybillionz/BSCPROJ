@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Users, UserCircle, Settings, FileText,
@@ -13,6 +12,7 @@ import { useUIStore } from '@/store/useUIStore'
 import { useRole } from '@/hooks/useRole'
 import { useTenant } from '@/hooks/useTenant'
 import { ROUTES } from '@/lib/constants'
+import { BrandLogo } from '@/components/shared/BrandLogo'
 
 interface NavItem { label: string; href: string; icon: LucideIcon }
 
@@ -53,7 +53,7 @@ export function Sidebar() {
   const pathname                      = usePathname()
   const { sidebarOpen, setSidebarOpen } = useUIStore()
   const { role, isOfficer, isPlatformOwner, isStudent } = useRole()
-  const { name, logoUrl, primaryColor } = useTenant()
+  const { name, logoUrl } = useTenant()
 
   // Use pathname as fallback during initial hydration to prevent nav flashing
   let navItems = adminNav
@@ -80,13 +80,12 @@ export function Sidebar() {
       )}
     >
       <div className="flex items-center gap-3 px-5 py-4 border-b border-[var(--color-border)]">
-        {isPlatformOwner ? (
-          <div className="h-8 w-8 rounded flex items-center justify-center text-white text-sm font-bold bg-slate-800">UC</div>
-        ) : logoUrl ? (
-          <Image src={logoUrl} alt={name} width={32} height={32} className="h-8 w-8 rounded object-cover" />
-        ) : (
-          <div className="h-8 w-8 rounded flex items-center justify-center text-white text-sm font-bold" style={{ backgroundColor: primaryColor }}>{name?.[0] || 'U'}</div>
-        )}
+        <BrandLogo
+          logoUrl={isPlatformOwner ? null : logoUrl}
+          alt={isPlatformOwner ? 'UniClear' : (name || 'UniClear')}
+          size={32}
+          className="h-8 w-8 rounded-md ring-1 ring-black/5"
+        />
         <span className="font-semibold text-sm text-[var(--color-text)] truncate">{isPlatformOwner ? 'UniClear Platform' : (name || 'UniClear')}</span>
       </div>
 
