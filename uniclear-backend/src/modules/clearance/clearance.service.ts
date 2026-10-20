@@ -1,5 +1,6 @@
 import crypto from 'crypto'
 import { ClearanceRepository } from './clearance.repository'
+import { CertificateGenerator } from './certificate.generator'
 import { StagesRepository } from '@/modules/stages/stages.repository'
 import { DocumentTypesRepository } from '@/modules/document-types/document-types.repository'
 import { DocumentsRepository } from '@/modules/documents/document.repository'

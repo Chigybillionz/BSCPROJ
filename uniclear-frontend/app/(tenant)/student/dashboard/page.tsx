@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Image from 'next/image'
 import { useTenantStore } from '@/store/useTenantStore'
 import { useClearanceStatus } from '@/features/clearance/hooks/useClearance'
@@ -13,6 +14,8 @@ import { CardSkeleton } from '@/components/shared/LoadingSkeleton'
 import { ROUTES } from '@/lib/constants'
 import { formatDate } from '@/lib/utils/format'
 import { cn } from '@/lib/utils/cn'
+import { clearanceApi } from '@/lib/api/clearance.api'
+import { toast } from 'sonner'
 import { 
   Download, 
   ArrowRight, 
@@ -23,7 +26,8 @@ import {
   ShieldCheck, 
   Calendar,
   FileCheck2,
-  ExternalLink
+  ExternalLink,
+  Sparkles
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -31,11 +35,28 @@ export default function StudentDashboard() {
   const tenant = useTenantStore()
   const { data: clearances, isLoading: loadingClearance } = useClearanceStatus()
   const { data: stages, isLoading: loadingStages } = useStages()
+  const [downloadingId, setDownloadingId] = useState<string | null>(null)
+
   const isLoading = loadingClearance || loadingStages
+
+  const handleDownloadCertificate = async (clearanceId: string, jambRegNo?: string) => {
+    try {
+      setDownloadingId(clearanceId)
+      toast.loading('Generating official clearance certificate...', { id: 'cert-download' })
+      await clearanceApi.downloadCertificatePdf(
+        clearanceId,
+        `Clearance_Certificate_${jambRegNo || 'student'}.pdf`
+      )
+      toast.success('Certificate downloaded successfully!', { id: 'cert-download' })
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to download certificate. Please try again.', { id: 'cert-download' })
+    } finally {
+      setDownloadingId(null)
+    }
+  }
 
   if (isLoading) return <CardSkeleton />
 
-  const activeClearances = clearances?.filter(c => c.status !== 'COMPLETED') ?? []
   const completedClearances = clearances?.filter(c => c.status === 'COMPLETED') ?? []
 
   return (
@@ -45,7 +66,7 @@ export default function StudentDashboard() {
         subtitle="Monitor and manage your departmental clearance stages in real-time" 
       />
 
-      {activeClearances.map(clearance => {
+      {(clearances ?? []).map(clearance => {
         const campaignStages = (stages?.filter(s => s.campaignId === clearance.campaignId) ?? [])
           .sort((a, b) => a.orderIndex - b.orderIndex)
         
@@ -107,7 +128,32 @@ export default function StudentDashboard() {
                     style={{ width: `${progressPercent}%` }}
                   />
                 </div>
-                {activeStage && clearance.status === 'IN_PROGRESS' && (
+                {clearance.status === 'COMPLETED' ? (
+                  <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between bg-emerald-50 border border-emerald-200 rounded-xl p-4 gap-3 shadow-2xs">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                        <Sparkles className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-emerald-950">
+                          Clearance Fully Approved & Verified!
+                        </p>
+                        <p className="text-xs text-emerald-700 mt-0.5">
+                          All departmental stages have been completed and officially signed with digital stamps.
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => handleDownloadCertificate(clearance.id, clearance.student?.jambRegNo)}
+                      disabled={downloadingId === clearance.id}
+                      className="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold shrink-0"
+                    >
+                      <Download className="h-4 w-4 mr-1.5" />
+                      {downloadingId === clearance.id ? 'Generating PDF...' : 'Download Clearance Certificate'}
+                    </Button>
+                  </div>
+                ) : activeStage && clearance.status === 'IN_PROGRESS' ? (
                   <div className="mt-3 flex items-center justify-between bg-blue-50/60 border border-blue-100 rounded-lg p-3 text-xs">
                     <div className="flex items-center gap-2 text-blue-900">
                       <Clock className="h-4 w-4 text-[var(--color-primary)] shrink-0" />
@@ -125,7 +171,7 @@ export default function StudentDashboard() {
                       </Button>
                     </Link>
                   </div>
-                )}
+                ) : null}
               </div>
             </Card>
 
@@ -306,11 +352,22 @@ export default function StudentDashboard() {
                 </div>
                 <div className="flex items-center gap-2">
                   {clearance.campaign?.issuesCertificate !== false && (
-                    <Link href={ROUTES.student.certificate}>
-                      <Button size="sm" variant="secondary">
-                        <Download className="h-3.5 w-3.5 mr-1" /> Certificate
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        size="sm" 
+                        disabled={downloadingId === clearance.id}
+                        onClick={() => handleDownloadCertificate(clearance.id, clearance.student?.jambRegNo)}
+                        className="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold"
+                      >
+                        <Download className="h-3.5 w-3.5 mr-1" />
+                        {downloadingId === clearance.id ? 'Downloading...' : 'Download Clearance Certificate'}
                       </Button>
-                    </Link>
+                      <Link href={ROUTES.student.certificate}>
+                        <Button size="sm" variant="secondary">
+                          View
+                        </Button>
+                      </Link>
+                    </div>
                   )}
                   {clearance.campaign?.issuesClearanceSlip === true && (
                     <Button 

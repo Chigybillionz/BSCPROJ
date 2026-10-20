@@ -11,7 +11,12 @@ jest.mock('@/lib/db', () => ({
 }))
 
 describe('ReportsService', () => {
-  beforeEach(() => jest.clearAllMocks())
+  beforeEach(() => {
+    jest.clearAllMocks()
+    ;(db.clearanceRequest.findMany as jest.Mock).mockResolvedValue([])
+    ;(db.clearanceRequest.groupBy as jest.Mock).mockResolvedValue([])
+    ;(db.stageApproval.groupBy as jest.Mock).mockResolvedValue([])
+  })
 
   describe('summary', () => {
     it('should return correct summary stats', async () => {
@@ -20,6 +25,7 @@ describe('ReportsService', () => {
         .mockResolvedValueOnce(80)   // total
         .mockResolvedValueOnce(50)   // completed
         .mockResolvedValueOnce(30)   // inProgress
+      ;(db.clearanceRequest.findMany as jest.Mock).mockResolvedValue([])
 
       const result = await ReportsService.summary('uni-id')
       expect(result.totalStudents).toBe(100)
@@ -30,6 +36,7 @@ describe('ReportsService', () => {
     it('should return 0 completion rate when no clearances', async () => {
       ;(db.student.count as jest.Mock).mockResolvedValue(50)
       ;(db.clearanceRequest.count as jest.Mock).mockResolvedValue(0)
+      ;(db.clearanceRequest.findMany as jest.Mock).mockResolvedValue([])
 
       const result = await ReportsService.summary('uni-id')
       expect(result.completionRate).toBe('0')
@@ -52,6 +59,8 @@ describe('ReportsService', () => {
       expect(result).toHaveLength(1)
       expect(result[0].stage.name).toBe('Library')
       expect(result[0].pending).toBe(10)
+      expect(result[0].approved).toBe(8)
+      expect(result[0].rejected).toBe(2)
     })
   })
 })

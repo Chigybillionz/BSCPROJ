@@ -246,4 +246,82 @@ describe('ClearanceService', () => {
       expect(ClearanceRepository.updateStageStatus).toHaveBeenCalledWith('req-1', 'REJECTED')
     })
   })
+
+  describe('getCertificate & generateCertificatePdf', () => {
+    const mockCompletedClearance = {
+      id: 'req-comp-1',
+      clearanceNumber: 'CLR-2026-UNN-001',
+      status: 'COMPLETED',
+      completedAt: new Date(),
+      createdAt: new Date(),
+      university: {
+        id: 'univ-1',
+        name: 'University of Nigeria, Nsukka',
+        slug: 'unn',
+        branding: { primaryColor: '#006633' },
+      },
+      campaign: {
+        id: 'camp-1',
+        name: '2023/2024 Final Year Clearance',
+      },
+      session: {
+        id: 'sess-1',
+        name: '2023/2024 Academic Session',
+      },
+      student: {
+        id: 'stud-1',
+        firstName: 'Emeka',
+        lastName: 'Nwosu',
+        jambRegNo: '202400123456AB',
+        matricNo: '2020/241552',
+        faculty: { name: 'Faculty of Physical Sciences' },
+        department: { name: 'Computer Science' },
+      },
+      documents: [],
+      stageApprovals: [
+        {
+          id: 'appr-1',
+          status: 'APPROVED',
+          decidedAt: new Date(),
+          stage: { name: 'Library Clearance', orderIndex: 1 },
+          officerRef: { firstName: 'Dr. Ngozi', lastName: 'Okeke' },
+          stamp: null,
+        },
+      ],
+    }
+
+    it('should throw NotFoundError if clearance record is not found', async () => {
+      ;(ClearanceRepository.findForCertificate as jest.Mock).mockResolvedValue(null)
+
+      await expect(ClearanceService.getCertificate('non-existent', 'univ-1'))
+        .rejects.toThrow(NotFoundError)
+    })
+
+    it('should throw ValidationError if clearance is not COMPLETED', async () => {
+      ;(ClearanceRepository.findForCertificate as jest.Mock).mockResolvedValue({
+        ...mockCompletedClearance,
+        status: 'IN_PROGRESS',
+      })
+
+      await expect(ClearanceService.getCertificate('req-1', 'univ-1'))
+        .rejects.toThrow(ValidationError)
+    })
+
+    it('should return certificate data when clearance is COMPLETED', async () => {
+      ;(ClearanceRepository.findForCertificate as jest.Mock).mockResolvedValue(mockCompletedClearance)
+
+      const cert = await ClearanceService.getCertificate('req-comp-1', 'univ-1')
+      expect(cert.id).toBe('req-comp-1')
+      expect(cert.status).toBe('COMPLETED')
+    })
+
+    it('should generate PDF bytes and formatted filename for completed clearance', async () => {
+      ;(ClearanceRepository.findForCertificate as jest.Mock).mockResolvedValue(mockCompletedClearance)
+
+      const result = await ClearanceService.generateCertificatePdf('req-comp-1', 'univ-1')
+      expect(result.pdfBytes).toBeInstanceOf(Uint8Array)
+      expect(result.pdfBytes.length).toBeGreaterThan(100)
+      expect(result.fileName).toContain('Clearance_Certificate_202400123456AB.pdf')
+    })
+  })
 })

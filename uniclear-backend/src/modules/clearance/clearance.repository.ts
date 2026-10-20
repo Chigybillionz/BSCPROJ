@@ -28,6 +28,53 @@ export class ClearanceRepository {
     })
   }
 
+  static async findForCertificate(id: string, universityId: string) {
+    return db.clearanceRequest.findFirst({
+      where: { id, universityId },
+      include: {
+        university: {
+          include: {
+            branding: true,
+          },
+        },
+        campaign: {
+          include: {
+            stages: {
+              orderBy: { orderIndex: 'asc' },
+            },
+          },
+        },
+        session: true,
+        student: {
+          include: {
+            faculty: true,
+            department: true,
+            user: true,
+          },
+        },
+        documents: {
+          include: {
+            documentType: true,
+          },
+        },
+        stageApprovals: {
+          include: {
+            stage: true,
+            stamp: true,
+            officerRef: true,
+            officer: {
+              select: {
+                id: true,
+                email: true,
+              },
+            },
+          },
+          orderBy: { decidedAt: 'asc' },
+        },
+      },
+    })
+  }
+
   static async findByStudent(studentId: string, universityId: string) {
     return db.clearanceRequest.findMany({
       where: { studentId, universityId },

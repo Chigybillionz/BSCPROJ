@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTenantStore } from '@/store/useTenantStore'
 import { useClearanceStatus } from '@/features/clearance/hooks/useClearance'
@@ -11,12 +12,14 @@ import { Lock, PartyPopper, Download } from 'lucide-react'
 import { ErrorState, EmptyState } from '@/components/shared/EmptyState'
 import { formatDate } from '@/lib/utils/format'
 import { StatusBadge } from '@/components/shared/StatusBadge'
+import { toast } from 'sonner'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ROUTES } from '@/lib/constants'
 
 export default function CertificatePage() {
   const tenant  = useTenantStore()
+  const [isDownloading, setIsDownloading] = useState(false)
 
   const router = useRouter()
   const { data: clearances, isLoading, isError } = useClearanceStatus()
@@ -93,27 +96,43 @@ export default function CertificatePage() {
 
         <Button 
           size="lg" 
-          className="w-full mt-2"
-          onClick={() => {
-            import('@/lib/utils/pdf').then(({ generateCertificatePDF }) => {
-              generateCertificatePDF({
-                studentName: `${clearance.student?.firstName} ${clearance.student?.lastName}`,
-                jambRegNo: clearance.student?.jambRegNo ?? 'N/A',
-                matricNo: clearance.student?.matricNo ?? 'N/A',
-                faculty: clearance.student?.faculty?.name ?? 'N/A',
-                department: clearance.student?.department?.name ?? 'N/A',
-                universityName: tenant.name,
-                primaryColor: tenant.primaryColor,
-                campaignName: clearance.campaign?.name ?? 'Clearance Campaign',
-                completedAt: clearance.completedAt ? formatDate(clearance.completedAt) : 'N/A',
-                clearanceNumber: clearance.clearanceNumber,
-                templateUrl: clearance.campaign?.customCertificateUrl || tenant.certificateTemplateUrl,
-                coordinates: (clearance.campaign?.customCertificateCoords || tenant.certificateCoordinates) as any
+          className="w-full mt-2 font-semibold"
+          disabled={isDownloading}
+          onClick={async () => {
+            try {
+              setIsDownloading(true)
+              toast.loading('Generating official certificate with digital stamps...', { id: 'cert-dl' })
+              await clearanceApi.downloadCertificatePdf(
+                clearance.id,
+                `Clearance_Certificate_${clearance.student?.jambRegNo || 'student'}.pdf`
+              )
+              toast.success('Certificate downloaded successfully!', { id: 'cert-dl' })
+            } catch {
+              // Fallback to client-side generator if offline/server proxy issue
+              import('@/lib/utils/pdf').then(({ generateCertificatePDF }) => {
+                generateCertificatePDF({
+                  studentName: `${clearance.student?.firstName} ${clearance.student?.lastName}`,
+                  jambRegNo: clearance.student?.jambRegNo ?? 'N/A',
+                  matricNo: clearance.student?.matricNo ?? 'N/A',
+                  faculty: clearance.student?.faculty?.name ?? 'N/A',
+                  department: clearance.student?.department?.name ?? 'N/A',
+                  universityName: tenant.name,
+                  primaryColor: tenant.primaryColor,
+                  campaignName: clearance.campaign?.name ?? 'Clearance Campaign',
+                  completedAt: clearance.completedAt ? formatDate(clearance.completedAt) : 'N/A',
+                  clearanceNumber: clearance.clearanceNumber,
+                  templateUrl: clearance.campaign?.customCertificateUrl || tenant.certificateTemplateUrl,
+                  coordinates: (clearance.campaign?.customCertificateCoords || tenant.certificateCoordinates) as any
+                })
               })
-            })
+              toast.success('Certificate generated!', { id: 'cert-dl' })
+            } finally {
+              setIsDownloading(false)
+            }
           }}
         >
-          <Download className="h-4 w-4 mr-2" /> Download PDF Certificate
+          <Download className="h-4 w-4 mr-2" />
+          {isDownloading ? 'Generating Certificate...' : 'Download PDF Certificate'}
         </Button>
 
         {clearance.clearanceNumber && (
