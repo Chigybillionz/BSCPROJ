@@ -67,7 +67,7 @@ async function main() {
     session2526: "00000000-0000-0000-0000-000000000011",
     session2627: "00000000-0000-0000-0000-000000000012",
     stages: Array.from(
-      { length: 5 },
+      { length: 17 },
       (_, i) => `00000000-0000-0000-0001-${String(i).padStart(12, "0")}`,
     ),
     docTypes: Array.from(
@@ -141,13 +141,26 @@ async function main() {
   });
   console.log("✅ Clearance campaign created");
 
-  // Clearance Stages
+  // Clearance Stages — Faculty of Physical Sciences registration items,
+  // modelled as sequential clearance stages (in the order they are verified).
   const stageNames = [
-    "Library Clearance",
-    "Bursary / Finance",
-    "Medical Centre",
-    "Hostel",
-    "Faculty Officer",
+    "O'Level Result",
+    "Student / Admission List",
+    "JAMB Admission Letter",
+    "JAMB Result Score",
+    "Screening Result",
+    "Admission Notification Slip",
+    "Student Personal Information",
+    "Birth Certificate",
+    "L.G.A. Identification Letter",
+    "Letter of Attestation",
+    "Acceptance of Admission",
+    "Acceptance of Offer of Admission (Pledge)",
+    "Letter of Undertaking",
+    "School Fees Receipts",
+    "Checking of Credentials",
+    "Provisional Clearance",
+    "Students Information Form",
   ];
   for (let i = 0; i < stageNames.length; i++) {
     await db.clearanceStage.upsert({
