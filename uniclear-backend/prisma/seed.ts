@@ -71,7 +71,7 @@ async function main() {
       (_, i) => `00000000-0000-0000-0001-${String(i).padStart(12, "0")}`,
     ),
     docTypes: Array.from(
-      { length: 4 },
+      { length: 17 },
       (_, i) => `00000000-0000-0000-0002-${String(i).padStart(12, "0")}`,
     ),
     faculty: "00000000-0000-0000-0003-000000000000",
@@ -141,27 +141,28 @@ async function main() {
   });
   console.log("✅ Clearance campaign created");
 
-  // Clearance Stages — Faculty of Physical Sciences registration items,
-  // modelled as sequential clearance stages (in the order they are verified).
-  const stageNames = [
-    "O'Level Result",
-    "Student / Admission List",
-    "JAMB Admission Letter",
-    "JAMB Result Score",
-    "Screening Result",
-    "Admission Notification Slip",
-    "Student Personal Information",
-    "Birth Certificate",
-    "L.G.A. Identification Letter",
-    "Letter of Attestation",
-    "Acceptance of Admission",
-    "Acceptance of Offer of Admission (Pledge)",
-    "Letter of Undertaking",
-    "School Fees Receipts",
-    "Checking of Credentials",
-    "Provisional Clearance",
-    "Students Information Form",
+  // Faculty of Physical Sciences registration items — single source of truth
+  // for both the clearance stages and the required document per stage.
+  const registrationItems = [
+    { name: "O'Level Result", description: "WAEC/NECO printed result or scratch card" },
+    { name: "Student / Admission List", description: "Printed admission list showing your name" },
+    { name: "JAMB Admission Letter", description: "Upload both Institution and Candidate copies as one PDF" },
+    { name: "JAMB Result Score", description: "Printed JAMB UTME result slip" },
+    { name: "Screening Result", description: "Post-UTME screening result slip" },
+    { name: "Admission Notification Slip", description: "University admission notification slip" },
+    { name: "Student Personal Information", description: "Completed personal information form" },
+    { name: "Birth Certificate", description: "Original or certified true copy" },
+    { name: "L.G.A. Identification Letter", description: "Letter of identification from your L.G.A." },
+    { name: "Letter of Attestation", description: "Signed letter of attestation" },
+    { name: "Acceptance of Admission", description: "Signed acceptance of admission" },
+    { name: "Acceptance of Offer of Admission (Pledge)", description: "Signed pledge accepting the offer of admission" },
+    { name: "Letter of Undertaking", description: "Signed letter of undertaking" },
+    { name: "School Fees Receipts", description: "Official school fees payment receipts" },
+    { name: "Checking of Credentials", description: "Evidence of credential verification" },
+    { name: "Provisional Clearance", description: "Provisional clearance document" },
+    { name: "Students Information Form", description: "Completed students information form" },
   ];
+  const stageNames = registrationItems.map((item) => item.name);
   for (let i = 0; i < stageNames.length; i++) {
     await db.clearanceStage.upsert({
       where: { id: IDS.stages[i] },
@@ -177,26 +178,15 @@ async function main() {
   }
   console.log("✅ UNN stages created");
 
-  // Document Types
-  const docTypes = [
-    {
-      name: "JAMB Admission Letter",
-      description: "Upload both Institution and Candidate copies as one PDF",
-    },
-    {
-      name: "Birth Certificate",
-      description: "Original or certified true copy",
-    },
-    {
-      name: "Medical Fitness Certificate",
-      description: "Signed by a licensed medical doctor",
-    },
-    { name: "O-Level Result", description: "WAEC or NECO result" },
-  ];
+  // Document Types — one required document per stage, named to match the stage
+  const docTypes = registrationItems.map((item) => ({
+    name: item.name,
+    description: item.description,
+  }));
   for (let i = 0; i < docTypes.length; i++) {
     await db.documentType.upsert({
       where: { id: IDS.docTypes[i] },
-      update: {},
+      update: { name: docTypes[i].name, description: docTypes[i].description, order: i + 1 },
       create: {
         id: IDS.docTypes[i],
         universityId: unn.id,
@@ -207,23 +197,20 @@ async function main() {
   }
   console.log("✅ UNN document types created");
 
-  // Assign document types to first stage
-  const firstStageSeed = IDS.stages[0];
-  for (let i = 0; i < IDS.docTypes.length; i++) {
-    const existingReq = await db.stageDocumentRequirement.findFirst({
-      where: { stageId: firstStageSeed, documentTypeId: IDS.docTypes[i] },
+  // Map each stage to its own required document (stage i → document i),
+  // clearing any stale requirements first so re-seeding stays consistent.
+  await db.stageDocumentRequirement.deleteMany({
+    where: { universityId: unn.id, stageId: { in: IDS.stages } },
+  });
+  for (let i = 0; i < stageNames.length; i++) {
+    await db.stageDocumentRequirement.create({
+      data: {
+        universityId: unn.id,
+        stageId: IDS.stages[i],
+        documentTypeId: IDS.docTypes[i],
+        isRequired: true,
+      },
     });
-
-    if (!existingReq) {
-      await db.stageDocumentRequirement.create({
-        data: {
-          universityId: unn.id,
-          stageId: firstStageSeed,
-          documentTypeId: IDS.docTypes[i],
-          isRequired: true,
-        },
-      });
-    }
   }
   console.log("✅ Stage document requirements created");
 
