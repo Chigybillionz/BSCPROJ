@@ -13,8 +13,8 @@ interface ClearanceStepperProps {
 export function ClearanceStepper({ stages, request }: ClearanceStepperProps) {
   return (
     <>
-      {/* Desktop horizontal */}
-      <div className="hidden md:flex items-center gap-0">
+      {/* Desktop horizontal — scrolls when there are many stages */}
+      <div className="hidden md:flex items-center gap-0 overflow-x-auto pb-2">
         {stages.map((stage, i) => {
           const approval = request.stageApprovals?.find(a => a.stageId === stage.id)
           const isActive    = request.currentStageId === stage.id
@@ -24,7 +24,7 @@ export function ClearanceStepper({ stages, request }: ClearanceStepperProps) {
           const isLocked    = !isActive && !isCompleted && !isRejected
 
           return (
-            <div key={stage.id} className="flex items-center flex-1 last:flex-none">
+            <div key={stage.id} className="flex items-center shrink-0">
               <div className="flex flex-col items-center">
                 <div className={cn(
                   'h-8 w-8 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-all',
@@ -49,7 +49,7 @@ export function ClearanceStepper({ stages, request }: ClearanceStepperProps) {
                 )}
               </div>
               {i < stages.length - 1 && (
-                <div className={cn('flex-1 h-0.5 mx-2 mb-6', isCompleted ? 'bg-[var(--color-approved)]' : 'bg-[var(--color-border)]')} />
+                <div className={cn('w-10 md:w-14 h-0.5 mx-2 mb-6 shrink-0', isCompleted ? 'bg-[var(--color-approved)]' : 'bg-[var(--color-border)]')} />
               )}
             </div>
           )

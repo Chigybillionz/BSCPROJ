@@ -59,6 +59,10 @@ export default function StudentDashboard() {
 
   const completedClearances = clearances?.filter(c => c.status === 'COMPLETED') ?? []
 
+  // Show only one clearance block in the main view (the active one, else the first)
+  const primaryClearance =
+    clearances?.find(c => c.status === 'IN_PROGRESS') ?? clearances?.[0]
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <PageHeader 
@@ -66,7 +70,7 @@ export default function StudentDashboard() {
         subtitle="Monitor and manage your departmental clearance stages in real-time" 
       />
 
-      {(clearances ?? []).map(clearance => {
+      {(primaryClearance ? [primaryClearance] : []).map(clearance => {
         const campaignStages = (stages?.filter(s => s.campaignId === clearance.campaignId) ?? [])
           .sort((a, b) => a.orderIndex - b.orderIndex)
         
