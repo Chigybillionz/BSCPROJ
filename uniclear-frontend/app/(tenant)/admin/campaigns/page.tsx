@@ -17,7 +17,7 @@ export default async function AdminCampaignsPage() {
   const sessions = await getSessions()
   
   return (
-    <div className="max-w-5xl space-y-6">
+    <div className="w-full space-y-6">
       <PageHeader
         title="Clearance Campaigns"
         subtitle="Manage multiple clearance workflows (e.g. Fresher, Hostel, Graduation)"

@@ -255,13 +255,26 @@ export class ClearanceService {
   }
 
   static async getCertificate(requestId: string, universityId: string, userId?: string, role?: string) {
-    const clearance = await ClearanceRepository.findById(requestId, universityId)
+    const clearance = await ClearanceRepository.findForCertificate(requestId, universityId)
     if (!clearance) throw new NotFoundError('Clearance request not found')
     if (clearance.status !== 'COMPLETED') throw new ValidationError('Clearance not yet completed')
-    if (role === 'STUDENT' && clearance.student.userId !== userId) {
+    const studentUserId = (clearance.student as any)?.user?.id || (clearance.student as any)?.userId
+    if (role === 'STUDENT' && studentUserId && studentUserId !== userId) {
       throw new ForbiddenError('You do not have permission to download this certificate')
     }
     return clearance
+  }
+
+  static async generateCertificatePdf(requestId: string, universityId: string, userId?: string, role?: string) {
+    const clearance = await this.getCertificate(requestId, universityId, userId, role)
+    const pdfBytes = await CertificateGenerator.generate(clearance as any)
+    const jambOrMatric = (clearance.student as any)?.jambRegNo || (clearance.student as any)?.matricNo || 'student'
+    const fileName = `Clearance_Certificate_${jambOrMatric}.pdf`
+    return {
+      pdfBytes,
+      fileName,
+      clearance,
+    }
   }
 
   static async verify(clearanceNumber: string) {

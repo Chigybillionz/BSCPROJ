@@ -88,9 +88,9 @@ export function TenantShell({ university, children }: TenantShellProps) {
         />
       )}
 
-      <div className={cn('transition-all duration-250', sidebarOpen ? 'lg:pl-60' : 'pl-0')}>
+      <div className={cn('transition-all duration-300 min-h-screen flex flex-col', sidebarOpen ? 'lg:pl-64' : 'pl-0')}>
         <Topbar />
-        <main className="p-3 md:p-6">{children}</main>
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">{children}</main>
       </div>
     </div>
   )

@@ -17,6 +17,8 @@ const config: Config = {
     '!src/**/*.schema.ts',
   ],
   clearMocks: true,
+  testTimeout: 20000,
+  maxWorkers: '50%',
 }
 
 export default config

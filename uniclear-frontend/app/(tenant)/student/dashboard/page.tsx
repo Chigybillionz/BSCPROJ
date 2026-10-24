@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
+import { motion } from 'framer-motion'
 import { useTenantStore } from '@/store/useTenantStore'
 import { useClearanceStatus } from '@/features/clearance/hooks/useClearance'
 import { useStages } from '@/features/stages/hooks/useStages'
@@ -36,6 +37,7 @@ export default function StudentDashboard() {
   const { data: clearances, isLoading: loadingClearance } = useClearanceStatus()
   const { data: stages, isLoading: loadingStages } = useStages()
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
+  const [stageFilter, setStageFilter] = useState<'ALL' | 'ACTION' | 'APPROVED' | 'PENDING'>('ALL')
 
   const isLoading = loadingClearance || loadingStages
 
@@ -64,7 +66,12 @@ export default function StudentDashboard() {
     clearances?.find(c => c.status === 'IN_PROGRESS') ?? clearances?.[0]
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <motion.div 
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="max-w-5xl mx-auto space-y-8 pb-10"
+    >
       <PageHeader 
         title="Student Clearance Portal" 
         subtitle="Monitor and manage your departmental clearance stages in real-time" 
@@ -79,99 +86,114 @@ export default function StudentDashboard() {
         const progressPercent = totalStages > 0 ? Math.round((approvedCount / totalStages) * 100) : 0
         const activeStage = campaignStages.find(s => s.id === clearance.currentStageId)
 
+        const filteredStages = campaignStages.filter(stage => {
+          const approval = clearance.stageApprovals?.find(a => a.stageId === stage.id)
+          const isCurrent = clearance.currentStageId === stage.id
+          const isApproved = approval?.status === 'APPROVED'
+          const isRejected = approval?.status === 'REJECTED'
+          const isUnderReview = isCurrent && clearance.stageStatus === 'SUBMITTED'
+
+          if (stageFilter === 'ACTION') return (isCurrent && !isUnderReview) || isRejected
+          if (stageFilter === 'APPROVED') return isApproved
+          if (stageFilter === 'PENDING') return isUnderReview || (!isCurrent && !isApproved && !isRejected)
+          return true
+        })
+
         return (
-          <div key={clearance.id} className="space-y-6">
+          <div key={clearance.id} className="space-y-8">
             {/* Student Profile & Progress Header Card */}
-            <Card padding="lg" className="border-t-4 border-t-[var(--color-primary)] shadow-sm">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b">
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center shrink-0">
-                    <GraduationCap className="h-6 w-6" />
+            <Card padding="lg" className="border-t-4 border-t-[var(--color-primary)] shadow-md overflow-hidden bg-white">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-slate-100">
+                <div className="flex items-center gap-3.5">
+                  <div className="h-14 w-14 rounded-2xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center shrink-0 shadow-2xs">
+                    <GraduationCap className="h-7 w-7" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-[var(--color-text)]">
+                    <h2 className="text-xl font-bold text-slate-900 tracking-tight">
                       {clearance.student 
                         ? `${clearance.student.firstName} ${clearance.student.lastName}`
                         : 'Student Profile'}
                     </h2>
-                    <p className="text-xs text-[var(--color-muted)] flex items-center gap-2 mt-0.5">
-                      <span>JAMB: <strong className="text-[var(--color-text)]">{clearance.student?.jambRegNo || 'N/A'}</strong></span>
+                    <p className="text-xs text-slate-500 flex flex-wrap items-center gap-2 mt-1">
+                      <span>JAMB: <strong className="text-slate-800 font-mono font-bold">{clearance.student?.jambRegNo || 'N/A'}</strong></span>
                       {clearance.student?.department?.name && (
                         <>
-                          <span>•</span>
-                          <span>Dept: <strong className="text-[var(--color-text)]">{clearance.student.department.name}</strong></span>
+                          <span className="text-slate-300">•</span>
+                          <span>Dept: <strong className="text-slate-800 font-semibold">{clearance.student.department.name}</strong></span>
                         </>
                       )}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
-                    <Calendar className="h-3.5 w-3.5 text-[var(--color-muted)]" />
+                <div className="flex items-center gap-2.5">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                    <Calendar className="h-3.5 w-3.5 text-slate-400" />
                     <span>{clearance.session?.name ?? 'Session'}</span>
                   </div>
                   <StatusBadge status={clearance.status} />
                 </div>
               </div>
 
-              {/* Real-time Progress Bar (Figure 3.9) */}
-              <div className="pt-4">
-                <div className="flex items-center justify-between text-xs font-semibold mb-2">
-                  <span className="text-[var(--color-text)] flex items-center gap-1.5">
+              {/* Real-time Progress Bar */}
+              <div className="pt-5">
+                <div className="flex items-center justify-between text-xs font-bold mb-2.5">
+                  <span className="text-slate-700 flex items-center gap-2">
                     <ShieldCheck className="h-4 w-4 text-[var(--color-primary)]" />
-                    Overall Clearance Progress
+                    Institutional Clearance Progress
                   </span>
-                  <span className="text-[var(--color-primary)] font-bold">
-                    {approvedCount} of {totalStages} Departments Cleared ({progressPercent}%)
+                  <span className="text-[var(--color-primary)] font-extrabold text-sm tabular-nums">
+                    {approvedCount} / {totalStages} Cleared ({progressPercent}%)
                   </span>
                 </div>
-                <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden border border-gray-200">
-                  <div 
-                    className="h-full bg-[var(--color-primary)] transition-all duration-500 rounded-full"
-                    style={{ width: `${progressPercent}%` }}
+                <div className="w-full h-3.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200 p-0.5">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progressPercent}%` }}
+                    transition={{ duration: 0.8, ease: 'easeOut' }}
+                    className="h-full bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] rounded-full shadow-xs"
                   />
                 </div>
                 {clearance.status === 'COMPLETED' ? (
-                  <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between bg-emerald-50 border border-emerald-200 rounded-xl p-4 gap-3 shadow-2xs">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                        <Sparkles className="h-5 w-5" />
+                  <div className="mt-5 flex flex-col sm:flex-row sm:items-center sm:justify-between bg-emerald-50/80 border border-emerald-200 rounded-2xl p-5 gap-4 shadow-sm">
+                    <div className="flex items-center gap-3.5">
+                      <div className="h-11 w-11 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 shadow-2xs">
+                        <Sparkles className="h-6 w-6" />
                       </div>
                       <div>
                         <p className="text-sm font-bold text-emerald-950">
                           Clearance Fully Approved & Verified!
                         </p>
-                        <p className="text-xs text-emerald-700 mt-0.5">
-                          All departmental stages have been completed and officially signed with digital stamps.
+                        <p className="text-xs text-emerald-700 mt-0.5 leading-relaxed">
+                          All departmental stages have been officially endorsed and digitally stamped.
                         </p>
                       </div>
                     </div>
                     <Button
-                      size="sm"
+                      size="md"
                       onClick={() => handleDownloadCertificate(clearance.id, clearance.student?.jambRegNo)}
                       disabled={downloadingId === clearance.id}
-                      className="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold shrink-0"
+                      className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold shrink-0 shadow-xs"
                     >
-                      <Download className="h-4 w-4 mr-1.5" />
-                      {downloadingId === clearance.id ? 'Generating PDF...' : 'Download Clearance Certificate'}
+                      <Download className="h-4 w-4 mr-2" />
+                      {downloadingId === clearance.id ? 'Generating PDF...' : 'Download Certificate'}
                     </Button>
                   </div>
                 ) : activeStage && clearance.status === 'IN_PROGRESS' ? (
-                  <div className="mt-3 flex items-center justify-between bg-blue-50/60 border border-blue-100 rounded-lg p-3 text-xs">
-                    <div className="flex items-center gap-2 text-blue-900">
+                  <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between bg-[var(--color-primary-light)]/60 border border-[var(--color-primary)]/20 rounded-2xl p-4 gap-3">
+                    <div className="flex items-center gap-2.5 text-slate-800 text-xs">
                       <Clock className="h-4 w-4 text-[var(--color-primary)] shrink-0" />
                       <span>
-                        Current Action: <strong>{activeStage.name}</strong>
+                        Current Action: <strong className="text-[var(--color-primary)] font-bold">{activeStage.name}</strong>
                         {clearance.stageStatus === 'SUBMITTED' 
-                          ? ' — Documents submitted. Awaiting clearance officer review.' 
+                          ? ' — Documents uploaded. Clearance officer review pending.' 
                           : ' — Required documents pending submission.'}
                       </span>
                     </div>
                     <Link href={`${ROUTES.student.documents}?requestId=${clearance.id}`}>
-                      <Button size="sm" className="shrink-0 ml-2">
-                        {clearance.stageStatus === 'SUBMITTED' ? 'View Submitted' : 'Upload Documents'}
-                        <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                      <Button size="sm" className="shrink-0 font-bold shadow-xs">
+                        {clearance.stageStatus === 'SUBMITTED' ? 'View Submission' : 'Upload Documents'}
+                        <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
                       </Button>
                     </Link>
                   </div>
@@ -180,21 +202,56 @@ export default function StudentDashboard() {
             </Card>
 
             {/* Stepper Visualization */}
-            <Card padding="lg">
-              <h3 className="text-sm font-bold text-[var(--color-text)] uppercase tracking-wider mb-4 text-[var(--color-muted)]">
-                Workflow Sequence
-              </h3>
+            <Card padding="lg" className="shadow-md bg-white">
+              <div className="flex items-center justify-between mb-5 pb-3 border-b border-slate-100">
+                <h3 className="text-xs font-extrabold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-[var(--color-primary)]" />
+                  Clearance Milestones & Verification Track
+                </h3>
+              </div>
               <ClearanceStepper stages={campaignStages} request={clearance} />
             </Card>
 
             {/* Stage-by-Stage Detailed Status Cards */}
-            <div className="space-y-3">
-              <h3 className="text-sm font-bold text-[var(--color-text)] uppercase tracking-wider text-[var(--color-muted)]">
-                Departmental Status Breakdown
-              </h3>
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-2 border-b border-slate-100">
+                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
+                  Departmental Status Breakdown
+                </h3>
+
+                <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-lg overflow-x-auto self-start sm:self-auto">
+                  {(['ALL', 'ACTION', 'APPROVED', 'PENDING'] as const).map(tab => {
+                    const count = tab === 'ALL'
+                      ? campaignStages.length
+                      : tab === 'APPROVED'
+                      ? approvedCount
+                      : tab === 'ACTION'
+                      ? campaignStages.filter(s => (s.id === clearance.currentStageId && clearance.stageStatus !== 'SUBMITTED') || clearance.stageApprovals?.some(a => a.stageId === s.id && a.status === 'REJECTED')).length
+                      : campaignStages.length - approvedCount
+
+                    return (
+                      <button
+                        key={tab}
+                        onClick={() => setStageFilter(tab)}
+                        className={cn(
+                          'px-2.5 py-1 rounded-md text-xs font-semibold whitespace-nowrap transition-all',
+                          stageFilter === tab
+                            ? 'bg-white text-[var(--color-primary)] shadow-xs font-bold'
+                            : 'text-slate-500 hover:text-slate-900'
+                        )}
+                      >
+                        {tab === 'ALL' && `All (${count})`}
+                        {tab === 'ACTION' && `Action Required (${count})`}
+                        {tab === 'APPROVED' && `Cleared (${count})`}
+                        {tab === 'PENDING' && `Pending (${count})`}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
 
               <div className="grid grid-cols-1 gap-3">
-                {campaignStages.map((stage, idx) => {
+                {filteredStages.map((stage, idx) => {
                   const approval = clearance.stageApprovals?.find(a => a.stageId === stage.id)
                   const isCurrent = clearance.currentStageId === stage.id
                   const isApproved = approval?.status === 'APPROVED'
@@ -418,7 +475,7 @@ export default function StudentDashboard() {
           </Link>
         </Card>
       )}
-    </div>
+    </motion.div>
   )
 }
 

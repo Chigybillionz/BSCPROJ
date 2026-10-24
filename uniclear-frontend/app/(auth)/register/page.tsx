@@ -55,7 +55,7 @@ export default function RegisterPage() {
     staleTime: 5 * 60 * 1000,
   })
 
-  const activeSlug = tenantSlug || (universities && universities.length > 0 ? universities[0].slug : 'unn')
+  const activeSlug = tenantSlug || (universities && universities.length > 0 ? universities[0].slug : '')
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),

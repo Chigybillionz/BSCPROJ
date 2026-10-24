@@ -2,6 +2,10 @@ import { UniversitiesService } from './universities.service'
 import { UniversitiesRepository } from './universities.repository'
 import { ConflictError, NotFoundError } from '@/core/errors/AppError'
 
+jest.mock('bcryptjs', () => ({
+  hash: jest.fn().mockResolvedValue('mock-hash'),
+  compare: jest.fn().mockResolvedValue(true),
+}))
 jest.mock('./universities.repository')
 jest.mock('@/modules/notifications/channels/email.channel', () => ({
   sendInviteEmail: jest.fn().mockResolvedValue({}),

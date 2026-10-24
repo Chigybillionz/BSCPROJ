@@ -184,7 +184,7 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
   const initials = getInitials(studentFullName)
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col space-y-3 pb-3">
+    <div className="min-h-[calc(100vh-4rem)] md:h-[calc(100vh-4rem)] flex flex-col space-y-3 pb-3">
       {/* Top Header & Breadcrumb */}
       <div className="flex items-center justify-between shrink-0 px-1">
         <button
@@ -206,12 +206,12 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
       {/* Main Split-Screen Layout */}
       {/* LEFT: Document Viewer (using react-pdf / PdfStampViewer) */}
       {/* RIGHT: Student Details & Approve/Reject Decision Buttons */}
-      <div className="flex-1 flex flex-col md:flex-row gap-4 overflow-hidden min-h-0">
+      <div className="flex-1 flex flex-col md:flex-row gap-4 overflow-y-auto md:overflow-hidden min-h-0">
         
         {/* ======================================================== */}
         {/* LEFT PANEL: Document Viewer (react-pdf)                  */}
         {/* ======================================================== */}
-        <Card className="flex-1 flex flex-col overflow-hidden p-0 border border-[var(--color-border)] shadow-xs">
+        <Card className="flex-1 flex flex-col overflow-hidden min-h-[420px] md:min-h-0 p-0 border border-[var(--color-border)] shadow-xs">
           {/* Document Tabs Bar */}
           <div className="bg-[var(--color-bg)]/80 border-b border-[var(--color-border)] px-3 py-2 flex items-center justify-between gap-2 overflow-x-auto shrink-0">
             <div className="flex items-center gap-1.5 min-w-0">
@@ -389,10 +389,14 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
                   <Building2 className="h-4 w-4 text-[var(--color-muted)] shrink-0 mt-0.5" />
                   <div>
                     <p className="font-semibold text-[var(--color-text)]">
-                      {clearance.student?.department?.name || 'Department of Physical Sciences'}
+                      {clearance.student?.department?.name ?? (
+                        <span className="text-amber-600 font-medium italic">Unassigned Department</span>
+                      )}
                     </p>
                     <p className="text-[11px] text-[var(--color-muted)]">
-                      {clearance.student?.faculty?.name || 'Faculty of Physical Sciences'}
+                      {clearance.student?.faculty?.name ?? (
+                        <span className="text-amber-600 italic">Unassigned Faculty</span>
+                      )}
                     </p>
                   </div>
                 </div>
@@ -400,7 +404,7 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
                 <div className="flex items-center gap-2 pt-1 border-t border-[var(--color-border)] text-[11px] text-[var(--color-muted)]">
                   <GraduationCap className="h-3.5 w-3.5 shrink-0" />
                   <span>
-                    Level: <strong className="text-[var(--color-text)]">{clearance.student?.level || '100'}</strong>
+                    Level: <strong className="text-[var(--color-text)]">{clearance.student?.level || 'N/A'}</strong>
                   </span>
                   <span>•</span>
                   <span>

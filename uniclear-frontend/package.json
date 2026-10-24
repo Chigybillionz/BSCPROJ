@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "postinstall": "node -e \"const fs=require('fs');try{fs.copyFileSync('./node_modules/pdfjs-dist/build/pdf.worker.min.js','./public/pdf.worker.min.js');console.log('pdf.worker.min.js copied to public/')}catch(e){console.warn('pdfjs worker copy failed:',e.message)}\"",
-    "dev": "next dev",
+    "dev": "next dev -H 0.0.0.0",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

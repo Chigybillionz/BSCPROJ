@@ -395,19 +395,19 @@ export class CertificateGenerator {
     drawInfoRow('Student Full Name:', studentFullName)
     drawInfoRow('JAMB Reg Number:', data.student.jambRegNo)
     drawInfoRow('Matriculation No:', data.student.matricNo || 'N/A')
-    drawInfoRow('Faculty:', data.student.faculty?.name || 'Faculty of Physical Sciences')
-    drawInfoRow('Department:', data.student.department?.name || 'Computer Science')
+    drawInfoRow('Faculty:', data.student.faculty?.name || 'N/A')
+    drawInfoRow('Department:', data.student.department?.name || 'N/A')
 
     // ==========================================
     // 6. CLEARANCE ENDORSEMENTS & STAMPS MATRIX
     // ==========================================
-    cursorY = profileBoxY - 26
+    cursorY = profileBoxY - 22
 
     const sectionTitle = 'OFFICIAL STAGES & CLEARANCE OFFICER ENDORSEMENTS'
     page.drawText(sectionTitle, {
       x: 45,
       y: cursorY,
-      size: 11,
+      size: 10.5,
       font: fontBold,
       color: primaryColor,
     })
@@ -415,47 +415,36 @@ export class CertificateGenerator {
     const sectionSubtitle = 'The following statutory departments have inspected, verified, and endorsed this student:'
     page.drawText(sectionSubtitle, {
       x: 45,
-      y: cursorY - 12,
-      size: 8,
+      y: cursorY - 11,
+      size: 7.5,
       font: fontOblique,
       color: mutedTextColor,
     })
 
-    cursorY -= 24
+    cursorY -= 20
 
     // Render Grid of Stages & Digital Stamps
-    // We display stages in a 2-column or 3-column grid depending on count
     const stages = data.stageApprovals && data.stageApprovals.length > 0 
       ? data.stageApprovals 
-      : [
-          {
-            id: 'mock-1',
-            status: 'APPROVED',
-            stage: { name: 'Library Clearance', orderIndex: 1 },
-            officerRef: { firstName: 'Dr. Ngozi', lastName: 'Okeke' },
-            decidedAt: new Date(),
-          },
-          {
-            id: 'mock-2',
-            status: 'APPROVED',
-            stage: { name: 'Bursary Clearance', orderIndex: 2 },
-            officerRef: { firstName: 'Mr. Emeka', lastName: 'Nwosu' },
-            decidedAt: new Date(),
-          },
-        ]
+      : []
 
-    const stampCols = 2
-    const cellMargin = 10
+    if (stages.length === 0) {
+      throw new Error('Cannot generate certificate: clearance record has no verified stage approvals.')
+    }
+
     const gridWidth = pageWidth - 90
-    const cellWidth = (gridWidth - cellMargin) / stampCols
-    const cellHeight = 76
+    const isDense = stages.length > 6
+    const stampCols = isDense ? 3 : 2
+    const cellMargin = isDense ? 6 : 10
+    const cellWidth = (gridWidth - (stampCols - 1) * cellMargin) / stampCols
+    const cellHeight = isDense ? 42 : 68
 
     for (let i = 0; i < stages.length; i++) {
       const approval = stages[i]
       const col = i % stampCols
       const row = Math.floor(i / stampCols)
       const cellX = 45 + col * (cellWidth + cellMargin)
-      const cellY = cursorY - (row + 1) * cellHeight + (row * 6)
+      const cellY = cursorY - (row + 1) * cellHeight + (row * (isDense ? 4 : 6))
 
       // Cell border & background
       page.drawRectangle({
@@ -465,23 +454,27 @@ export class CertificateGenerator {
         height: cellHeight,
         color: whiteColor,
         borderColor: rgb(203 / 255, 213 / 255, 225 / 255),
-        borderWidth: 1,
+        borderWidth: 0.8,
       })
 
       // Top colored accent bar for cell
       page.drawRectangle({
         x: cellX,
-        y: cellY + cellHeight - 3,
+        y: cellY + cellHeight - 2.5,
         width: cellWidth,
-        height: 3,
+        height: 2.5,
         color: primaryColor,
       })
 
+      const rawStageName = `${approval.stage?.orderIndex || i + 1}. ${approval.stage?.name || 'Clearance Stage'}`.toUpperCase()
+      const maxStageChars = isDense ? 25 : 36
+      const stageNameDisplay = rawStageName.length > maxStageChars ? `${rawStageName.substring(0, maxStageChars - 2)}..` : rawStageName
+
       // Stage Title
-      page.drawText(`${approval.stage.orderIndex || i + 1}. ${approval.stage.name}`.toUpperCase(), {
-        x: cellX + 8,
-        y: cellY + cellHeight - 16,
-        size: 8.5,
+      page.drawText(stageNameDisplay, {
+        x: cellX + 6,
+        y: cellY + cellHeight - (isDense ? 12 : 16),
+        size: isDense ? 7.2 : 8.5,
         font: fontBold,
         color: darkTextColor,
       })
@@ -490,47 +483,76 @@ export class CertificateGenerator {
       const officerName = approval.officerRef 
         ? `${approval.officerRef.firstName} ${approval.officerRef.lastName}`
         : 'Authorized Officer'
-      page.drawText(`Officer: ${officerName}`, {
-        x: cellX + 8,
-        y: cellY + cellHeight - 28,
-        size: 7.5,
-        font: fontRegular,
-        color: mutedTextColor,
-      })
+      const approvalDate = approval.decidedAt
+        ? new Date(approval.decidedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+        : 'Approved'
 
-      const approvalDate = new Date(approval.decidedAt).toLocaleDateString('en-GB', {
-        day: '2-digit', month: 'short', year: 'numeric'
-      })
-      page.drawText(`Date: ${approvalDate}`, {
-        x: cellX + 8,
-        y: cellY + cellHeight - 39,
-        size: 7.5,
-        font: fontRegular,
-        color: mutedTextColor,
-      })
+      if (isDense) {
+        page.drawText(`${officerName} • ${approvalDate}`, {
+          x: cellX + 6,
+          y: cellY + cellHeight - 22,
+          size: 6.2,
+          font: fontRegular,
+          color: mutedTextColor,
+        })
 
-      // Status pill badge
-      page.drawRectangle({
-        x: cellX + 8,
-        y: cellY + 8,
-        width: 72,
-        height: 16,
-        color: rgb(220 / 255, 252 / 255, 231 / 255), // light green
-        borderColor: rgb(34 / 255, 197 / 255, 94 / 255),
-        borderWidth: 0.8,
-      })
-      page.drawText('APPROVED', {
-        x: cellX + 15,
-        y: cellY + 13,
-        size: 7.5,
-        font: fontBold,
-        color: rgb(21 / 255, 128 / 255, 61 / 255),
-      })
+        // Status pill badge
+        page.drawRectangle({
+          x: cellX + 6,
+          y: cellY + 5,
+          width: 58,
+          height: 12,
+          color: rgb(220 / 255, 252 / 255, 231 / 255),
+          borderColor: rgb(34 / 255, 197 / 255, 94 / 255),
+          borderWidth: 0.6,
+        })
+        page.drawText('✓ APPROVED', {
+          x: cellX + 10,
+          y: cellY + 8,
+          size: 6,
+          font: fontBold,
+          color: rgb(21 / 255, 128 / 255, 61 / 255),
+        })
+      } else {
+        page.drawText(`Officer: ${officerName}`, {
+          x: cellX + 8,
+          y: cellY + cellHeight - 28,
+          size: 7.5,
+          font: fontRegular,
+          color: mutedTextColor,
+        })
+
+        page.drawText(`Date: ${approvalDate}`, {
+          x: cellX + 8,
+          y: cellY + cellHeight - 39,
+          size: 7.5,
+          font: fontRegular,
+          color: mutedTextColor,
+        })
+
+        // Status pill badge
+        page.drawRectangle({
+          x: cellX + 8,
+          y: cellY + 8,
+          width: 72,
+          height: 16,
+          color: rgb(220 / 255, 252 / 255, 231 / 255),
+          borderColor: rgb(34 / 255, 197 / 255, 94 / 255),
+          borderWidth: 0.8,
+        })
+        page.drawText('APPROVED', {
+          x: cellX + 15,
+          y: cellY + 13,
+          size: 7.5,
+          font: fontBold,
+          color: rgb(21 / 255, 128 / 255, 61 / 255),
+        })
+      }
 
       // Stamp slot on right of cell
-      const stampBoxSize = 54
-      const stampBoxX = cellX + cellWidth - stampBoxSize - 8
-      const stampBoxY = cellY + 10
+      const stampBoxSize = isDense ? 28 : 50
+      const stampBoxX = cellX + cellWidth - stampBoxSize - (isDense ? 5 : 8)
+      const stampBoxY = cellY + (isDense ? 5 : 8)
 
       let stampEmbedded = false
       if (approval.stamp) {
@@ -551,47 +573,54 @@ export class CertificateGenerator {
       if (!stampEmbedded) {
         const centerX = stampBoxX + stampBoxSize / 2
         const centerY = stampBoxY + stampBoxSize / 2
-        const radius = stampBoxSize / 2 - 2
+        const radius = stampBoxSize / 2 - 1.5
 
-        // Outer seal circle
         page.drawCircle({
           x: centerX,
           y: centerY,
           size: radius,
           borderColor: primaryColor,
-          borderWidth: 1.2,
+          borderWidth: 0.9,
         })
-        // Inner dashed ring
         page.drawCircle({
           x: centerX,
           y: centerY,
-          size: radius - 3.5,
+          size: Math.max(1, radius - 2.5),
           borderColor: goldColor,
-          borderWidth: 0.7,
+          borderWidth: 0.5,
         })
 
-        // Seal text
-        page.drawText('VERIFIED', {
-          x: centerX - 18,
-          y: centerY + 6,
-          size: 6.5,
-          font: fontBold,
-          color: primaryColor,
-        })
-        page.drawText('OFFICIAL', {
-          x: centerX - 18,
-          y: centerY - 4,
-          size: 6,
-          font: fontBold,
-          color: goldColor,
-        })
-        page.drawText('STAMP', {
-          x: centerX - 13,
-          y: centerY - 13,
-          size: 5.5,
-          font: fontBold,
-          color: primaryColor,
-        })
+        if (!isDense) {
+          page.drawText('VERIFIED', {
+            x: centerX - 18,
+            y: centerY + 6,
+            size: 6.5,
+            font: fontBold,
+            color: primaryColor,
+          })
+          page.drawText('OFFICIAL', {
+            x: centerX - 18,
+            y: centerY - 4,
+            size: 6,
+            font: fontBold,
+            color: goldColor,
+          })
+          page.drawText('STAMP', {
+            x: centerX - 13,
+            y: centerY - 13,
+            size: 5.5,
+            font: fontBold,
+            color: primaryColor,
+          })
+        } else {
+          page.drawText('SEAL', {
+            x: centerX - 8,
+            y: centerY - 2.5,
+            size: 5,
+            font: fontBold,
+            color: primaryColor,
+          })
+        }
       }
     }
 
@@ -648,17 +677,23 @@ export class CertificateGenerator {
       color: primaryColor,
     })
 
-    // Registrar Signature Lines (Left & Center)
+    // Dynamic Signatures (Left & Center)
     const sigY = footerY + 20
-    // Signature 1: Dean of Student Affairs
-    page.drawLine({ start: { x: 45, y: sigY }, end: { x: 185, y: sigY }, color: darkTextColor, thickness: 0.8 })
-    page.drawText('Dean of Student Affairs', { x: 45, y: sigY - 11, size: 8, font: fontBold, color: darkTextColor })
-    page.drawText('Signature & Date Endorsement', { x: 45, y: sigY - 20, size: 6.5, font: fontRegular, color: mutedTextColor })
+    const brandingSignatories = (data.university.branding as any)?.signatories
+    const signatory1Title = brandingSignatories?.[0]?.title || 'Dean of Student Affairs'
+    const signatory1Sub = brandingSignatories?.[0]?.subText || 'Signature & Date Endorsement'
+    const signatory2Title = brandingSignatories?.[1]?.title || 'University Academic Registrar'
+    const signatory2Sub = brandingSignatories?.[1]?.subText || 'Digital Verification & Seal'
 
-    // Signature 2: University Registrar
+    // Signature 1
+    page.drawLine({ start: { x: 45, y: sigY }, end: { x: 185, y: sigY }, color: darkTextColor, thickness: 0.8 })
+    page.drawText(signatory1Title, { x: 45, y: sigY - 11, size: 8, font: fontBold, color: darkTextColor })
+    page.drawText(signatory1Sub, { x: 45, y: sigY - 20, size: 6.5, font: fontRegular, color: mutedTextColor })
+
+    // Signature 2
     page.drawLine({ start: { x: 235, y: sigY }, end: { x: 375, y: sigY }, color: darkTextColor, thickness: 0.8 })
-    page.drawText('University Academic Registrar', { x: 235, y: sigY - 11, size: 8, font: fontBold, color: darkTextColor })
-    page.drawText('Digital Verification & Seal', { x: 235, y: sigY - 20, size: 6.5, font: fontRegular, color: mutedTextColor })
+    page.drawText(signatory2Title, { x: 235, y: sigY - 11, size: 8, font: fontBold, color: darkTextColor })
+    page.drawText(signatory2Sub, { x: 235, y: sigY - 20, size: 6.5, font: fontRegular, color: mutedTextColor })
 
     // Security Notice Bottom Bar
     const securityNotice = 'SECURE ELECTRONIC DOCUMENT | GENERATED BY UNICLEAR CLEARANCE PLATFORM | FORGERY IS A CRIMINAL OFFENSE'

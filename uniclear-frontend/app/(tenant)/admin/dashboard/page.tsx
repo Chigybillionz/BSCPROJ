@@ -76,68 +76,98 @@ export default async function AdminDashboard({ searchParams }: { searchParams: P
         <DashboardSessionFilter sessions={sessions} />
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map(({ label, value, icon: Icon, note }) => (
-          <Card key={label} padding="md">
-            <div className="flex items-center justify-between mb-1.5">
-              <p className="text-[11px] text-[var(--color-muted)] font-medium uppercase tracking-wide">{label}</p>
-              <Icon className="h-3.5 w-3.5 text-[var(--color-muted)] shrink-0" />
+          <Card key={label} padding="lg" className="border border-slate-200/90 shadow-xs hover:border-slate-300 transition-colors">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">{label}</p>
+              <div className="p-1.5 rounded-lg bg-slate-100 text-slate-600">
+                <Icon className="h-4 w-4 shrink-0" />
+              </div>
             </div>
-            <p className="text-xl font-bold text-[var(--color-text)] truncate">{value}</p>
-            {note && <p className="text-[11px] text-[var(--color-muted)] mt-0.5">{note}</p>}
+            <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight tabular-nums truncate">
+              {typeof value === 'number' ? value.toLocaleString() : value}
+            </p>
+            {note && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-md mt-2">
+                {note}
+              </span>
+            )}
           </Card>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-sm font-semibold text-[var(--color-text)]">Active Campaigns</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 pt-2">
+        <Card padding="lg" className="border border-slate-200/90 shadow-xs">
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 tracking-tight">Active Campaigns</h2>
+              <p className="text-xs text-slate-500 mt-0.5">Configured clearance workflows for active sessions</p>
+            </div>
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600">
+              {campaigns.length} Active
+            </span>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 max-h-[340px] overflow-y-auto pr-1 custom-scrollbar">
             {campaigns.map((campaign: any) => (
               <Link key={campaign.id} href={`/admin/campaigns/${campaign.id}`}>
-                <div className="border border-[var(--color-border)] hover:border-[var(--color-primary)] transition-colors rounded-lg p-3 bg-[var(--color-bg-secondary)] cursor-pointer group">
+                <div className="border border-slate-200 hover:border-[var(--color-primary)] transition-all rounded-xl p-4 bg-white hover:bg-slate-50/60 cursor-pointer group shadow-2xs">
                   <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-sm font-medium text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors line-clamp-1">{campaign.name}</h3>
-                    {campaign.isActive && <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0 mt-1"></span>}
+                    <h3 className="text-xs font-bold text-slate-900 group-hover:text-[var(--color-primary)] transition-colors line-clamp-1">
+                      {campaign.name}
+                    </h3>
+                    {campaign.isActive && (
+                      <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0 mt-1" />
+                    )}
                   </div>
-                  <p className="text-xs text-[var(--color-muted)] line-clamp-2">
-                    {campaign.description || 'No description provided.'}
+                  <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">
+                    {campaign.description || 'No campaign description provided.'}
                   </p>
-                  <div className="mt-3 flex items-center text-[11px] font-medium text-[var(--color-primary)] opacity-0 group-hover:opacity-100 transition-opacity">
-                    View Details <span className="ml-1">→</span>
+                  <div className="mt-3 flex items-center text-[11px] font-semibold text-[var(--color-primary)]">
+                    Manage Workflow <span className="ml-1 transition-transform group-hover:translate-x-0.5">→</span>
                   </div>
                 </div>
               </Link>
             ))}
             {campaigns.length === 0 && (
-              <div className="col-span-full text-center py-6 text-sm text-[var(--color-muted)]">No active campaigns found.</div>
+              <div className="col-span-full text-center py-8 text-xs text-slate-500">
+                No active clearance campaigns configured.
+              </div>
             )}
           </div>
         </Card>
 
-        <Card>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-sm font-semibold text-[var(--color-text)]">Department Clearance Rates</h2>
+        <Card padding="lg" className="border border-slate-200/90 shadow-xs">
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 tracking-tight">Department Clearance Rates</h2>
+              <p className="text-xs text-slate-500 mt-0.5">Completion distribution across academic departments</p>
+            </div>
+            <span className="text-xs font-semibold text-slate-500 tabular-nums">
+              Top {Math.min(8, summary.departmentRates?.length || 0)}
+            </span>
           </div>
-          <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+          <div className="space-y-4 max-h-[340px] overflow-y-auto pr-1 custom-scrollbar">
             {summary.departmentRates?.slice(0, 8).map(dept => (
-              <div key={dept.name}>
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-xs font-medium text-[var(--color-text)] truncate pr-4">{dept.name}</p>
-                  <p className="text-[11px] text-[var(--color-muted)] shrink-0">{dept.completed} / {dept.total}</p>
+              <div key={dept.name} className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <p className="font-semibold text-slate-800 truncate pr-4">{dept.name}</p>
+                  <span className="text-slate-500 font-mono text-[11px] tabular-nums shrink-0">
+                    {dept.completed} / {dept.total} ({dept.rate}%)
+                  </span>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="bg-[var(--color-bg-secondary)] rounded-full h-1.5 overflow-hidden flex-1">
-                    <div className="bg-[var(--color-primary)] h-full transition-all duration-500" style={{ width: `${dept.rate}%` }} />
-                  </div>
-                  <span className="text-[10px] font-bold text-[var(--color-text)] w-8 text-right">{dept.rate}%</span>
+                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-200/80">
+                  <div 
+                    className="bg-[var(--color-primary)] h-full rounded-full transition-all duration-500" 
+                    style={{ width: `${dept.rate}%` }} 
+                  />
                 </div>
               </div>
             ))}
             {(!summary.departmentRates || summary.departmentRates.length === 0) && (
-              <div className="text-center py-6 text-sm text-[var(--color-muted)]">No department data available.</div>
+              <div className="text-center py-8 text-xs text-slate-500">
+                No departmental clearance data available for this session.
+              </div>
             )}
           </div>
         </Card>

@@ -106,6 +106,21 @@ export class ClearanceController {
     } catch (err) { next(err) }
   }
 
+  static async downloadCertificatePdf(req: Request, res: Response, next: NextFunction) {
+    try {
+      const requestId = param(req.params.requestId)
+      const { pdfBytes, fileName } = await ClearanceService.generateCertificatePdf(
+        requestId,
+        req.universityId!,
+        req.user?.sub,
+        req.user?.role
+      )
+      res.setHeader('Content-Type', 'application/pdf')
+      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`)
+      return res.send(Buffer.from(pdfBytes))
+    } catch (err) { next(err) }
+  }
+
   static async verify(req: Request, res: Response, next: NextFunction) {
     try {
       const clearanceNumber = param(req.params.clearanceNumber)

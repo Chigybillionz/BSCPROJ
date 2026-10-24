@@ -31,10 +31,11 @@ export default function StudentClearancePage() {
     queryFn:  () => campaignsApi.listActive().then(r => r.data.data),
   })
 
-  // A session counts as active when its start year is 2025 or later (year-based rule)
+  // A session is active based on institutional configuration (s.isActive)
   const isActiveSession = (s: any) => {
+    if (typeof s?.isActive === 'boolean') return s.isActive
     const year = s?.startDate ? new Date(s.startDate).getFullYear() : Number(String(s?.name ?? '').slice(0, 4))
-    return year >= 2025
+    return !isNaN(year) && year >= 2020
   }
 
   // Default to the first active (2025+) session when data loads

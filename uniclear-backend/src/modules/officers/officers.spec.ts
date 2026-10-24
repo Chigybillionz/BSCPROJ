@@ -3,6 +3,10 @@ import { OfficersRepository } from './officers.repository'
 import { ConflictError, NotFoundError, TierLimitError } from '@/core/errors/AppError'
 import { db } from '@/lib/db'
 
+jest.mock('bcryptjs', () => ({
+  hash: jest.fn().mockResolvedValue('mock-hash'),
+  compare: jest.fn().mockResolvedValue(true),
+}))
 jest.mock('./officers.repository')
 jest.mock('@/modules/notifications/channels/email.channel', () => ({
   sendInviteEmail: jest.fn().mockResolvedValue({}),

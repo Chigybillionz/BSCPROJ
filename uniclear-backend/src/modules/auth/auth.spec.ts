@@ -23,12 +23,16 @@ jest.mock('@/lib/db', () => ({
 const mockUser = {
   id: 'user-id', email: 'test@unn.edu.ng', role: 'STUDENT' as const,
   universityId: 'uni-id', isActive: true,
-  passwordHash: bcrypt.hashSync('password123', 10),
+  passwordHash: '$2a$10$abcdefghijklmnopqrstuvwxyz1234567890abcdefghijklmnopqr',
   passwordSetAt: new Date(), officer: null,
 }
 
 describe('AuthService', () => {
-  beforeEach(() => jest.clearAllMocks())
+  beforeEach(() => {
+    jest.clearAllMocks()
+    jest.spyOn(bcrypt, 'hash').mockResolvedValue('mocked-hash' as never)
+    jest.spyOn(bcrypt, 'compare').mockImplementation((async (plain: unknown) => plain === 'password123') as any)
+  })
 
   describe('login', () => {
     it('should return tokens on valid credentials', async () => {

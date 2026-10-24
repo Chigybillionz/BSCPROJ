@@ -461,6 +461,9 @@ model ClearanceRequest {
   @@unique([studentId, sessionId, campaignId])
   @@index([universityId])
   @@index([studentId])
+  @@index([universityId, status, stageStatus])
+  @@index([currentStageId])
+  @@index([campaignId])
 }
 
 // ─────────────────────────────────────────
