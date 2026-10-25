@@ -31,17 +31,10 @@ export default function StudentClearancePage() {
     queryFn:  () => campaignsApi.listActive().then(r => r.data.data),
   })
 
-  // A session is active based on institutional configuration (s.isActive)
-  const isActiveSession = (s: any) => {
-    if (typeof s?.isActive === 'boolean') return s.isActive
-    const year = s?.startDate ? new Date(s.startDate).getFullYear() : Number(String(s?.name ?? '').slice(0, 4))
-    return !isNaN(year) && year >= 2020
-  }
-
-  // Default to the first active (2025+) session when data loads
+  // Default to the active session when data loads
   useEffect(() => {
     if (sessions && !selectedSessionId) {
-      const active = sessions.find((s: any) => isActiveSession(s))
+      const active = sessions.find((s: any) => s.isActive)
       if (active) setSelectedSessionId(active.id)
       else if (sessions.length > 0) setSelectedSessionId(sessions[0].id)
     }
@@ -56,11 +49,6 @@ export default function StudentClearancePage() {
     },
     onError: (e: any) => toast.error(e.response?.data?.message ?? 'Failed to start clearance'),
   })
-
-  const isSessionActive = (() => {
-    const s = sessions?.find((x: any) => x.id === selectedSessionId)
-    return s ? isActiveSession(s) : false
-  })()
 
   const isLoading = loadingSessions || loadingCampaigns
 
@@ -82,14 +70,11 @@ export default function StudentClearancePage() {
               onChange={e => setSelectedSessionId(e.target.value)}
               className="w-full p-2.5 text-sm border border-[var(--color-border)] rounded-md bg-[var(--color-surface)] text-[var(--color-text)]"
             >
-              {sessions.map((session: any) => {
-                const active = isActiveSession(session)
-                return (
-                  <option key={session.id} value={session.id} disabled={!active}>
-                    {session.name} {active ? '(Active)' : '(Inactive)'}
-                  </option>
-                )
-              })}
+              {sessions.map((session: any) => (
+                <option key={session.id} value={session.id}>
+                  {session.name} {session.isActive ? '(Current Active)' : ''}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -115,7 +100,7 @@ export default function StudentClearancePage() {
           <Button 
             className="w-full" 
             size="lg" 
-            disabled={!selectedCampaignId || !selectedSessionId || !isSessionActive || isPending}
+            disabled={!selectedCampaignId || !selectedSessionId || isPending}
             loading={isPending} 
             onClick={() => selectedCampaignId && selectedSessionId && start({ sessionId: selectedSessionId, campaignId: selectedCampaignId })}
           >

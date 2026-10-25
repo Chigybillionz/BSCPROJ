@@ -9,9 +9,11 @@ export interface AcademicSession {
 }
 
 export const sessionsApi = {
-  list:     ()                                                         => apiClient.get<{ success: true; data: AcademicSession[] }>('/sessions'),
-  create:   (data: { name: string; startDate: string; endDate: string }) => apiClient.post('/sessions', data),
-  activate: (id: string)                                               => apiClient.patch(`/sessions/${id}/activate`, {}),
+  list:     ()                                                                    => apiClient.get<{ success: true; data: AcademicSession[] }>('/sessions'),
+  create:   (data: { name: string; startDate: string; endDate: string })          => apiClient.post('/sessions', data),
+  update:   (id: string, data: { name?: string; startDate?: string; endDate?: string }) => apiClient.patch(`/sessions/${id}`, data),
+  activate: (id: string)                                                          => apiClient.patch(`/sessions/${id}/activate`, {}),
+  delete:   (id: string)                                                          => apiClient.delete(`/sessions/${id}`),
 }
 
 export const structureApi = {
