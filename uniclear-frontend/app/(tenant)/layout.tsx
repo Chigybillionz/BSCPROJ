@@ -2,6 +2,8 @@ import { cookies } from 'next/headers'
 import type { University } from '@/types'
 import { TenantShell } from './TenantShell'
 
+export const dynamic = 'force-dynamic'
+
 const API_URL = process.env.API_URL || 'http://localhost:5000'
 
 export default async function TenantLayout({ children }: { children: React.ReactNode }) {
