@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Menu, LogOut, Search, Sparkles, ShieldCheck } from 'lucide-react'
+import { Menu, LogOut, Search, ShieldCheck } from 'lucide-react'
 import { useUIStore } from '@/store/useUIStore'
 import { useAuthStore } from '@/store/useAuthStore'
 import { useTenantStore } from '@/store/useTenantStore'
@@ -22,7 +22,6 @@ export function Topbar({ title }: TopbarProps) {
 
   const user = useAuthStore(s => s.user)
   const tenantName = useTenantStore(s => s.name)
-  const tenantSlug = useTenantStore(s => s.slug)
 
   return (
     <>

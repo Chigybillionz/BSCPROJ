@@ -1,0 +1,46 @@
+services:
+  - type: web
+    name: uniclear-api
+    runtime: node
+    rootDir: uniclear-backend
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: JWT_ACCESS_EXPIRES_IN
+        value: 15m
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d
+      - key: CLIENT_URL
+        sync: false
+      - key: APP_URL
+        sync: false
+      - key: STORAGE_PROVIDER
+        value: supabase
+      - key: SUPABASE_S3_ACCESS_KEY_ID
+        value: 66ec9a6d472747a2ebeb0ba0c766d7ee
+      - key: SUPABASE_S3_SECRET_ACCESS_KEY
+        sync: false
+      - key: SUPABASE_S3_ENDPOINT
+        value: https://ltqyaavtoiqaibfcnnsj.supabase.co/storage/v1/s3
+      - key: SUPABASE_S3_REGION
+        value: eu-central-2
+      - key: SUPABASE_STORAGE_BUCKET
+        value: clearance-documents
+      - key: EMAIL_PROVIDER
+        value: gmail
+      - key: EMAIL_FROM
+        value: mosesjohnson706@gmail.com
+      - key: GOOGLE_CLIENT_ID
+        value: 140468195317-oo6lpu3g009ga545009a25uue6d2enh1.apps.googleusercontent.com
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GMAIL_REFRESH_TOKEN
+        sync: false

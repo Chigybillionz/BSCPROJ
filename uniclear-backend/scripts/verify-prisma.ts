@@ -7,12 +7,12 @@ async function main() {
   const db = new PrismaClient({ adapter })
 
   try {
-    const platformOwner = await db.platformOwner.findFirst()
-    const university    = await db.university.findFirst()
-    const stageCount    = await db.clearanceStage.count()
+    const user = await db.user.findFirst()
+    const university = await db.university.findFirst()
+    const stageCount = await db.clearanceStage.count()
 
     console.log('✅ Connected to Prisma Postgres')
-    console.log(`   Platform Owner : ${platformOwner?.email}`)
+    console.log(`   User           : ${user?.email}`)
     console.log(`   University     : ${university?.name}`)
     console.log(`   Stages seeded  : ${stageCount}`)
   } catch (err) {

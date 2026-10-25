@@ -106,10 +106,6 @@ export function ClearanceStepper({ stages, request }: ClearanceStepperProps) {
     return currentPhase ? currentPhase.stages : stages
   }, [isLargeStageSet, viewMode, stages, phases, selectedPhase])
 
-  const totalStages = stages.length
-  const approvedStages = request.stageApprovals?.filter(a => a.status === 'APPROVED').length ?? 0
-  const completionPercent = totalStages > 0 ? Math.round((approvedStages / totalStages) * 100) : 0
-
   return (
     <div className="space-y-6">
       {/* Top Phase Header / Progress Pill */}

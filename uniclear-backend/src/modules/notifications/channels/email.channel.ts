@@ -10,12 +10,29 @@ interface InviteEmailPayload {
   tempPassword: string
 }
 
-async function sendViaMailpit(payload: InviteEmailPayload): Promise<void> {
-  const transporter = nodemailer.createTransport({
+function createNodemailerTransporter() {
+  if (env.EMAIL_PROVIDER === 'gmail') {
+    return nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        type: 'OAuth2',
+        user: env.EMAIL_FROM,
+        clientId: env.GOOGLE_CLIENT_ID,
+        clientSecret: env.GOOGLE_CLIENT_SECRET,
+        refreshToken: env.GMAIL_REFRESH_TOKEN,
+      },
+    })
+  }
+
+  return nodemailer.createTransport({
     host: env.SMTP_HOST,
     port: env.SMTP_PORT,
     secure: false,
   })
+}
+
+async function sendViaNodemailer(payload: InviteEmailPayload): Promise<void> {
+  const transporter = createNodemailerTransporter()
 
   await transporter.sendMail({
     from: env.EMAIL_FROM,
@@ -24,7 +41,8 @@ async function sendViaMailpit(payload: InviteEmailPayload): Promise<void> {
     html: buildInviteHtml(payload),
   })
 
-  logger.info({ to: payload.to }, 'Invite email sent via Mailpit → http://localhost:8025')
+  const target = env.EMAIL_PROVIDER === 'gmail' ? 'Gmail OAuth2' : 'Mailpit → http://localhost:8025'
+  logger.info({ to: payload.to }, `Invite email sent via ${target}`)
 }
 
 async function sendViaResend(payload: InviteEmailPayload): Promise<void> {
@@ -56,7 +74,7 @@ export async function sendInviteEmail(payload: InviteEmailPayload): Promise<void
     if (env.EMAIL_PROVIDER === 'resend') {
       await sendViaResend(payload)
     } else {
-      await sendViaMailpit(payload)
+      await sendViaNodemailer(payload)
     }
   } catch (err) {
     // Email failure should never crash the invite flow — log and continue
@@ -133,11 +151,7 @@ export async function sendClearanceStatusEmail(payload: ClearanceStatusEmailPayl
         logger.info({ to: payload.to, status: payload.status }, 'Clearance status email sent via Resend')
       }
     } else {
-      const transporter = nodemailer.createTransport({
-        host: env.SMTP_HOST,
-        port: env.SMTP_PORT,
-        secure: false,
-      })
+      const transporter = createNodemailerTransporter()
 
       await transporter.sendMail({
         from: env.EMAIL_FROM,
@@ -146,7 +160,8 @@ export async function sendClearanceStatusEmail(payload: ClearanceStatusEmailPayl
         html,
       })
 
-      logger.info({ to: payload.to, status: payload.status }, 'Clearance status email sent via Mailpit → http://localhost:8025')
+      const target = env.EMAIL_PROVIDER === 'gmail' ? 'Gmail OAuth2' : 'Mailpit → http://localhost:8025'
+      logger.info({ to: payload.to, status: payload.status }, `Clearance status email sent via ${target}`)
     }
   } catch (err) {
     logger.error({ err, to: payload.to }, 'Failed to send clearance status email')

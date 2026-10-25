@@ -6,7 +6,7 @@ import { motion } from 'framer-motion'
 import {
   LayoutDashboard, Users, UserCircle, Settings, FileText,
   CalendarDays, BarChart2, Paintbrush, ClipboardList, University,
-  GraduationCap, FolderOpen, Terminal, Sparkles, ChevronRight,
+  GraduationCap, FolderOpen, Terminal, ChevronRight,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
@@ -24,7 +24,7 @@ interface NavSection {
 export function Sidebar() {
   const pathname = usePathname()
   const { sidebarOpen, setSidebarOpen } = useUIStore()
-  const { role, isOfficer, isPlatformOwner, isStudent } = useRole()
+  const { isOfficer, isPlatformOwner, isStudent } = useRole()
   const { name, logoUrl } = useTenant()
 
   const adminSections: NavSection[] = [
