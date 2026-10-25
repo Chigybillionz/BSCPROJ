@@ -1,4 +1,6 @@
 import { serverFetch } from '@/lib/api/server'
+
+export const dynamic = 'force-dynamic'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card } from '@/components/ui/card'
 import { Users, CheckCircle, Clock } from 'lucide-react'

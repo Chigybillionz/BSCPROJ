@@ -2,6 +2,8 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { CampaignList } from '@/components/admin/CampaignList'
 import { serverFetch } from '@/lib/api/server'
 
+export const dynamic = 'force-dynamic'
+
 async function getSessions() {
   try {
     const res = await serverFetch<any>('/sessions')
