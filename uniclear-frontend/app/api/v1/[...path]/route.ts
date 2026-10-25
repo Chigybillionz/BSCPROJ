@@ -62,7 +62,17 @@ async function proxy(req: NextRequest, { params }: { params: Promise<{ path: str
   let body: any
   if (!['GET', 'HEAD'].includes(req.method)) {
     if (isMultipart) {
-      body = await req.formData()
+      const incomingFormData = await req.formData()
+      const forwardFormData = new FormData()
+      for (const [key, value] of incomingFormData.entries()) {
+        if (value instanceof Blob) {
+          const filename = (value as File).name || 'file'
+          forwardFormData.append(key, value, filename)
+        } else {
+          forwardFormData.append(key, value)
+        }
+      }
+      body = forwardFormData
     } else {
       headers.set('Content-Type', contentType || 'application/json')
       body = await req.text()

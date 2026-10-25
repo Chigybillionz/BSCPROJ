@@ -33,7 +33,7 @@ services:
       - key: SUPABASE_S3_REGION
         value: eu-central-2
       - key: SUPABASE_STORAGE_BUCKET
-        value: clearance-documents
+        value: uniclear
       - key: EMAIL_PROVIDER
         value: gmail
       - key: EMAIL_FROM
