@@ -4,9 +4,10 @@ export function middleware(req: NextRequest) {
   const res = NextResponse.next()
   const host = req.headers.get('host') ?? ''
 
-  // Ignore IP addresses (e.g. 192.168.x.x, 127.0.0.1) and localhost
+  // Ignore IP addresses and platform deployment domains (e.g. vercel.app, onrender.com, localhost)
   const isIp = /^(\d{1,3}\.){3}\d{1,3}/.test(host)
-  const isLocal = host.includes('localhost') || isIp
+  const isPlatformHost = ['vercel.app', 'onrender.com', 'localhost'].some(d => host.endsWith(d))
+  const isLocal = isPlatformHost || isIp
   const subdomain = host.split('.')[0]
   const fromSubdomain = !isLocal && host.includes('.') && subdomain !== 'www'
     ? subdomain : null
