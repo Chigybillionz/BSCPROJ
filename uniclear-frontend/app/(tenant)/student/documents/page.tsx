@@ -20,7 +20,7 @@ function DocumentsContent() {
   // Support multi-campaign by picking the requested clearance, or falling back to the first active one
   const clearance = urlRequestId 
     ? clearances?.find((c: any) => c.id === urlRequestId)
-    : clearances?.find((c: any) => c.status !== 'COMPLETED')
+    : (clearances?.find((c: any) => c.status !== 'COMPLETED') || clearances?.[0])
 
   const requestId = clearance?.id ?? ''
   

@@ -24,6 +24,7 @@ export function useUploadDocument(requestId: string) {
     onSuccess: () => {
       toast.success('Document uploaded')
       qc.invalidateQueries({ queryKey: documentKeys.byRequest(requestId) })
+      qc.invalidateQueries({ queryKey: ['clearance'] })
     },
     onError: (e: any) => toast.error(e.response?.data?.message ?? 'Upload failed'),
   })
@@ -36,6 +37,7 @@ export function useDeleteDocument(requestId: string) {
     onSuccess: () => {
       toast.success('Document removed')
       qc.invalidateQueries({ queryKey: documentKeys.byRequest(requestId) })
+      qc.invalidateQueries({ queryKey: ['clearance'] })
     },
   })
 }

@@ -15,6 +15,6 @@ router.post('/upload',                         requireRole('STUDENT'), upload.si
 router.get('/:id/url',                         requireRole('SUPER_ADMIN', 'ADMIN', 'OFFICER', 'STUDENT'), DocumentsController.getSignedUrl)
 router.patch('/:id/approve',                   requireRole('OFFICER', 'SUPER_ADMIN', 'ADMIN'),    DocumentsController.approveDocument)
 router.patch('/:id/reject',                    requireRole('OFFICER', 'SUPER_ADMIN', 'ADMIN'),    DocumentsController.rejectDocument)
-router.delete('/:id',                          requireRole('STUDENT', 'SUPER_ADMIN'),             DocumentsController.delete)
+router.delete('/:id',                          requireRole('STUDENT', 'SUPER_ADMIN', 'ADMIN'),    DocumentsController.delete)
 
 export default router

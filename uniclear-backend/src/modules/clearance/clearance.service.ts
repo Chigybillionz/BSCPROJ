@@ -92,7 +92,8 @@ export class ClearanceService {
     })
     const required = requirements.filter(r => r.isRequired)
     const uploaded = await DocumentsRepository.findByStage(requestId, clearance.currentStageId, universityId)
-    const uploadedTypeIds = uploaded.map(d => d.documentTypeId)
+    const validUploaded = uploaded.filter(d => d.status !== 'REJECTED')
+    const uploadedTypeIds = validUploaded.map(d => d.documentTypeId)
     const missing = required.filter(r => !uploadedTypeIds.includes(r.documentTypeId))
 
     if (missing.length > 0) {
@@ -122,14 +123,15 @@ export class ClearanceService {
       throw new ForbiddenError('You are not assigned to this stage')
     }
 
-    // Verify scope: if assignment is scoped to faculty or dept, student must match
+    // Verify scope: if assignment is scoped to faculty, dept, or session, student must match
     const authorized = matchingAssignments.some(a => {
       if (a.facultyId && a.facultyId !== clearance.student.facultyId) return false
       if (a.departmentId && a.departmentId !== clearance.student.departmentId) return false
+      if (a.sessionId && a.sessionId !== clearance.sessionId) return false
       return true
     })
     if (!authorized) {
-      throw new ForbiddenError('You are not authorized to review students outside your assigned faculty/department')
+      throw new ForbiddenError('You are not authorized to review students outside your assigned faculty/department/session')
     }
 
     const currentStage = await db.clearanceStage.findUnique({ where: { id: clearance.currentStageId } })
@@ -214,10 +216,11 @@ export class ClearanceService {
     const authorized = matchingAssignments.some(a => {
       if (a.facultyId && a.facultyId !== clearance.student.facultyId) return false
       if (a.departmentId && a.departmentId !== clearance.student.departmentId) return false
+      if (a.sessionId && a.sessionId !== clearance.sessionId) return false
       return true
     })
     if (!authorized) {
-      throw new ForbiddenError('You are not authorized to review students outside your assigned faculty/department')
+      throw new ForbiddenError('You are not authorized to review students outside your assigned faculty/department/session')
     }
 
     await ClearanceRepository.createStageApproval({

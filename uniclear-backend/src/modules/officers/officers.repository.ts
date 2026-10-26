@@ -25,7 +25,7 @@ export class OfficersRepository {
   static async findByUserId(userId: string) {
     return db.officer.findUnique({
       where: { userId },
-      include: { stageAssignments: { include: { stage: true, faculty: true, department: true } } },
+      include: { stageAssignments: { include: { stage: true, faculty: true, department: true, session: true } } },
     })
   }
 

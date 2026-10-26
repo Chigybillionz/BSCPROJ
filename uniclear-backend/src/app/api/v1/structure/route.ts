@@ -71,14 +71,14 @@ router.get('/departments', async (req, res, next) => {
 })
 
 // ── Protected Admin Routes ──
-router.post('/faculties', authMiddleware, requireTenant, requireRole('SUPER_ADMIN'), async (req, res, next) => {
+router.post('/faculties', authMiddleware, requireTenant, requireRole('SUPER_ADMIN', 'ADMIN'), async (req, res, next) => {
   try {
     const data = await db.faculty.create({ data: { name: req.body.name, universityId: req.universityId! } })
     return ApiResponse.success(res, data, 'Created', 201)
   } catch (err) { next(err) }
 })
 
-router.delete('/faculties/:id', authMiddleware, requireTenant, requireRole('SUPER_ADMIN'), async (req, res, next) => {
+router.delete('/faculties/:id', authMiddleware, requireTenant, requireRole('SUPER_ADMIN', 'ADMIN'), async (req, res, next) => {
   try {
     const faculty = await db.faculty.findFirst({
       where: { id: req.params.id, universityId: req.universityId! },
@@ -91,7 +91,7 @@ router.delete('/faculties/:id', authMiddleware, requireTenant, requireRole('SUPE
   } catch (err) { next(err) }
 })
 
-router.post('/departments', authMiddleware, requireTenant, requireRole('SUPER_ADMIN'), async (req, res, next) => {
+router.post('/departments', authMiddleware, requireTenant, requireRole('SUPER_ADMIN', 'ADMIN'), async (req, res, next) => {
   try {
     const { name, facultyId, availableLevels } = req.body
     const faculty = await db.faculty.findFirst({
@@ -111,7 +111,7 @@ router.post('/departments', authMiddleware, requireTenant, requireRole('SUPER_AD
   } catch (err) { next(err) }
 })
 
-router.delete('/departments/:id', authMiddleware, requireTenant, requireRole('SUPER_ADMIN'), async (req, res, next) => {
+router.delete('/departments/:id', authMiddleware, requireTenant, requireRole('SUPER_ADMIN', 'ADMIN'), async (req, res, next) => {
   try {
     const dept = await db.department.findFirst({
       where: { id: req.params.id, faculty: { universityId: req.universityId! } },

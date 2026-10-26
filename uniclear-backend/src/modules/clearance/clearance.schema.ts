@@ -1,5 +1,10 @@
 import { z } from 'zod'
 
+const optionalUuid = z.preprocess(
+  (val) => (val === '' || val === null || val === undefined ? undefined : val),
+  z.string().uuid().optional()
+)
+
 export const startClearanceSchema = z.object({
   sessionId: z.string().uuid(),
   campaignId: z.string().uuid(),
@@ -8,7 +13,7 @@ export const startClearanceSchema = z.object({
 export const approveStageSchema = z.object({
   remarks: z.string().optional(),
   issuedData: z.union([z.string(), z.record(z.any())]).optional(),
-  stampId: z.string().uuid().optional(),
+  stampId: optionalUuid,
 })
 
 export const rejectStageSchema = z.object({
@@ -18,8 +23,14 @@ export const rejectStageSchema = z.object({
 export const queueQuerySchema = z.object({
   page:   z.coerce.number().default(1),
   limit:  z.coerce.number().default(20),
-  search: z.string().optional(),
-  sessionId: z.string().uuid().optional(),
-  campaignId: z.string().uuid().optional(),
-  stageStatus: z.enum(['ALL', 'SUBMITTED', 'PENDING', 'REJECTED']).optional(),
+  search: z.preprocess(
+    (val) => (val === '' || val === null || val === undefined ? undefined : val),
+    z.string().optional()
+  ),
+  sessionId: optionalUuid,
+  campaignId: optionalUuid,
+  stageStatus: z.preprocess(
+    (val) => (val === '' || val === null || val === undefined ? undefined : val),
+    z.enum(['ALL', 'SUBMITTED', 'PENDING', 'REJECTED']).optional()
+  ),
 })

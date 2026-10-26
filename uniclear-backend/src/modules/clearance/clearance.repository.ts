@@ -126,8 +126,13 @@ export class ClearanceRepository {
     const { page, limit, search, sessionId, campaignId, stageStatus } = opts
     const skip = (page - 1) * limit
 
+    if (!assignments || assignments.length === 0) {
+      return { data: [], total: 0 }
+    }
+
     const assignmentOrs = assignments.map(a => {
       const cond: any = { currentStageId: a.stageId }
+      if (a.sessionId) cond.sessionId = a.sessionId
       if (a.facultyId || a.departmentId) {
         cond.student = {}
         if (a.facultyId) cond.student.facultyId = a.facultyId
@@ -160,6 +165,7 @@ export class ClearanceRepository {
             { firstName: { contains: search, mode: 'insensitive' } },
             { lastName:  { contains: search, mode: 'insensitive' } },
             { jambRegNo: { contains: search, mode: 'insensitive' } },
+            { matricNo:  { contains: search, mode: 'insensitive' } },
           ]
         }
       })

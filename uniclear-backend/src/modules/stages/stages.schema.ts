@@ -1,7 +1,12 @@
 import { z } from 'zod'
 
+const optionalUuid = z.preprocess(
+  (val) => (val === '' || val === null || val === undefined ? undefined : val),
+  z.string().uuid().optional()
+)
+
 export const createStageSchema = z.object({
-  campaignId:  z.string().uuid().optional(),
+  campaignId:  optionalUuid,
   name:        z.string().min(1, 'Stage name is required'),
   description: z.string().optional(),
   orderIndex:  z.number().int().min(1).optional(),

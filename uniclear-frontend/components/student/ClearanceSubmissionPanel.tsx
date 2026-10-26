@@ -45,7 +45,7 @@ export function ClearanceSubmissionPanel({
   ).length
 
   const percentComplete = requiredCount > 0 ? Math.round((uploadedRequiredCount / requiredCount) * 100) : 100
-  const canSubmit = requiredCount === uploadedRequiredCount && requirements.length > 0
+  const canSubmit = requiredCount === uploadedRequiredCount
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, typeId: string) => {
     const file = e.target.files?.[0]
@@ -276,19 +276,23 @@ export function ClearanceSubmissionPanel({
         <Button 
           className="w-full" 
           size="lg" 
-          disabled={!canSubmit || isSubmitting} 
+          disabled={!canSubmit || isSubmitting || request.stageStatus === 'SUBMITTED'} 
           onClick={handleSubmit}
         >
           {isSubmitting ? (
             <Loader2 className="w-4 h-4 animate-spin mr-2" />
           ) : null}
-          Submit for Review
+          {request.stageStatus === 'SUBMITTED' ? 'Submitted — Awaiting Review' : 'Submit for Review'}
         </Button>
-        {!canSubmit && requirements.length > 0 && (
+        {request.stageStatus === 'SUBMITTED' ? (
+          <p className="text-xs text-center text-emerald-600 mt-2 font-medium">
+            Stage successfully submitted and currently under review by clearance officers.
+          </p>
+        ) : !canSubmit && requirements.length > 0 ? (
           <p className="text-xs text-center text-[var(--color-muted)] mt-2">
             Please upload all required documents above to enable submission.
           </p>
-        )}
+        ) : null}
       </div>
     </Card>
   )

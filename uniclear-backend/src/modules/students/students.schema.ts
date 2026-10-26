@@ -1,16 +1,26 @@
 import { z } from 'zod'
 
+const optionalUuid = z.preprocess(
+  (val) => (val === '' || val === null || val === undefined ? undefined : val),
+  z.string().uuid().optional()
+)
+
+const optionalString = z.preprocess(
+  (val) => (val === '' || val === null || val === undefined ? undefined : val),
+  z.string().optional()
+)
+
 export const createStudentSchema = z.object({
   email:          z.string().email().optional(),
   jambRegNo:      z.string().min(1),
-  matricNo:       z.string().optional(),
+  matricNo:       optionalString,
   firstName:      z.string().min(1),
   lastName:       z.string().min(1),
-  facultyId:      z.string().uuid().optional(),
-  departmentId:   z.string().uuid().optional(),
-  entrySessionId: z.string().uuid().optional(),
-  level:          z.string().optional(),
-  phone:          z.string().optional(),
+  facultyId:      optionalUuid,
+  departmentId:   optionalUuid,
+  entrySessionId: optionalUuid,
+  level:          optionalString,
+  phone:          optionalString,
 })
 
 export const bulkCreateItemSchema = z.object({
@@ -30,17 +40,17 @@ export const updateStudentSchema = z.object({
   firstName:    z.string().min(1).optional(),
   lastName:     z.string().min(1).optional(),
   jambRegNo:    z.string().min(1).optional(),
-  matricNo:     z.string().min(1).optional(),
-  facultyId:    z.string().uuid().optional(),
-  departmentId: z.string().uuid().optional(),
-  level:        z.string().optional(),
-  phone:        z.string().optional(),
+  matricNo:     optionalString,
+  facultyId:    optionalUuid,
+  departmentId: optionalUuid,
+  level:        optionalString,
+  phone:        optionalString,
 })
 
 export const listStudentsSchema = z.object({
   page:         z.coerce.number().default(1),
   limit:        z.coerce.number().default(20),
-  search:       z.string().optional(),
-  facultyId:    z.string().uuid().optional(),
-  departmentId: z.string().uuid().optional(),
+  search:       optionalString,
+  facultyId:    optionalUuid,
+  departmentId: optionalUuid,
 })
