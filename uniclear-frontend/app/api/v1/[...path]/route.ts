@@ -33,12 +33,18 @@ async function doFetch(url: string, method: string, headers: Headers, body: any,
   const reqHeaders = new Headers(headers)
   if (token) reqHeaders.set('Authorization', `Bearer ${token}`)
 
-  return fetch(url, {
+  const init: RequestInit = {
     method,
     headers: reqHeaders,
+  }
+
+  if (body !== undefined && !['GET', 'HEAD'].includes(method)) {
+    init.body = body
     // @ts-expect-error Node.js fetch requires duplex: 'half' for streaming request bodies
-    duplex: 'half',
-  })
+    init.duplex = 'half'
+  }
+
+  return fetch(url, init)
 }
 
 async function proxy(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
@@ -59,12 +65,23 @@ async function proxy(req: NextRequest, { params }: { params: Promise<{ path: str
   const isMultipart = contentType.includes('multipart/form-data')
   const headers = new Headers()
   
-  let body: any
+  let incomingEntries: [string, FormDataEntryValue][] = []
+  let rawBody: string | undefined
   if (!['GET', 'HEAD'].includes(req.method)) {
     if (isMultipart) {
       const incomingFormData = await req.formData()
+      incomingEntries = Array.from(incomingFormData.entries())
+    } else {
+      headers.set('Content-Type', contentType || 'application/json')
+      rawBody = await req.text()
+    }
+  }
+
+  const getBody = () => {
+    if (['GET', 'HEAD'].includes(req.method)) return undefined
+    if (isMultipart) {
       const forwardFormData = new FormData()
-      for (const [key, value] of incomingFormData.entries()) {
+      for (const [key, value] of incomingEntries) {
         if (value instanceof Blob) {
           const filename = (value as File).name || 'file'
           forwardFormData.append(key, value, filename)
@@ -72,16 +89,14 @@ async function proxy(req: NextRequest, { params }: { params: Promise<{ path: str
           forwardFormData.append(key, value)
         }
       }
-      body = forwardFormData
-    } else {
-      headers.set('Content-Type', contentType || 'application/json')
-      body = await req.text()
+      return forwardFormData
     }
+    return rawBody
   }
 
   let res: Response
   try {
-    res = await doFetch(url, req.method, headers, body, token)
+    res = await doFetch(url, req.method, headers, getBody(), token)
   } catch {
     return NextResponse.json({ success: false, message: 'Cannot reach server. Please try again later.' }, { status: 503 })
   }
@@ -91,7 +106,7 @@ async function proxy(req: NextRequest, { params }: { params: Promise<{ path: str
     const newToken = await refreshAccessToken()
     if (newToken) {
       try {
-        res = await doFetch(url, req.method, headers, body, newToken)
+        res = await doFetch(url, req.method, headers, getBody(), newToken)
       } catch {
         return NextResponse.json({ success: false, message: 'Cannot reach server. Please try again later.' }, { status: 503 })
       }

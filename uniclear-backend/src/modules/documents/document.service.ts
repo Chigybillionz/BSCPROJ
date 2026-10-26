@@ -29,17 +29,18 @@ export class DocumentsService {
 
     // Sanitize originalname — strip directory components, keep only bare filename
     const safeName = path.basename(file.originalname).replace(/[^a-zA-Z0-9._-]/g, '_')
-    const ext = path.extname(safeName).replace('.', '').toLowerCase()
+    const rawExt = path.extname(safeName).replace('.', '').toLowerCase()
+    const ext = rawExt === 'jpeg' ? 'jpg' : rawExt
 
-    if (!ext || !docType.allowedFormats.includes(ext)) {
+    const normalizedAllowed = docType.allowedFormats.map(f => f.toLowerCase() === 'jpeg' ? 'jpg' : f.toLowerCase())
+    if (!ext || !normalizedAllowed.includes(ext)) {
       throw new ValidationError(`Invalid format. Allowed: ${docType.allowedFormats.join(', ')}`)
     }
 
     // Validate MIME type matches extension
     const allowedMimes: Record<string, string[]> = {
       pdf:  ['application/pdf'],
-      jpg:  ['image/jpeg'],
-      jpeg: ['image/jpeg'],
+      jpg:  ['image/jpeg', 'image/pjpeg'],
       png:  ['image/png'],
     }
     if (allowedMimes[ext] && !allowedMimes[ext].includes(file.mimetype)) {
