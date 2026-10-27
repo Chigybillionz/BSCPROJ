@@ -1,7 +1,8 @@
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 
-const API_URL = process.env.API_URL || 'http://localhost:5000'
+const RAW_API_URL = process.env.API_URL || 'http://localhost:5000'
+const API_URL = RAW_API_URL.replace(/\/api\/v1\/?$/, '').replace(/\/+$/, '')
 
 async function refreshAccessToken(): Promise<string | null> {
   const cookieStore = await cookies()

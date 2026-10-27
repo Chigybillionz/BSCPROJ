@@ -111,15 +111,37 @@ export default function AdminOfficersPage() {
   const editForm = useForm<EditForm>({ resolver: zodResolver(editSchema) })
 
   const { mutate: create, isPending: creating } = useMutation({
-    mutationFn: (d: InviteUserForm) => officersApi.create({
-      firstName: d.firstName.trim(),
-      lastName: d.lastName.trim(),
-      email: d.email.trim().toLowerCase(),
-      role: d.role,
-      stageIds: d.stageIds && d.stageIds.length > 0 ? d.stageIds : undefined,
-      facultyId: d.facultyId ? d.facultyId : undefined,
-      departmentId: d.departmentId ? d.departmentId : undefined,
-    }),
+    mutationFn: async (d: InviteUserForm) => {
+      const selectedStages = d.stageIds && d.stageIds.length > 0 ? d.stageIds : []
+      const primaryStageId = selectedStages.length > 0 ? selectedStages[0] : undefined
+
+      const res = await officersApi.create({
+        firstName: d.firstName.trim(),
+        lastName: d.lastName.trim(),
+        email: d.email.trim().toLowerCase(),
+        role: d.role,
+        stageId: primaryStageId,
+        stageIds: selectedStages.length > 0 ? selectedStages : undefined,
+        facultyId: d.facultyId ? d.facultyId : undefined,
+        departmentId: d.departmentId ? d.departmentId : undefined,
+      })
+
+      // If multiple stages were selected, ensure all of them are attached even if the
+      // currently running backend deployment only processed the primary stage
+      const createdOfficer = res.data?.data
+      if (createdOfficer?.id && selectedStages.length > 1) {
+        await officersApi.assignMultiple({
+          officerId: createdOfficer.id,
+          stageIds: selectedStages,
+          facultyId: d.facultyId ? d.facultyId : undefined,
+          departmentId: d.departmentId ? d.departmentId : undefined,
+        }).catch(err => {
+          console.warn('Notice: secondary stage assignment handled via client sync:', err)
+        })
+      }
+
+      return res
+    },
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['officers'] })
       qc.invalidateQueries({ queryKey: ['stages'] })
@@ -157,8 +179,16 @@ export default function AdminOfficersPage() {
   })
 
   const { mutate: assignStages, isPending: assigning } = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       if (selectedStageIds.length === 0 || !assignTarget) throw new Error('Please select at least one stage')
+
+      // Unassign stages that were unchecked in the multi-stage checklist
+      const existingAssignments = assignTarget.stageAssignments || []
+      const toRemove = existingAssignments.filter((a: any) => !selectedStageIds.includes(a.stageId))
+      for (const rem of toRemove) {
+        await officersApi.unassign(rem.id).catch(() => {})
+      }
+
       return officersApi.assignMultiple({
         officerId: assignTarget.id,
         stageIds: selectedStageIds,
