@@ -283,7 +283,7 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
   
   // Required docs uploaded and not rejected
   const areRequiredDocsUploaded = stageReqTypeIds.length > 0
-    ? stageReqTypeIds.every(typeId => {
+    ? stageReqTypeIds.every((typeId: string) => {
         const matchingDoc = documents?.find(d => d.documentTypeId === typeId)
         return !!matchingDoc && (matchingDoc as any).status !== 'REJECTED'
       })
@@ -291,7 +291,7 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
 
   // Required docs verified
   const areRequiredDocsVerified = stageReqTypeIds.length > 0
-    ? stageReqTypeIds.every(typeId => {
+    ? stageReqTypeIds.every((typeId: string) => {
         const matchingDoc = documents?.find(d => d.documentTypeId === typeId)
         return matchingDoc && (matchingDoc as any).status === 'APPROVED'
       })
