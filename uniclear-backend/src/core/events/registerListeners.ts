@@ -19,13 +19,27 @@ export function registerListeners() {
 
   // ── Stage submitted ────────────────────────────────────────────
   eventBus.on('stage.submitted', async ({ requestId, stageId, studentId, universityId }) => {
-    const actorId = await getStudentUserId(studentId)
+    const [actorId, stage, student] = await Promise.all([
+      getStudentUserId(studentId),
+      db.clearanceStage.findUnique({ where: { id: stageId }, include: { officerAssignments: { include: { officer: true } } } }),
+      db.student.findUnique({ where: { id: studentId } }),
+    ])
+
+    const stageName = stage?.name || 'Clearance Stage'
+    const studentName = student ? `${student.firstName} ${student.lastName}` : undefined
+
     if (actorId) {
-      await AuditService.log({ universityId, actorId, action: 'STAGE_SUBMITTED', targetId: requestId, targetType: 'ClearanceRequest', metadata: { stageId } })
+      await AuditService.log({
+        universityId,
+        actorId,
+        action: 'STAGE_SUBMITTED',
+        targetId: requestId,
+        targetType: 'ClearanceRequest',
+        metadata: { stageId, stageName, studentName, jambRegNo: student?.jambRegNo },
+      })
     }
 
     // Notify officer
-    const stage = await db.clearanceStage.findUnique({ where: { id: stageId }, include: { officerAssignments: { include: { officer: true } } } })
     if (stage?.officerAssignments) {
       await Promise.all(
         stage.officerAssignments.map(assignment =>
@@ -37,15 +51,23 @@ export function registerListeners() {
 
   // ── Stage approved ─────────────────────────────────────────────
   eventBus.on('stage.approved', async ({ requestId, stageId, officerId, universityId, studentId }) => {
-    await AuditService.log({ universityId, actorId: officerId, action: 'STAGE_APPROVED', targetId: requestId, targetType: 'ClearanceRequest', metadata: { stageId } })
-
     const [stage, student] = await Promise.all([
       db.clearanceStage.findUnique({ where: { id: stageId } }),
       db.student.findUnique({ where: { id: studentId }, include: { user: true } }),
     ])
 
     const stageName = stage?.name || 'Clearance Stage'
+    const studentName = student ? `${student.firstName} ${student.lastName}` : undefined
     const targetUserId = student?.userId || studentId
+
+    await AuditService.log({
+      universityId,
+      actorId: officerId,
+      action: 'STAGE_APPROVED',
+      targetId: requestId,
+      targetType: 'ClearanceRequest',
+      metadata: { stageId, stageName, studentName, jambRegNo: student?.jambRegNo },
+    })
 
     await NotificationsService.send(
       universityId, targetUserId, 'STAGE_APPROVED',
@@ -68,15 +90,23 @@ export function registerListeners() {
 
   // ── Stage rejected ─────────────────────────────────────────────
   eventBus.on('stage.rejected', async ({ requestId, stageId, officerId, remarks, universityId, studentId }) => {
-    await AuditService.log({ universityId, actorId: officerId, action: 'STAGE_REJECTED', targetId: requestId, targetType: 'ClearanceRequest', metadata: { stageId, remarks } })
-
     const [stage, student] = await Promise.all([
       db.clearanceStage.findUnique({ where: { id: stageId } }),
       db.student.findUnique({ where: { id: studentId }, include: { user: true } }),
     ])
 
     const stageName = stage?.name || 'Clearance Stage'
+    const studentName = student ? `${student.firstName} ${student.lastName}` : undefined
     const targetUserId = student?.userId || studentId
+
+    await AuditService.log({
+      universityId,
+      actorId: officerId,
+      action: 'STAGE_REJECTED',
+      targetId: requestId,
+      targetType: 'ClearanceRequest',
+      metadata: { stageId, stageName, remarks, studentName, jambRegNo: student?.jambRegNo },
+    })
 
     await NotificationsService.send(
       universityId, targetUserId, 'STAGE_REJECTED',

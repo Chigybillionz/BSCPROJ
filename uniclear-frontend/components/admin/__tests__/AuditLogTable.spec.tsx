@@ -94,7 +94,7 @@ describe('AuditLogTable', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Event Audit Record')).toBeInTheDocument()
-      expect(screen.getByText(/Good documentation/i)).toBeInTheDocument()
+      expect(screen.getAllByText(/Good documentation/i).length).toBeGreaterThanOrEqual(1)
     })
 
     // Close modal

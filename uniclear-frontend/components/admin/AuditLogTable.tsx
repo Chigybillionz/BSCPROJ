@@ -368,12 +368,34 @@ export function AuditLogTable() {
 
                       {/* Target */}
                       <td className="py-3.5 px-4">
-                        <div className="min-w-0">
-                          <span className="font-semibold text-slate-800 text-xs">
-                            {log.targetType || 'System'}
-                          </span>
+                        <div className="min-w-0 max-w-[240px]">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-semibold text-slate-800 text-xs">
+                              {log.targetType || 'System'}
+                            </span>
+                            {log.metadata?.stageName && (
+                              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 truncate">
+                                {log.metadata.stageName}
+                              </span>
+                            )}
+                            {log.metadata?.documentName && (
+                              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-sky-50 text-sky-700 border border-sky-200 truncate">
+                                {log.metadata.documentName}
+                              </span>
+                            )}
+                          </div>
+                          {log.metadata?.remarks && (
+                            <p className="text-[11px] text-rose-600 italic truncate mt-0.5" title={log.metadata.remarks}>
+                              &ldquo;{log.metadata.remarks}&rdquo;
+                            </p>
+                          )}
+                          {log.metadata?.studentName && (
+                            <p className="text-[10px] text-slate-500 truncate mt-0.5">
+                              Student: {log.metadata.studentName}
+                            </p>
+                          )}
                           {log.targetId && (
-                            <div className="flex items-center gap-1 text-[11px] text-slate-500 font-mono mt-0.5">
+                            <div className="flex items-center gap-1 text-[11px] text-slate-400 font-mono mt-0.5">
                               <span>{log.targetId.slice(0, 10)}...</span>
                               <button
                                 type="button"
