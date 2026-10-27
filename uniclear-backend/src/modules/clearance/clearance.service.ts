@@ -103,8 +103,8 @@ export class ClearanceService {
       level:        student?.level        ?? undefined,
     })
     const required = requirements.filter(r => r.isRequired)
-    const uploaded = await DocumentsRepository.findByStage(requestId, targetStageId, universityId)
-    const validUploaded = uploaded.filter(d => d.status !== 'REJECTED')
+    const allUploaded = await DocumentsRepository.findByRequest(requestId, universityId)
+    const validUploaded = allUploaded.filter(d => d.status !== 'REJECTED')
     const uploadedTypeIds = validUploaded.map(d => d.documentTypeId)
     const missing = required.filter(r => !uploadedTypeIds.includes(r.documentTypeId))
 
@@ -202,8 +202,10 @@ export class ClearanceService {
     })
     const required = requirements.filter(r => r.isRequired)
     if (required.length > 0) {
-      const uploaded = await DocumentsRepository.findByStage(requestId, stageIdToApprove, universityId)
-      const validUploaded = uploaded.filter(d => d.status !== 'REJECTED')
+      // Fetch ALL documents for this request (not just stage-filtered) so that
+      // documents uploaded before stage routing are still found
+      const allUploaded = await DocumentsRepository.findByRequest(requestId, universityId)
+      const validUploaded = allUploaded.filter(d => d.status !== 'REJECTED')
       const uploadedTypeIds = validUploaded.map(d => d.documentTypeId)
       const missing = required.filter(r => !uploadedTypeIds.includes(r.documentTypeId))
       if (missing.length > 0) {
