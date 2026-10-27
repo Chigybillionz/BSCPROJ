@@ -112,13 +112,22 @@ export class ClearanceService {
       throw new ValidationError(`Missing required documents for ${targetStage.name}: ${missing.map(m => m.documentType.name).join(', ')}`)
     }
 
+    // Only update stageStatus to SUBMITTED when submitting the current active stage.
+    // For advance-uploaded future stages, just touch updatedAt — the status advances
+    // naturally when the officer approves the current stage and currentStageId moves forward.
     if (clearance.currentStageId === targetStageId) {
       await ClearanceRepository.updateStageStatus(requestId, 'SUBMITTED')
     } else {
-      await db.clearanceRequest.update({
-        where: { id: requestId },
-        data: { updatedAt: new Date() },
-      })
+      // Prevent re-submitting a future stage that is already submitted
+      const isAlreadySubmitted = (clearance.stageApprovals || []).some(
+        a => a.stageId === targetStageId && a.status === 'SUBMITTED'
+      )
+      if (!isAlreadySubmitted) {
+        await db.clearanceRequest.update({
+          where: { id: requestId },
+          data: { updatedAt: new Date() },
+        })
+      }
     }
 
     eventBus.emit('stage.submitted', { requestId, stageId: targetStageId, studentId: clearance.studentId, universityId })
@@ -256,6 +265,7 @@ export class ClearanceService {
           data: {
             currentStageId: nextStageId,
             status: 'IN_PROGRESS',
+            stageStatus: 'PENDING',
             updatedAt: new Date(),
           },
         })
@@ -329,7 +339,7 @@ export class ClearanceService {
     } else {
       await db.clearanceRequest.update({
         where: { id: requestId },
-        data: { updatedAt: new Date() },
+        data: { updatedAt: new Date(), stageStatus: 'PENDING' },
       })
     }
 
