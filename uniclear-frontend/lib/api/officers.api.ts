@@ -29,6 +29,8 @@ export const officersApi = {
     apiClient.delete(`/officers/${id}`),
   assign: (stageId: string, data: { officerId: string; facultyId?: string; departmentId?: string; sessionId?: string }) =>
     apiClient.post(`/officers/stage/${stageId}/assign`, data),
+  assignMultiple: (data: { officerId: string; stageIds: string[]; facultyId?: string; departmentId?: string; sessionId?: string }) =>
+    apiClient.post('/officers/assign-stages', data),
   unassign: (assignmentId: string) =>
     apiClient.delete(`/officers/assignment/${assignmentId}`),
 }

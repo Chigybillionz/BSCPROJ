@@ -117,8 +117,11 @@ export default function OfficerDashboard() {
   }
 
   const pending = queue?.total ?? queue?.items?.length ?? 0
-  const assignment = meRes?.stageAssignments?.[0]
-  const stageName = assignment?.stage?.name ?? 'Assigned Stage'
+  const assignments = meRes?.stageAssignments || []
+  const stageNames = assignments.map((a: any) => a.stage?.name).filter(Boolean)
+  const stageName = stageNames.length > 0 ? stageNames.join(', ') : 'Assigned Stage'
+  const assignment = assignments[0]
+  const sessionScope = assignment?.session?.name ? `Session ${assignment.session.name}` : 'All Sessions'
 
   return (
     <div className="w-full space-y-6">
@@ -144,7 +147,10 @@ export default function OfficerDashboard() {
         ) : (
           <>
             {/* 1. Pending Review */}
-            <Card className="border-l-4 border-l-amber-500 shadow-xs">
+            <Card 
+              onClick={() => { setStageStatus('SUBMITTED'); setPage(1) }}
+              className="border-l-4 border-l-amber-500 shadow-xs cursor-pointer hover:border-amber-600 transition-colors"
+            >
               <div className="flex items-center justify-between mb-1">
                 <p className="text-[11px] text-[var(--color-muted)] uppercase tracking-wider font-semibold">
                   Pending Queue
@@ -161,10 +167,17 @@ export default function OfficerDashboard() {
             </Card>
 
             {/* 2. Today's Approvals Velocity */}
-            <Card className="border-l-4 border-l-emerald-500 shadow-xs">
-              <p className="text-[11px] text-[var(--color-muted)] uppercase tracking-wider font-semibold mb-1">
-                Today&apos;s Velocity
-              </p>
+            <Card 
+              onClick={() => { setStageStatus('APPROVED'); setPage(1) }}
+              className="border-l-4 border-l-emerald-500 shadow-xs cursor-pointer hover:border-emerald-600 transition-colors"
+              title="Click to view approved students"
+            >
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-[11px] text-[var(--color-muted)] uppercase tracking-wider font-semibold">
+                  Today&apos;s Velocity
+                </p>
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">View</span>
+              </div>
               <p className="text-3xl font-extrabold text-emerald-600 tracking-tight">
                 {meRes?.todayVelocity ?? 0}
               </p>
@@ -177,22 +190,27 @@ export default function OfficerDashboard() {
             {/* 3. Assigned Stage */}
             <Card className="border-l-4 border-l-[var(--color-primary)] shadow-xs">
               <p className="text-[11px] text-[var(--color-muted)] uppercase tracking-wider font-semibold mb-1">
-                Your Stage
+                Your Stage{assignments.length > 1 ? `s (${assignments.length})` : ''}
               </p>
-              <p className="text-base font-bold text-[var(--color-text)] truncate mt-1">
+              <p className="text-base font-bold text-[var(--color-text)] truncate mt-1" title={stageName}>
                 {stageName}
               </p>
               <p className="text-xs text-[var(--color-muted)] mt-1.5 flex items-center gap-1.5 truncate">
                 <Layers className="h-3.5 w-3.5 text-[var(--color-primary)] shrink-0" />
-                <span>Sequence #{assignment?.stage?.orderIndex ?? 1}</span>
+                <span>{assignments.length > 1 ? `${assignments.length} Stages Assigned` : `Sequence #${assignment?.stage?.orderIndex ?? 1}`}</span>
               </p>
             </Card>
 
             {/* 4. Jurisdiction / Scope */}
             <Card className="border-l-4 border-l-sky-500 shadow-xs">
-              <p className="text-[11px] text-[var(--color-muted)] uppercase tracking-wider font-semibold mb-1">
-                Review Scope
-              </p>
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-[11px] text-[var(--color-muted)] uppercase tracking-wider font-semibold">
+                  Review Scope
+                </p>
+                <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                  {sessionScope}
+                </span>
+              </div>
               <div className="mt-1">
                 {!assignment?.faculty && !assignment?.department ? (
                   <p className="text-sm font-bold text-[var(--color-primary)]">
@@ -313,6 +331,7 @@ export default function OfficerDashboard() {
             {[
               { id: 'SUBMITTED', label: 'Awaiting Review' },
               { id: 'PENDING', label: 'In Progress / Pending' },
+              { id: 'APPROVED', label: 'Approved / Cleared' },
               { id: 'REJECTED', label: 'Action / Re-uploaded' },
               { id: 'ALL', label: 'All Records' },
             ].map(tab => (

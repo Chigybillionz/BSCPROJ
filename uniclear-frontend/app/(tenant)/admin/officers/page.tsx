@@ -7,7 +7,7 @@ import { z } from 'zod'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { officersApi } from '@/lib/api/officers.api'
 import { stagesApi } from '@/lib/api/stages.api'
-import { structureApi } from '@/lib/api/misc.api'
+import { structureApi, sessionsApi } from '@/lib/api/misc.api'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -18,7 +18,7 @@ import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton'
 import { EmptyState, ErrorState } from '@/components/shared/EmptyState'
 import {
   UserCircle, AlertTriangle, Pencil, Trash2, Shield,
-  Search, CheckCircle2, UserPlus, Layers, X
+  Search, CheckCircle2, UserPlus, Layers, X, CheckSquare, Square
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { toast } from 'sonner'
@@ -55,10 +55,12 @@ export default function AdminOfficersPage() {
   const [roleFilter, setRoleFilter] = useState<'ALL' | 'OFFICER' | 'ADMIN'>('ALL')
   const [stageFilter, setStageFilter] = useState<string>('ALL')
 
-  // Quick Assign form state
-  const [quickStageId, setQuickStageId] = useState('')
+  // Multi-Stage Assign form state
+  const [selectedStageIds, setSelectedStageIds] = useState<string[]>([])
+  const [stageSearch, setStageSearch] = useState('')
   const [quickFacultyId, setQuickFacultyId] = useState('')
   const [quickDeptId, setQuickDeptId] = useState('')
+  const [quickSessionId, setQuickSessionId] = useState('')
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['officers'],
@@ -82,6 +84,12 @@ export default function AdminOfficersPage() {
     queryKey: ['departments'],
     queryFn: () => structureApi.departments().then(r => r.data.data),
   })
+
+  const { data: sessionsRes } = useQuery({
+    queryKey: ['sessions'],
+    queryFn: () => sessionsApi.list().then(r => r.data),
+  })
+  const sessions = sessionsRes?.data || []
 
   const inviteForm = useForm({
     resolver: zodResolver(inviteUserSchema),
@@ -148,24 +156,28 @@ export default function AdminOfficersPage() {
     onError: (e: any) => toast.error(e.response?.data?.message || e.message || 'Failed to remove user')
   })
 
-  const { mutate: assignStage, isPending: assigning } = useMutation({
+  const { mutate: assignStages, isPending: assigning } = useMutation({
     mutationFn: () => {
-      if (!quickStageId || !assignTarget) throw new Error('Stage is required')
-      return officersApi.assign(quickStageId, {
+      if (selectedStageIds.length === 0 || !assignTarget) throw new Error('Please select at least one stage')
+      return officersApi.assignMultiple({
         officerId: assignTarget.id,
+        stageIds: selectedStageIds,
         facultyId: quickFacultyId || undefined,
         departmentId: quickDeptId || undefined,
+        sessionId: quickSessionId || undefined,
       })
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['officers'] })
       qc.invalidateQueries({ queryKey: ['stages'] })
-      setQuickStageId('')
+      setAssignTarget(null)
+      setSelectedStageIds([])
       setQuickFacultyId('')
       setQuickDeptId('')
-      toast.success('Stage assigned to officer')
+      setQuickSessionId('')
+      toast.success('Stages assigned successfully to officer')
     },
-    onError: (e: any) => toast.error(e.response?.data?.message || e.message || 'Failed to assign stage')
+    onError: (e: any) => toast.error(e.response?.data?.message || e.message || 'Failed to assign stages')
   })
 
   const { mutate: unassignStage } = useMutation({
@@ -185,9 +197,12 @@ export default function AdminOfficersPage() {
 
   const openAssign = (o: any) => {
     setAssignTarget(o)
-    setQuickStageId('')
+    const existing = (o.stageAssignments || []).map((a: any) => a.stageId)
+    setSelectedStageIds(existing)
+    setStageSearch('')
     setQuickFacultyId('')
     setQuickDeptId('')
+    setQuickSessionId('')
   }
 
   // Filtered list
@@ -563,54 +578,146 @@ export default function AdminOfficersPage() {
         </form>
       </Dialog>
 
-      {/* Quick Stage Assignment Modal */}
-      <Dialog open={!!assignTarget} onClose={() => setAssignTarget(null)} title={`Assign Stage to ${assignTarget?.firstName} ${assignTarget?.lastName}`} className="max-w-md">
+      {/* Multi-Stage Assignment Modal */}
+      <Dialog 
+        open={!!assignTarget} 
+        onClose={() => setAssignTarget(null)} 
+        title={`Assign Clearance Stages to ${assignTarget?.firstName} ${assignTarget?.lastName}`} 
+        className="max-w-xl"
+      >
         <div className="space-y-4">
-          <div className="space-y-1">
-            <label htmlFor="quickStageSelect" className="text-xs font-semibold text-gray-700 uppercase tracking-wide block">
-              Select Clearance Stage *
-            </label>
-            <select
-              id="quickStageSelect"
-              value={quickStageId}
-              onChange={e => setQuickStageId(e.target.value)}
-              className="w-full text-xs rounded-lg border border-gray-300 bg-white p-2.5 text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium"
-            >
-              <option value="">Choose a stage...</option>
-              {stages.map(s => (
-                <option key={s.id} value={s.id}>{s.name} (Stage {s.orderIndex})</option>
-              ))}
-            </select>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-gray-700 uppercase tracking-wide block">
+                Select Clearance Stages *
+              </label>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedStageIds(stages.map((s: any) => s.id))}
+                  className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors"
+                >
+                  Select All ({stages.length})
+                </button>
+                <span className="text-gray-300">|</span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedStageIds([])}
+                  className="text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  Clear All
+                </button>
+              </div>
+            </div>
+
+            {/* Stage Checklist with Filter */}
+            <div className="border border-gray-200 rounded-xl overflow-hidden bg-slate-50/50">
+              <div className="p-2 border-b border-gray-200 bg-white">
+                <Input
+                  placeholder="Search stages by name..."
+                  value={stageSearch}
+                  onChange={e => setStageSearch(e.target.value)}
+                  className="h-8 text-xs"
+                />
+              </div>
+              <div className="max-h-60 overflow-y-auto p-2 space-y-1">
+                {stages
+                  .filter((s: any) => !stageSearch || s.name.toLowerCase().includes(stageSearch.toLowerCase()))
+                  .map((s: any) => {
+                    const isSelected = selectedStageIds.includes(s.id)
+                    const isAlreadyAssigned = (assignTarget?.stageAssignments || []).some((a: any) => a.stageId === s.id)
+                    return (
+                      <div
+                        key={s.id}
+                        onClick={() => {
+                          setSelectedStageIds(prev =>
+                            prev.includes(s.id) ? prev.filter(id => id !== s.id) : [...prev, s.id]
+                          )
+                        }}
+                        className={cn(
+                          "flex items-center justify-between p-2.5 rounded-lg border text-xs cursor-pointer transition-all",
+                          isSelected
+                            ? "bg-blue-50/90 border-blue-300 text-blue-950 font-medium shadow-xs"
+                            : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
+                        )}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            readOnly
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4 pointer-events-none"
+                          />
+                          <span className="font-semibold">{s.name}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                            Stage {s.orderIndex}
+                          </span>
+                          {isAlreadyAssigned && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              Active
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+              </div>
+              <div className="p-2 bg-slate-100/70 border-t border-gray-200 text-[11px] text-gray-600 flex items-center justify-between font-medium">
+                <span>{selectedStageIds.length} of {stages.length} stages selected</span>
+                {selectedStageIds.length > 0 && (
+                  <span className="text-blue-700 font-bold">{selectedStageIds.length} stage(s) ready to assign</span>
+                )}
+              </div>
+            </div>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-gray-700">Faculty (Optional)</label>
-            <select
-              value={quickFacultyId}
-              onChange={e => setQuickFacultyId(e.target.value)}
-              className="w-full text-xs rounded border border-gray-300 bg-white p-2 text-gray-800"
-            >
-              <option value="">All Faculties (Universal)</option>
-              {faculties.map((f: any) => (
-                <option key={f.id} value={f.id}>{f.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-gray-700">Department (Optional)</label>
-            <select
-              value={quickDeptId}
-              onChange={e => setQuickDeptId(e.target.value)}
-              className="w-full text-xs rounded border border-gray-300 bg-white p-2 text-gray-800"
-            >
-              <option value="">All Departments</option>
-              {departments
-                .filter((d: any) => !quickFacultyId || d.facultyId === quickFacultyId)
-                .map((d: any) => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
+          {/* Scope Options */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-700">Session (Optional)</label>
+              <select
+                value={quickSessionId}
+                onChange={e => setQuickSessionId(e.target.value)}
+                className="w-full text-xs rounded-lg border border-gray-300 bg-white p-2 text-gray-800"
+              >
+                <option value="">All Sessions (Universal)</option>
+                {sessions.map((s: any) => (
+                  <option key={s.id} value={s.id}>{s.name} {s.isActive ? '(Current)' : ''}</option>
                 ))}
-            </select>
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-700">Faculty (Optional)</label>
+              <select
+                value={quickFacultyId}
+                onChange={e => setQuickFacultyId(e.target.value)}
+                className="w-full text-xs rounded border border-gray-300 bg-white p-2 text-gray-800"
+              >
+                <option value="">All Faculties (Universal)</option>
+                {faculties.map((f: any) => (
+                  <option key={f.id} value={f.id}>{f.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-700">Department (Optional)</label>
+              <select
+                value={quickDeptId}
+                onChange={e => setQuickDeptId(e.target.value)}
+                className="w-full text-xs rounded border border-gray-300 bg-white p-2 text-gray-800"
+              >
+                <option value="">All Departments</option>
+                {departments
+                  .filter((d: any) => !quickFacultyId || d.facultyId === quickFacultyId)
+                  .map((d: any) => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
+              </select>
+            </div>
           </div>
 
           <div className="flex gap-2 pt-2">
@@ -618,12 +725,12 @@ export default function AdminOfficersPage() {
               Cancel
             </Button>
             <Button
-              className="flex-1 bg-blue-600 text-white"
-              disabled={!quickStageId}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold"
+              disabled={selectedStageIds.length === 0}
               loading={assigning}
-              onClick={() => assignStage()}
+              onClick={() => assignStages()}
             >
-              Confirm Assignment
+              Confirm Assignment ({selectedStageIds.length} {selectedStageIds.length === 1 ? 'Stage' : 'Stages'})
             </Button>
           </div>
         </div>

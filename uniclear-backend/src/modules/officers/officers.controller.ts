@@ -3,7 +3,7 @@ import { OfficersService } from './officers.service'
 import { OfficersRepository } from './officers.repository'
 import { ApiResponse } from '@/core/response/ApiResponse'
 import { NotFoundError, ValidationError } from '@/core/errors/AppError'
-import { createOfficerSchema, updateOfficerSchema, listOfficersSchema, assignOfficerSchema } from './officers.schema'
+import { createOfficerSchema, updateOfficerSchema, listOfficersSchema, assignOfficerSchema, assignMultipleStagesSchema } from './officers.schema'
 import { param } from '@/lib/utils/param'
 import { storage } from '@/modules/documents/storage'
 import { db } from '@/lib/db'
@@ -64,6 +64,14 @@ export class OfficersController {
       const { officerId, facultyId, departmentId, sessionId } = assignOfficerSchema.parse(req.body)
       const result = await OfficersService.assign(param(req.params.stageId), req.universityId!, officerId, facultyId, departmentId, sessionId)
       return ApiResponse.created(res, result)
+    } catch (err) { next(err) }
+  }
+
+  static async assignMultiple(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { officerId, stageIds, facultyId, departmentId, sessionId } = assignMultipleStagesSchema.parse(req.body)
+      const results = await OfficersService.assignMultiple(stageIds, req.universityId!, officerId, facultyId, departmentId, sessionId)
+      return ApiResponse.created(res, results)
     } catch (err) { next(err) }
   }
 

@@ -46,9 +46,36 @@ export class OfficersRepository {
   }
 
   static async assign(universityId: string, stageId: string, officerId: string, facultyId?: string, departmentId?: string, sessionId?: string) {
+    const existing = await db.stageOfficerAssignment.findFirst({
+      where: {
+        stageId,
+        officerId,
+        facultyId: facultyId ?? null,
+        departmentId: departmentId ?? null,
+        sessionId: sessionId ?? null,
+      }
+    })
+    if (existing) return existing
+
     return db.stageOfficerAssignment.create({
       data: { universityId, stageId, officerId, facultyId, departmentId, sessionId },
     })
+  }
+
+  static async assignMultiple(
+    universityId: string,
+    stageIds: string[],
+    officerId: string,
+    facultyId?: string,
+    departmentId?: string,
+    sessionId?: string
+  ) {
+    const results = []
+    for (const stageId of stageIds) {
+      const res = await this.assign(universityId, stageId, officerId, facultyId, departmentId, sessionId)
+      results.push(res)
+    }
+    return results
   }
 
   static async unassign(id: string) {

@@ -177,28 +177,45 @@ export class ClearanceRepository {
     }
 
     const assignmentOrs = assignments.map(a => {
-      const cond: any = { currentStageId: a.stageId }
+      const cond: any = {
+        campaign: { stages: { some: { id: a.stageId } } },
+      }
       if (a.sessionId) cond.sessionId = a.sessionId
       if (a.facultyId || a.departmentId) {
         cond.student = {}
         if (a.facultyId) cond.student.facultyId = a.facultyId
         if (a.departmentId) cond.student.departmentId = a.departmentId
       }
+
+      if (!stageStatus || stageStatus === 'SUBMITTED') {
+        cond.stageApprovals = { none: { stageId: a.stageId, status: 'APPROVED' } }
+        cond.OR = [
+          { stageStatus: 'SUBMITTED' },
+          { currentStageId: a.stageId },
+          { documents: { some: { documentType: { stageRequirements: { some: { stageId: a.stageId } } } } } },
+        ]
+      } else if (stageStatus === 'PENDING') {
+        cond.stageApprovals = { none: { stageId: a.stageId, status: 'APPROVED' } }
+        cond.stageStatus = 'PENDING'
+      } else if (stageStatus === 'REJECTED') {
+        cond.OR = [
+          { stageStatus: 'REJECTED' },
+          { stageApprovals: { some: { stageId: a.stageId, status: 'REJECTED' } } },
+        ]
+      } else if (stageStatus === 'APPROVED') {
+        cond.stageApprovals = { some: { stageId: a.stageId, status: 'APPROVED' } }
+      }
+      // If stageStatus === 'ALL', no approval restriction is applied so all records are visible
       return cond
     })
 
+    const isAllOrApproved = stageStatus === 'ALL' || stageStatus === 'APPROVED'
     const where: any = {
       universityId,
-      status: 'IN_PROGRESS',
+      status: isAllOrApproved ? { in: ['IN_PROGRESS', 'COMPLETED'] } : 'IN_PROGRESS',
       AND: [
         { OR: assignmentOrs }
       ]
-    }
-
-    if (!stageStatus || stageStatus === 'SUBMITTED') {
-      where.stageStatus = 'SUBMITTED'
-    } else if (stageStatus !== 'ALL') {
-      where.stageStatus = stageStatus as StageStatus
     }
 
     if (sessionId) where.sessionId = sessionId
@@ -247,8 +264,18 @@ export class ClearanceRepository {
         include: {
           student: { include: { faculty: true, department: true } },
           currentStage: true,
-          campaign: true,
+          campaign: {
+            include: {
+              stages: {
+                orderBy: { orderIndex: 'asc' },
+              },
+            },
+          },
           session: true,
+          stageApprovals: {
+            include: { stage: true, stamp: true },
+            orderBy: { decidedAt: 'asc' },
+          },
           documents: {
             include: {
               documentType: {

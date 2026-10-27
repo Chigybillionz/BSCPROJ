@@ -16,6 +16,7 @@ router.get('/stamps',                requireRole('OFFICER'),             Officer
 router.post('/stamps',               requireRole('OFFICER'),             upload.single('file'), OfficersController.uploadStamp)
 router.delete('/stamps/:id',         requireRole('OFFICER'),             OfficersController.deleteStamp)
 router.post('/stage/:stageId/assign',         requireRole('SUPER_ADMIN', 'ADMIN'), OfficersController.assign)
+router.post('/assign-stages',                  requireRole('SUPER_ADMIN', 'ADMIN'), OfficersController.assignMultiple)
 router.delete('/assignment/:assignmentId',    requireRole('SUPER_ADMIN', 'ADMIN'), OfficersController.unassign)
 router.get('/',                      requireRole('SUPER_ADMIN', 'ADMIN'), OfficersController.list)
 router.get('/:id',                   requireRole('SUPER_ADMIN', 'ADMIN'), OfficersController.getById)

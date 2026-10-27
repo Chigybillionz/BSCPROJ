@@ -21,6 +21,8 @@ jest.mock('@/lib/db', () => {
     },
     clearanceStage: {
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
+      findMany: jest.fn(),
     },
     clearanceRequest: {
       update: jest.fn(),
@@ -47,9 +49,17 @@ describe('ClearanceService', () => {
       ;(ClearanceRepository.findById as jest.Mock).mockResolvedValue({
         id: mockRequestId,
         studentId: mockStudentId,
+        campaignId: 'camp-1',
         sessionId: 'session-1',
         currentStageId: mockStageId,
         student: { userId: mockUserId },
+        stageApprovals: [],
+      })
+      ;(db.clearanceStage.findFirst as jest.Mock).mockResolvedValue({
+        id: mockStageId,
+        name: 'O-Level Result',
+        campaignId: 'camp-1',
+        isActive: true,
       })
       ;(db.student.findUnique as jest.Mock).mockResolvedValue({ id: mockStudentId })
       ;(DocumentTypesRepository.findByStage as jest.Mock).mockResolvedValue([
@@ -63,16 +73,24 @@ describe('ClearanceService', () => {
 
       await expect(ClearanceService.submit(mockRequestId, mockUserId, mockUniversityId))
         .rejects
-        .toThrow('Missing required documents: O-Level Result')
+        .toThrow('Missing required documents for O-Level Result: O-Level Result')
     })
 
     it('should update the clearance stageStatus to SUBMITTED if all documents are present', async () => {
       ;(ClearanceRepository.findById as jest.Mock).mockResolvedValue({
         id: mockRequestId,
         studentId: mockStudentId,
+        campaignId: 'camp-1',
         sessionId: 'session-1',
         currentStageId: mockStageId,
         student: { userId: mockUserId },
+        stageApprovals: [],
+      })
+      ;(db.clearanceStage.findFirst as jest.Mock).mockResolvedValue({
+        id: mockStageId,
+        name: 'O-Level Result',
+        campaignId: 'camp-1',
+        isActive: true,
       })
       ;(db.student.findUnique as jest.Mock).mockResolvedValue({ id: mockStudentId })
       ;(DocumentTypesRepository.findByStage as jest.Mock).mockResolvedValue([
@@ -82,7 +100,6 @@ describe('ClearanceService', () => {
         { documentTypeId: 'doc-type-1' },
       ])
 
-      // We expect this new method to be called
       ;(ClearanceRepository.updateStageStatus as jest.Mock).mockResolvedValue(true)
 
       const result = await ClearanceService.submit(mockRequestId, mockUserId, mockUniversityId)
@@ -148,13 +165,18 @@ describe('ClearanceService', () => {
       ;(ClearanceRepository.findById as jest.Mock).mockResolvedValue({
         id: 'req-1',
         currentStageId: 'stage-1',
+        campaignId: 'camp-1',
         stageStatus: 'SUBMITTED',
         student: { id: 'student-1' },
+        stageApprovals: [],
       })
       ;(OfficersRepository.findByUserId as jest.Mock).mockResolvedValue({
         id: 'officer-1',
         stageAssignments: [{ stageId: 'other-stage' }],
       })
+      ;(db.clearanceStage.findMany as jest.Mock).mockResolvedValue([
+        { id: 'stage-1', orderIndex: 1 },
+      ])
 
       await expect(ClearanceService.approve('req-1', 'officer-user', 'univ-1'))
         .rejects
@@ -169,15 +191,18 @@ describe('ClearanceService', () => {
         currentStageId: 'stage-1',
         stageStatus: 'SUBMITTED',
         student: { id: 'student-1' },
+        stageApprovals: [],
       })
       ;(OfficersRepository.findByUserId as jest.Mock).mockResolvedValue({
         id: 'officer-1',
         stageAssignments: [{ stageId: 'stage-1' }],
       })
-      ;(db.clearanceStage.findUnique as jest.Mock).mockResolvedValue({ id: 'stage-1', orderIndex: 1 })
-      ;(StagesRepository.findNext as jest.Mock).mockResolvedValue({ id: 'stage-2', orderIndex: 2 })
+      ;(db.clearanceStage.findMany as jest.Mock).mockResolvedValue([
+        { id: 'stage-1', orderIndex: 1 },
+        { id: 'stage-2', orderIndex: 2 },
+      ])
+      ;(DocumentTypesRepository.findByStage as jest.Mock).mockResolvedValue([])
       ;(ClearanceRepository.createStageApproval as jest.Mock).mockResolvedValue({ id: 'appr-1' })
-      ;(ClearanceRepository.updateStage as jest.Mock).mockResolvedValue({ id: 'req-1' })
 
       await ClearanceService.approve('req-1', 'officer-user', 'univ-1', 'Documents verified')
 
@@ -187,7 +212,10 @@ describe('ClearanceService', () => {
         status: 'APPROVED',
         remarks: 'Documents verified',
       }), expect.anything())
-      expect(ClearanceRepository.updateStage).toHaveBeenCalledWith('req-1', 'stage-2', 'IN_PROGRESS', expect.anything())
+      expect(db.clearanceRequest.update).toHaveBeenCalledWith(expect.objectContaining({
+        where: { id: 'req-1' },
+        data: expect.objectContaining({ currentStageId: 'stage-2', status: 'IN_PROGRESS' }),
+      }))
     })
 
     it('should link digital stamp to approval record when stampId is provided', async () => {
@@ -198,15 +226,18 @@ describe('ClearanceService', () => {
         currentStageId: 'stage-1',
         stageStatus: 'SUBMITTED',
         student: { id: 'student-1' },
+        stageApprovals: [],
       })
       ;(OfficersRepository.findByUserId as jest.Mock).mockResolvedValue({
         id: 'officer-1',
         stageAssignments: [{ stageId: 'stage-1' }],
       })
-      ;(db.clearanceStage.findUnique as jest.Mock).mockResolvedValue({ id: 'stage-1', orderIndex: 1 })
-      ;(StagesRepository.findNext as jest.Mock).mockResolvedValue({ id: 'stage-2', orderIndex: 2 })
+      ;(db.clearanceStage.findMany as jest.Mock).mockResolvedValue([
+        { id: 'stage-1', orderIndex: 1 },
+        { id: 'stage-2', orderIndex: 2 },
+      ])
+      ;(DocumentTypesRepository.findByStage as jest.Mock).mockResolvedValue([])
       ;(ClearanceRepository.createStageApproval as jest.Mock).mockResolvedValue({ id: 'appr-1' })
-      ;(ClearanceRepository.updateStage as jest.Mock).mockResolvedValue({ id: 'req-1' })
 
       await ClearanceService.approve('req-1', 'officer-user', 'univ-1', 'Stamped and verified', undefined, undefined, undefined, undefined, 'stamp-123')
 
@@ -224,14 +255,19 @@ describe('ClearanceService', () => {
       ;(ClearanceRepository.findById as jest.Mock).mockResolvedValue({
         id: 'req-1',
         studentId: 'student-1',
+        campaignId: 'camp-1',
         currentStageId: 'stage-1',
         stageStatus: 'SUBMITTED',
         student: { id: 'student-1' },
+        stageApprovals: [],
       })
       ;(OfficersRepository.findByUserId as jest.Mock).mockResolvedValue({
         id: 'officer-1',
         stageAssignments: [{ stageId: 'stage-1' }],
       })
+      ;(db.clearanceStage.findMany as jest.Mock).mockResolvedValue([
+        { id: 'stage-1', orderIndex: 1 },
+      ])
       ;(ClearanceRepository.createStageApproval as jest.Mock).mockResolvedValue({ id: 'appr-1' })
       ;(ClearanceRepository.updateStageStatus as jest.Mock).mockResolvedValue(true)
 

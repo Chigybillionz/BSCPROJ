@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express'
 import { ClearanceService } from './clearance.service'
 import { ApiResponse } from '@/core/response/ApiResponse'
-import { startClearanceSchema, approveStageSchema, rejectStageSchema, queueQuerySchema } from './clearance.schema'
+import { startClearanceSchema, approveStageSchema, rejectStageSchema, submitStageSchema, queueQuerySchema } from './clearance.schema'
 import { param } from '@/lib/utils/param'
 
 export class ClearanceController {
@@ -36,7 +36,8 @@ export class ClearanceController {
 
   static async submit(req: Request, res: Response, next: NextFunction) {
     try {
-      const result = await ClearanceService.submit(param(req.params.requestId), req.user!.sub, req.universityId!)
+      const { stageId } = submitStageSchema.parse(req.body || {})
+      const result = await ClearanceService.submit(param(req.params.requestId), req.user!.sub, req.universityId!, stageId)
       return ApiResponse.success(res, result, 'Submitted for review')
     } catch (err) { next(err) }
   }
@@ -44,7 +45,7 @@ export class ClearanceController {
   static async approve(req: Request, res: Response, next: NextFunction) {
     try {
       const requestId = param(req.params.requestId || req.body.requestId || '')
-      const { remarks, issuedData, stampId } = approveStageSchema.parse(req.body)
+      const { remarks, issuedData, stampId, stageId } = approveStageSchema.parse(req.body)
       let parsedIssuedData = undefined
       if (issuedData) {
         parsedIssuedData = typeof issuedData === 'string' ? JSON.parse(issuedData) : issuedData
@@ -69,7 +70,8 @@ export class ClearanceController {
         attachmentKey,
         req.ip,
         parsedIssuedData,
-        stampId
+        stampId,
+        stageId
       )
       return ApiResponse.success(res, result, 'Stage approved')
     } catch (err) { next(err) }
@@ -78,8 +80,8 @@ export class ClearanceController {
   static async reject(req: Request, res: Response, next: NextFunction) {
     try {
       const requestId = param(req.params.requestId || req.body.requestId || '')
-      const { remarks } = rejectStageSchema.parse(req.body)
-      const result = await ClearanceService.reject(requestId, req.user!.sub, req.universityId!, remarks, req.ip)
+      const { remarks, stageId } = rejectStageSchema.parse(req.body)
+      const result = await ClearanceService.reject(requestId, req.user!.sub, req.universityId!, remarks, req.ip, stageId)
       return ApiResponse.success(res, result, 'Stage rejected')
     } catch (err) { next(err) }
   }

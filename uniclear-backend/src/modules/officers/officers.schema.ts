@@ -11,6 +11,7 @@ export const createOfficerSchema = z.object({
   lastName:     z.string().min(1, 'Last name is required'),
   role:         z.enum(['OFFICER', 'ADMIN']).default('OFFICER').optional(),
   stageId:      optionalUuid,
+  stageIds:     z.array(z.string().uuid()).optional(),
   facultyId:    optionalUuid,
   departmentId: optionalUuid,
   sessionId:    optionalUuid,
@@ -28,6 +29,14 @@ export const listOfficersSchema = z.object({
 
 export const assignOfficerSchema = z.object({
   officerId:    z.string().uuid(),
+  facultyId:    optionalUuid,
+  departmentId: optionalUuid,
+  sessionId:    optionalUuid,
+})
+
+export const assignMultipleStagesSchema = z.object({
+  officerId:    z.string().uuid(),
+  stageIds:     z.array(z.string().uuid()).min(1, 'Please select at least one stage to assign'),
   facultyId:    optionalUuid,
   departmentId: optionalUuid,
   sessionId:    optionalUuid,

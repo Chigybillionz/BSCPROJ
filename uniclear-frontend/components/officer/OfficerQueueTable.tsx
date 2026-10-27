@@ -31,6 +31,10 @@ export interface OfficerQueueItem {
   currentStageId?: string | null
   updatedAt: string | Date
   createdAt: string | Date
+  session?: {
+    id: string
+    name: string
+  } | null
   student?: {
     id: string
     firstName: string
@@ -312,18 +316,25 @@ export function OfficerQueueTable({
                       </span>
                     </td>
 
-                    {/* Department */}
+                    {/* Department & Academic Session */}
                     <td className="py-3 px-4">
                       <div className="min-w-0">
                         <p className="font-medium text-xs text-[var(--color-text)] truncate flex items-center gap-1.5">
                           <Building2 className="h-3.5 w-3.5 text-[var(--color-muted)] shrink-0" />
                           <span>{item.student?.department?.name || 'Departmental Stage'}</span>
                         </p>
-                        {item.student?.faculty?.name && (
-                          <p className="text-[10px] text-[var(--color-muted)] truncate pl-5">
-                            {item.student.faculty.name}
-                          </p>
-                        )}
+                        <div className="flex items-center gap-2 mt-0.5 pl-5 flex-wrap">
+                          {item.student?.faculty?.name && (
+                            <p className="text-[10px] text-[var(--color-muted)] truncate">
+                              {item.student.faculty.name}
+                            </p>
+                          )}
+                          {item.session?.name && (
+                            <span className="inline-flex items-center text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200">
+                              {item.session.name}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </td>
 
