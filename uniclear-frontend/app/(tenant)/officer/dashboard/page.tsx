@@ -32,6 +32,7 @@ export default function OfficerDashboard() {
   const router = useRouter()
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
+  const [stageStatus, setStageStatus] = useState<string>('SUBMITTED')
 
   const {
     data: queue,
@@ -39,7 +40,7 @@ export default function OfficerDashboard() {
     isLoading: queueLoading,
     isError: queueIsError,
     refetch: refetchQueue,
-  } = useOfficerQueue(page, search || undefined)
+  } = useOfficerQueue(page, search || undefined, undefined, undefined, stageStatus)
 
   const { data: meRes, isLoading: meLoading } = useQuery({
     queryKey: ['officer', 'me'],
@@ -305,17 +306,40 @@ export default function OfficerDashboard() {
         )}
       </Card>
 
-      {/* Main Request Queue Data Table */}
+      {/* Main Request Queue Data Table & Status Tabs */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold text-[var(--color-text)] uppercase tracking-wider flex items-center gap-2">
-            <span>Pending Student Requests</span>
-            {pending > 0 && (
-              <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-800">
-                {pending}
-              </span>
-            )}
-          </h2>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-lg overflow-x-auto self-start border border-slate-200">
+            {[
+              { id: 'SUBMITTED', label: 'Awaiting Review' },
+              { id: 'REJECTED', label: 'Action / Re-uploaded' },
+              { id: 'ALL', label: 'All Records' },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  setStageStatus(tab.id)
+                  setPage(1)
+                }}
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                  stageStatus === tab.id
+                    ? 'bg-white text-[var(--color-primary)] shadow-xs font-bold'
+                    : 'text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-[var(--color-muted)] font-medium">
+              Queue:
+            </span>
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-100 text-[var(--color-text)] border border-[var(--color-border)]">
+              {queue?.total ?? 0} students
+            </span>
+          </div>
         </div>
 
         <OfficerQueueTable

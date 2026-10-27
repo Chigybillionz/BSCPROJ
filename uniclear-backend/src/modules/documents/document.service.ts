@@ -16,11 +16,35 @@ export class DocumentsService {
         throw new ForbiddenError('You do not have permission to view these documents')
       }
     }
-    return DocumentsRepository.findByRequest(requestId, universityId)
+    const docs = await DocumentsRepository.findByRequest(requestId, universityId)
+    return Promise.all(
+      docs.map(async doc => {
+        try {
+          if (doc.fileKey) {
+            const freshUrl = await storage.getSignedUrl(doc.fileKey)
+            if (freshUrl) return { ...doc, fileUrl: freshUrl }
+          }
+        } catch {
+          // If storage refresh fails, keep existing fileUrl as fallback
+        }
+        return doc
+      })
+    )
   }
 
   static async getByStage(requestId: string, stageId: string, universityId: string) {
-    return DocumentsRepository.findByStage(requestId, stageId, universityId)
+    const docs = await DocumentsRepository.findByStage(requestId, stageId, universityId)
+    return Promise.all(
+      docs.map(async doc => {
+        try {
+          if (doc.fileKey) {
+            const freshUrl = await storage.getSignedUrl(doc.fileKey)
+            if (freshUrl) return { ...doc, fileUrl: freshUrl }
+          }
+        } catch {}
+        return doc
+      })
+    )
   }
 
   static async upload(universityId: string, studentId: string, requestId: string, documentTypeId: string, file: Express.Multer.File) {

@@ -121,6 +121,20 @@ export function OfficerQueueTable({
     return result
   }, [items, selectedDept, recentOnly])
 
+  // Real-time debounced search so officers don't have to manually press Enter
+  React.useEffect(() => {
+    const handler = setTimeout(() => {
+      if (localSearch !== search) {
+        onSearchChange?.(localSearch)
+      }
+    }, 300)
+    return () => clearTimeout(handler)
+  }, [localSearch, search, onSearchChange])
+
+  React.useEffect(() => {
+    setLocalSearch(search)
+  }, [search])
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     onSearchChange?.(localSearch)

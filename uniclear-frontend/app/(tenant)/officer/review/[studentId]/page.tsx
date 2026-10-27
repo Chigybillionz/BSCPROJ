@@ -1,6 +1,5 @@
 'use client'
 
-import Image from 'next/image'
 import { use, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useApproveStage, useRejectStage } from '@/features/clearance/hooks/useClearance'
@@ -19,7 +18,7 @@ import { ErrorState } from '@/components/shared/EmptyState'
 import { clearanceApi } from '@/lib/api/clearance.api'
 import { useStages } from '@/features/stages/hooks/useStages'
 import { documentsApi } from '@/lib/api/documents.api'
-import { formatDateTime, getInitials } from '@/lib/utils/format'
+import { formatDateTime, getInitials, normalizeDocUrl } from '@/lib/utils/format'
 import { useRouter } from 'next/navigation'
 import { ROUTES } from '@/lib/constants'
 import { toast } from 'sonner'
@@ -37,8 +36,125 @@ import {
   AlertTriangle,
   ExternalLink,
   RefreshCw,
-  Search
+  Search,
+  ZoomIn,
+  ZoomOut,
+  RotateCw,
+  MessageSquare,
+  AlertCircle
 } from 'lucide-react'
+
+function InteractiveImageViewer({ url, alt }: { url: string; alt: string }) {
+  const [zoom, setZoom] = useState(1)
+  const [rotation, setRotation] = useState(0)
+  const [loaded, setLoaded] = useState(false)
+  const [hasError, setHasError] = useState(false)
+
+  // Reset controls when url changes
+  const [currentUrl, setCurrentUrl] = useState(url)
+  if (url !== currentUrl) {
+    setCurrentUrl(url)
+    setZoom(1)
+    setRotation(0)
+    setLoaded(false)
+    setHasError(false)
+  }
+
+  return (
+    <div className="relative w-full h-full min-h-[480px] flex flex-col items-center justify-center bg-slate-900/5 rounded-xl overflow-hidden p-2">
+      {/* Floating Control Toolbar */}
+      <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5 bg-white/95 backdrop-blur-md px-2.5 py-1.5 rounded-xl border border-slate-200 shadow-md">
+        <button
+          type="button"
+          onClick={() => setZoom(z => Math.min(Number((z + 0.25).toFixed(2)), 3))}
+          className="p-1 rounded-lg text-slate-700 hover:text-slate-900 hover:bg-slate-100"
+          title="Zoom In"
+        >
+          <ZoomIn className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          onClick={() => setZoom(z => Math.max(Number((z - 0.25).toFixed(2)), 0.5))}
+          className="p-1 rounded-lg text-slate-700 hover:text-slate-900 hover:bg-slate-100"
+          title="Zoom Out"
+        >
+          <ZoomOut className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          onClick={() => setRotation(r => (r + 90) % 360)}
+          className="p-1 rounded-lg text-slate-700 hover:text-slate-900 hover:bg-slate-100"
+          title="Rotate 90° Clockwise"
+        >
+          <RotateCw className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          onClick={() => { setZoom(1); setRotation(0); }}
+          className="px-1.5 py-0.5 text-[10px] font-bold text-slate-700 hover:bg-slate-100 rounded"
+          title="Reset View"
+        >
+          {Math.round(zoom * 100)}%
+        </button>
+        <a
+          href={url}
+          target="_blank"
+          rel="noreferrer"
+          className="p-1 rounded-lg text-slate-700 hover:text-blue-600 hover:bg-slate-100 ml-0.5"
+          title="Open Original in New Tab"
+        >
+          <ExternalLink className="h-4 w-4" />
+        </a>
+      </div>
+
+      {/* Loading Spinner */}
+      {!loaded && !hasError && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 z-10 bg-slate-50/50">
+          <RefreshCw className="h-6 w-6 animate-spin text-[var(--color-primary)]" />
+          <span className="text-xs text-slate-600 font-medium">Loading document preview...</span>
+        </div>
+      )}
+
+      {/* Error State */}
+      {hasError ? (
+        <div className="p-8 text-center max-w-sm mx-auto space-y-3">
+          <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
+            <AlertTriangle className="h-6 w-6" />
+          </div>
+          <p className="text-xs font-semibold text-slate-800">Could not render image preview directly</p>
+          <p className="text-[11px] text-slate-500">The file format or network host requires direct inspection.</p>
+          <a
+            href={url}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 hover:bg-blue-100"
+          >
+            <span>Open Image in New Window</span>
+            <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+        </div>
+      ) : (
+        <div className="w-full h-full flex items-center justify-center overflow-auto p-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={url}
+            alt={alt}
+            onLoad={() => setLoaded(true)}
+            onError={() => setHasError(true)}
+            style={{
+              transform: `scale(${zoom}) rotate(${rotation}deg)`,
+              transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              maxWidth: '100%',
+              maxHeight: '100%',
+              objectFit: 'contain',
+            }}
+            className={`rounded-lg shadow-sm ${loaded ? 'opacity-100' : 'opacity-0'}`}
+          />
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function ReviewPage({ params }: { params: Promise<{ studentId: string }> }) {
   const router = useRouter()
@@ -341,7 +457,7 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
                   <div className="flex items-center gap-2">
                     {selectedDoc.fileUrl && (
                       <a
-                        href={selectedDoc.fileUrl}
+                        href={normalizeDocUrl(selectedDoc.fileUrl)}
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center gap-1 text-[11px] text-[var(--color-muted)] hover:text-[var(--color-text)] font-medium p-1 hover:underline"
@@ -378,24 +494,32 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
 
                 {/* React-PDF / Image Canvas */}
                 <div className="flex-1 overflow-auto p-4 flex items-center justify-center relative">
-                  {selectedDoc.mimeType === 'application/pdf' ? (
-                    <div className="w-full h-full min-h-[450px]">
-                      <PdfStampViewer
-                        fileUrl={selectedDoc.fileUrl}
-                        onSaveStampedFile={file => setStampedFile(file)}
-                        onStampSelect={stamp => setSelectedStampId(stamp?.id)}
-                      />
-                    </div>
-                  ) : (
-                    <div className="relative w-full h-full min-h-[450px] flex items-center justify-center">
-                      <Image
-                        src={selectedDoc.fileUrl}
+                  {(() => {
+                    const docUrl = normalizeDocUrl(selectedDoc.fileUrl)
+                    const isPdf =
+                      selectedDoc.mimeType === 'application/pdf' ||
+                      selectedDoc.fileName?.toLowerCase().endsWith('.pdf') ||
+                      docUrl.toLowerCase().includes('.pdf')
+
+                    if (isPdf) {
+                      return (
+                        <div className="w-full h-full min-h-[450px]">
+                          <PdfStampViewer
+                            fileUrl={docUrl}
+                            onSaveStampedFile={file => setStampedFile(file)}
+                            onStampSelect={stamp => setSelectedStampId(stamp?.id)}
+                          />
+                        </div>
+                      )
+                    }
+
+                    return (
+                      <InteractiveImageViewer
+                        url={docUrl}
                         alt={selectedDoc.documentType?.name || 'Document Preview'}
-                        fill
-                        className="object-contain"
                       />
-                    </div>
-                  )}
+                    )
+                  })()}
                 </div>
               </>
             ) : (
@@ -482,6 +606,37 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
                 <span>Submitted on {formatDateTime(clearance.updatedAt || clearance.createdAt)}</span>
               </div>
             </div>
+
+            {/* Prior Review Remarks / Chat Instructions */}
+            {clearance.stageApprovals && clearance.stageApprovals.some((a: any) => a.remarks) && (
+              <div className="p-3 bg-amber-50/80 rounded-xl border border-amber-200 space-y-1.5">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
+                  <MessageSquare className="h-3.5 w-3.5 text-amber-600" />
+                  <span>Officer Remarks & Chat Notes</span>
+                </div>
+                <div className="space-y-1">
+                  {clearance.stageApprovals
+                    .filter((a: any) => a.remarks)
+                    .map((a: any) => (
+                      <div key={a.id} className="text-xs text-amber-800 bg-white/70 p-2 rounded border border-amber-200/60">
+                        <span className="font-semibold text-amber-900">{a.stage?.name || 'Stage'}: </span>
+                        <span>{a.remarks}</span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {/* Active Document Flagged Reason */}
+            {selectedDoc?.rejectionReason && (
+              <div className="p-2.5 bg-rose-50 rounded-lg border border-rose-200 text-xs text-rose-800 flex items-start gap-2">
+                <AlertCircle className="h-3.5 w-3.5 text-rose-600 mt-0.5 shrink-0" />
+                <div>
+                  <span className="font-bold">Flagged Note: </span>
+                  <span>{selectedDoc.rejectionReason}</span>
+                </div>
+              </div>
+            )}
 
             {/* Document Verification Checklist */}
             <div className="space-y-2.5">

@@ -25,3 +25,12 @@ export function getInitials(name?: string): string {
 export function formatMatricNo(matric: string): string {
   return matric.toUpperCase()
 }
+
+export function normalizeDocUrl(url?: string | null): string {
+  if (!url) return ''
+  if (url.includes('/uploads/')) {
+    return url.substring(url.indexOf('/uploads/'))
+  }
+  return url
+}
+
