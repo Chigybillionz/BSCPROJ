@@ -14,10 +14,16 @@ export const approveStageSchema = z.object({
   remarks: z.string().optional(),
   issuedData: z.union([z.string(), z.record(z.any())]).optional(),
   stampId: optionalUuid,
+  stageId: optionalUuid,
 })
 
 export const rejectStageSchema = z.object({
   remarks: z.string().min(10, 'Please provide a detailed rejection reason (min 10 chars)'),
+  stageId: optionalUuid,
+})
+
+export const submitStageSchema = z.object({
+  stageId: optionalUuid,
 })
 
 export const queueQuerySchema = z.object({

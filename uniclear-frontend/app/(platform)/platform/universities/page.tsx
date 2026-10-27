@@ -11,6 +11,7 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { CustomDropdown } from '@/components/ui/CustomDropdown'
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton'
 import { Building2 } from 'lucide-react'
 import { EmptyState, ErrorState } from '@/components/shared/EmptyState'
@@ -58,7 +59,7 @@ export default function PlatformUniversitiesPage() {
     onError:    (e: any) => toast.error(e.response?.data?.message ?? 'Failed'),
   })
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<OnboardForm>({
+  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<OnboardForm>({
     resolver: zodResolver(onboardSchema),
     defaultValues: { primaryColor: '#1B4F72', accentColor: '#2980B9', tier: 'TRIAL' },
   })
@@ -91,11 +92,16 @@ export default function PlatformUniversitiesPage() {
             </div>
             <div className="flex flex-col gap-1.5 col-span-2">
               <label className="text-sm font-medium text-[var(--color-text)]">Plan Tier</label>
-              <select {...register('tier')} className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]">
-                <option value="TRIAL">Trial</option>
-                <option value="STANDARD">Standard</option>
-                <option value="ENTERPRISE">Enterprise</option>
-              </select>
+              <CustomDropdown
+                value={watch('tier')}
+                onChange={val => setValue('tier', val)}
+                searchable={false}
+                options={[
+                  { value: 'TRIAL', label: 'Trial' },
+                  { value: 'STANDARD', label: 'Standard' },
+                  { value: 'ENTERPRISE', label: 'Enterprise' },
+                ]}
+              />
             </div>
             <div className="col-span-2 flex justify-end gap-2">
               <Button type="button" variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button>

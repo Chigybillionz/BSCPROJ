@@ -26,6 +26,7 @@ export class OfficersService {
     lastName: string
     role?: 'OFFICER' | 'ADMIN'
     stageId?: string
+    stageIds?: string[]
     facultyId?: string
     departmentId?: string
     sessionId?: string
@@ -62,11 +63,15 @@ export class OfficersService {
     logger.info({ email: data.email, inviteLink }, 'Officer invite created')
     const officer = await OfficersRepository.create(universityId, user.id, { firstName: data.firstName, lastName: data.lastName })
 
-    let stageAssignment = null
-    if (data.stageId) {
-      stageAssignment = await OfficersRepository.assign(
+    const stageIdsToAssign = data.stageIds && data.stageIds.length > 0
+      ? data.stageIds
+      : data.stageId ? [data.stageId] : []
+
+    let stageAssignments: any[] = []
+    if (stageIdsToAssign.length > 0) {
+      stageAssignments = await OfficersRepository.assignMultiple(
         universityId,
-        data.stageId,
+        stageIdsToAssign,
         officer.id,
         data.facultyId,
         data.departmentId,
@@ -77,7 +82,7 @@ export class OfficersService {
     return {
       ...officer,
       user: { id: user.id, email: user.email, role: user.role, isActive: user.isActive },
-      stageAssignments: stageAssignment ? [stageAssignment] : [],
+      stageAssignments,
       inviteLink,
       tempPassword,
     }
@@ -90,6 +95,10 @@ export class OfficersService {
 
   static async assign(stageId: string, universityId: string, officerId: string, facultyId?: string, departmentId?: string, sessionId?: string) {
     return OfficersRepository.assign(universityId, stageId, officerId, facultyId, departmentId, sessionId)
+  }
+
+  static async assignMultiple(stageIds: string[], universityId: string, officerId: string, facultyId?: string, departmentId?: string, sessionId?: string) {
+    return OfficersRepository.assignMultiple(universityId, stageIds, officerId, facultyId, departmentId, sessionId)
   }
 
   static async unassign(assignmentId: string) {

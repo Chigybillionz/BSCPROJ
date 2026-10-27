@@ -55,6 +55,7 @@ export function PdfStampViewer({ fileUrl, onSaveStampedFile, onStampSelect }: Pd
         }
       }
     }).catch(e => console.error("Could not load stamps", e))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleSelectStamp = (stamp: OfficerStamp) => {

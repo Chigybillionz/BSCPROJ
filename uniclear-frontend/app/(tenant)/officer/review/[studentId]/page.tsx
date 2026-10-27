@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Dialog } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { CustomDropdown } from '@/components/ui/CustomDropdown'
 import { officerStampsApi, OfficerStamp } from '@/lib/api/officerStamps.api'
 import { StampManagerDialog } from '@/components/officer/StampManagerDialog'
 import dynamic from 'next/dynamic'
@@ -22,7 +23,8 @@ import { clearanceApi } from '@/lib/api/clearance.api'
 import { useStages } from '@/features/stages/hooks/useStages'
 import { documentsApi } from '@/lib/api/documents.api'
 import { formatDateTime, getInitials, normalizeDocUrl } from '@/lib/utils/format'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { officersApi } from '@/lib/api/officers.api'
 import { ROUTES } from '@/lib/constants'
 import { toast } from 'sonner'
 import {
@@ -161,6 +163,8 @@ function InteractiveImageViewer({ url, alt }: { url: string; alt: string }) {
 
 export default function ReviewPage({ params }: { params: Promise<{ studentId: string }> }) {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const urlStageId = searchParams.get('stageId')
   const qc = useQueryClient()
   const { studentId } = use(params)
   const [rejectOpen, setRejectOpen] = useState(false)
@@ -172,6 +176,13 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
   const [docActionPending, setDocActionPending] = useState(false)
   const [docFilter, setDocFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL')
   const [docSearch, setDocSearch] = useState('')
+  const [chosenStageId, setChosenStageId] = useState<string | null>(null)
+
+  // Load officer profile for assigned stages
+  const { data: meRes } = useQuery({
+    queryKey: ['officer', 'me'],
+    queryFn: () => officersApi.getMe().then((r: any) => r.data.data),
+  })
 
   // Load officer's available stamps and auto-select default stamp
   const { data: officerStampsRes, refetch: refetchStamps } = useQuery({
@@ -243,13 +254,42 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
 
   const campaignStages = allStages?.filter(s => s.campaignId === clearance.campaignId) || []
   const sortedStages = [...campaignStages].sort((a, b) => a.orderIndex - b.orderIndex)
-  const isFinalStage =
-    sortedStages.length > 0 &&
-    sortedStages[sortedStages.length - 1].id === clearance.currentStageId
+
+  const approvedStageIds = (clearance.stageApprovals || [])
+    .filter((a: any) => a.status === 'APPROVED')
+    .map((a: any) => a.stageId)
+
+  const officerAssignedStages = sortedStages.filter(s =>
+    meRes?.stageAssignments?.some((a: any) => a.stageId === s.id)
+  )
+
+  const activeStageId = 
+    chosenStageId ||
+    (urlStageId && sortedStages.some(s => s.id === urlStageId) ? urlStageId : null) ||
+    officerAssignedStages.find(s => !approvedStageIds.includes(s.id))?.id ||
+    clearance.currentStageId ||
+    sortedStages[0]?.id || ''
+
+  const activeStage = sortedStages.find(s => s.id === activeStageId) || sortedStages[0]
+  const isCurrentStageApproved = approvedStageIds.includes(activeStageId)
+
+  const remainingUnapprovedStages = sortedStages.filter(s => !approvedStageIds.includes(s.id) && s.id !== activeStageId)
+  const isFinalStage = remainingUnapprovedStages.length === 0
   const issuedDataFields: string[] = clearance.campaign?.issuedDataFields || []
   const needsIssuedData = isFinalStage && issuedDataFields.length > 0
 
-  // Check how many documents have been approved
+  // Stage-specific document requirements
+  const stageReqTypeIds = (activeStage?.documentRequirements || []).map((r: any) => r.documentTypeId)
+  const areRequiredDocsVerified = stageReqTypeIds.length > 0
+    ? stageReqTypeIds.every(typeId => {
+        const matchingDoc = documents?.find(d => d.documentTypeId === typeId)
+        return matchingDoc && (matchingDoc as any).status === 'APPROVED'
+      })
+    : true
+
+  const canApproveStage = !isCurrentStageApproved && areRequiredDocsVerified
+
+  // Check how many documents have been approved overall
   const approvedDocsCount = documents?.filter(d => (d as any).status === 'APPROVED').length ?? 0
   const pendingDocsCount = documents?.filter(d => (d as any).status !== 'APPROVED' && (d as any).status !== 'REJECTED').length ?? 0
   const rejectedDocsCount = documents?.filter(d => (d as any).status === 'REJECTED').length ?? 0
@@ -307,7 +347,7 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
       setIssueDataOpen(true)
     } else {
       approve(
-        { requestId: clearance.id, file: stampedFile, stampId: selectedStampId },
+        { requestId: clearance.id, stageId: activeStageId, file: stampedFile, stampId: selectedStampId },
         {
           onSuccess: () => {
             qc.invalidateQueries()
@@ -320,7 +360,7 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
 
   const handleIssueDataSubmit = () => {
     approve(
-      { requestId: clearance.id, file: stampedFile, issuedData, stampId: selectedStampId },
+      { requestId: clearance.id, stageId: activeStageId, file: stampedFile, issuedData, stampId: selectedStampId },
       {
         onSuccess: () => {
           setIssueDataOpen(false)
@@ -422,6 +462,11 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
                     >
                       <FileText className="h-3.5 w-3.5" />
                       <span>{doc.documentType?.name || `Doc ${idx + 1}`}</span>
+                      {stageReqTypeIds.includes(doc.documentTypeId) && (
+                        <span className="px-1 py-0.2 rounded text-[8px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                          Required
+                        </span>
+                      )}
                       {isRecent && status !== 'APPROVED' && (
                         <span className="px-1 py-0.2 rounded text-[9px] font-extrabold bg-blue-100 text-blue-700 animate-pulse">
                           NEW
@@ -605,7 +650,7 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 pt-1 border-t border-[var(--color-border)] text-[11px] text-[var(--color-muted)]">
+                <div className="flex items-center gap-2 pt-1 border-t border-[var(--color-border)] text-[11px] text-[var(--color-muted)] flex-wrap">
                   <GraduationCap className="h-3.5 w-3.5 shrink-0" />
                   <span>
                     Level: <strong className="text-[var(--color-text)]">{clearance.student?.level || 'N/A'}</strong>
@@ -614,23 +659,54 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
                   <span>
                     Matric: <strong className="font-mono text-[var(--color-text)]">{clearance.student?.matricNo || 'Pending'}</strong>
                   </span>
+                  {clearance.session?.name && (
+                    <>
+                      <span>•</span>
+                      <span className="inline-flex items-center gap-1 font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded text-[10px]">
+                        Session {clearance.session.name}
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Current Stage Card */}
+            {/* Clearance Stage Under Review */}
             <div className="pb-4 border-b border-[var(--color-border)] space-y-2">
               <div className="flex items-center justify-between">
                 <p className="text-[11px] uppercase tracking-wider font-semibold text-[var(--color-muted)]">
-                  Current Clearance Stage
+                  Clearance Stage Under Review
                 </p>
-                <span className="text-xs font-mono font-bold text-[var(--color-primary)]">
-                  #{clearance.currentStage?.orderIndex ?? 1}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  {isCurrentStageApproved && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                      Approved
+                    </span>
+                  )}
+                  <span className="text-xs font-mono font-bold text-[var(--color-primary)]">
+                    #{activeStage?.orderIndex ?? 1}
+                  </span>
+                </div>
               </div>
-              <p className="text-sm font-bold text-[var(--color-text)]">
-                {clearance.currentStage?.name || 'Assigned Review Stage'}
-              </p>
+              {officerAssignedStages.length > 1 ? (
+                <div className="space-y-1">
+                  <CustomDropdown
+                    value={activeStageId}
+                    onChange={val => setChosenStageId(val)}
+                    searchable={officerAssignedStages.length > 4}
+                    options={officerAssignedStages.map(s => ({
+                      value: s.id,
+                      label: s.name,
+                      badge: approvedStageIds.includes(s.id) ? 'Approved' : `Stage ${s.orderIndex}`,
+                    }))}
+                    triggerClassName="py-1.5 px-3 text-xs font-bold"
+                  />
+                </div>
+              ) : (
+                <p className="text-sm font-bold text-[var(--color-text)]">
+                  {activeStage?.name || 'Assigned Review Stage'}
+                </p>
+              )}
               <div className="flex items-center gap-1.5 text-xs text-[var(--color-muted)]">
                 <Clock className="h-3.5 w-3.5 shrink-0" />
                 <span>Submitted on {formatDateTime(clearance.updatedAt || clearance.createdAt)}</span>
@@ -788,6 +864,11 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
                             <span className="truncate text-xs font-medium text-[var(--color-text)]">
                               {doc.documentType?.name}
                             </span>
+                            {stageReqTypeIds.includes(doc.documentTypeId) && (
+                              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                Required
+                              </span>
+                            )}
                             {isRecent && status !== 'APPROVED' && (
                               <span className="px-1 py-0.2 rounded text-[9px] font-extrabold bg-blue-100 text-blue-700 animate-pulse">
                                 NEW
@@ -893,11 +974,20 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
               )}
             </div>
 
-            {!allDocsApproved && totalDocsCount > 0 && (
+            {!areRequiredDocsVerified && stageReqTypeIds.length > 0 && !isCurrentStageApproved && (
               <div className="flex items-center gap-1.5 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-[11px] leading-tight">
                 <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
                 <span>
-                  Please verify each required document above before submitting final approval.
+                  Please verify each document required for <strong>{activeStage?.name}</strong> before approving this stage.
+                </span>
+              </div>
+            )}
+
+            {isCurrentStageApproved && (
+              <div className="flex items-center gap-1.5 p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] leading-tight font-medium">
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                <span>
+                  This stage (<strong>{activeStage?.name}</strong>) has been officially verified and endorsed.
                 </span>
               </div>
             )}
@@ -907,16 +997,18 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
             <Button
               className="w-full py-3 h-auto text-sm font-bold bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white shadow-xs rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               loading={approving}
-              disabled={!allDocsApproved || approving}
+              disabled={!canApproveStage || approving}
               onClick={handleApproveClick}
             >
               <CheckCircle2 className="h-4 w-4" />
               <span>
                 {approving
                   ? 'Approving...'
+                  : isCurrentStageApproved
+                  ? 'Stage Approved'
                   : isFinalStage
                   ? 'Approve & Issue Final Clearance'
-                  : 'Approve Clearance Stage'}
+                  : `Approve ${activeStage?.name || 'Clearance Stage'}`}
               </span>
             </Button>
 
@@ -925,11 +1017,11 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
               variant="danger"
               className="w-full py-3 h-auto text-sm font-bold bg-rose-600 hover:bg-rose-700 active:scale-[0.99] text-white shadow-xs rounded-xl flex items-center justify-center gap-2"
               loading={rejecting}
-              disabled={rejecting}
+              disabled={rejecting || isCurrentStageApproved}
               onClick={() => setRejectOpen(true)}
             >
               <XCircle className="h-4 w-4" />
-              <span>{rejecting ? 'Rejecting...' : 'Reject Clearance Stage'}</span>
+              <span>{rejecting ? 'Rejecting...' : `Reject ${activeStage?.name || 'Stage'}`}</span>
             </Button>
           </div>
         </Card>
@@ -943,7 +1035,7 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
           isPending={rejecting}
           onConfirm={remarks =>
             reject(
-              { requestId: clearance.id, remarks },
+              { requestId: clearance.id, stageId: activeStageId, remarks },
               {
                 onSuccess: () => {
                   setRejectOpen(false)

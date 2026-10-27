@@ -25,7 +25,7 @@ interface ClearanceSubmissionPanelProps {
   initialStageId?: string
   onUploadDocument: (file: File, documentTypeId: string) => Promise<void>
   onDeleteDocument: (documentId: string) => Promise<void>
-  onSubmitStage: () => Promise<void>
+  onSubmitStage: (stageId?: string) => Promise<void>
 }
 
 export function ClearanceSubmissionPanel({
@@ -80,7 +80,7 @@ export function ClearanceSubmissionPanel({
   ).length
 
   const percentComplete = requiredCount > 0 ? Math.round((uploadedRequiredCount / requiredCount) * 100) : 100
-  const canSubmit = isCurrentStage && requiredCount === uploadedRequiredCount && !isUnderReview
+  const canSubmit = !isApproved && requiredCount === uploadedRequiredCount && !isUnderReview
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, typeId: string) => {
     const file = e.target.files?.[0]
@@ -110,7 +110,7 @@ export function ClearanceSubmissionPanel({
   const handleSubmit = async () => {
     try {
       setIsSubmitting(true)
-      await onSubmitStage()
+      await onSubmitStage(activeStage.id)
     } finally {
       setIsSubmitting(false)
     }
@@ -471,13 +471,18 @@ export function ClearanceSubmissionPanel({
 
         {/* Bottom Submission Action Bar */}
         <div className="pt-2 border-t">
-          {isCurrentStage ? (
+          {isApproved ? (
+            <div className="text-center py-2 text-xs font-semibold text-emerald-700 flex items-center justify-center gap-1.5">
+              <CheckCircle2 className="h-4 w-4" />
+              This departmental stage has been officially verified and endorsed.
+            </div>
+          ) : (
             <>
               {canSubmit && !isUnderReview && (
                 <div className="mb-3 flex items-center justify-between p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs">
                   <div className="flex items-center gap-2">
                     <Sparkles className="h-4 w-4 text-amber-600 shrink-0" />
-                    <span>All required documents uploaded! Click <strong>Submit for Review</strong> below to forward your submission to the clearance officer.</span>
+                    <span>All required documents uploaded for <strong>{activeStage.name}</strong>! Click <strong>Submit for Review</strong> below to forward your submission to the clearance officer.</span>
                   </div>
                 </div>
               )}
@@ -496,7 +501,7 @@ export function ClearanceSubmissionPanel({
                 {isSubmitting ? (
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
                 ) : null}
-                {isUnderReview ? 'Submitted — Awaiting Officer Review' : 'Submit for Review'}
+                {isUnderReview ? 'Submitted — Awaiting Officer Review' : `Submit ${activeStage.name} for Review`}
               </Button>
               {isUnderReview ? (
                 <p className="text-xs text-center text-emerald-600 mt-2 font-medium">
@@ -508,18 +513,6 @@ export function ClearanceSubmissionPanel({
                 </p>
               ) : null}
             </>
-          ) : isApproved ? (
-            <div className="text-center py-2 text-xs font-semibold text-emerald-700 flex items-center justify-center gap-1.5">
-              <CheckCircle2 className="h-4 w-4" />
-              This departmental stage has been officially verified and endorsed.
-            </div>
-          ) : (
-            <div className="text-center py-2 text-xs text-slate-500 flex items-center justify-center gap-2">
-              <UploadCloud className="h-4 w-4 text-[var(--color-primary)]" />
-              <span>
-                All documents uploaded for <strong>{activeStage.name}</strong> are saved in advance and ready for review when you complete previous stages.
-              </span>
-            </div>
           )}
         </div>
       </Card>

@@ -42,11 +42,12 @@ export function useOfficerQueue(page = 1, search?: string, sessionId?: string, c
 export function useApproveStage() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ requestId, remarks, file, issuedData, stampId }: { requestId: string; remarks?: string; file?: File; issuedData?: any; stampId?: string }) =>
-      clearanceApi.approve(requestId, remarks, file, issuedData, stampId),
+    mutationFn: ({ requestId, remarks, file, issuedData, stampId, stageId }: { requestId: string; remarks?: string; file?: File; issuedData?: any; stampId?: string; stageId?: string }) =>
+      clearanceApi.approve(requestId, remarks, file, issuedData, stampId, stageId),
     onSuccess: () => {
       toast.success('Stage approved')
       qc.invalidateQueries({ queryKey: clearanceKeys.queue() })
+      qc.invalidateQueries({ queryKey: clearanceKeys.all() })
     },
     onError: (e: any) => toast.error(e.response?.data?.message ?? 'Failed to approve'),
   })
@@ -55,11 +56,12 @@ export function useApproveStage() {
 export function useRejectStage() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ requestId, remarks }: { requestId: string; remarks: string }) =>
-      clearanceApi.reject(requestId, remarks),
+    mutationFn: ({ requestId, remarks, stageId }: { requestId: string; remarks: string; stageId?: string }) =>
+      clearanceApi.reject(requestId, remarks, stageId),
     onSuccess: () => {
       toast.success('Stage rejected')
       qc.invalidateQueries({ queryKey: clearanceKeys.queue() })
+      qc.invalidateQueries({ queryKey: clearanceKeys.all() })
     },
     onError: (e: any) => toast.error(e.response?.data?.message ?? 'Failed to reject'),
   })
@@ -68,7 +70,12 @@ export function useRejectStage() {
 export function useSubmitStage() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (requestId: string) => clearanceApi.submit(requestId),
+    mutationFn: (arg: { requestId: string; stageId?: string } | string) => {
+      if (typeof arg === 'string') {
+        return clearanceApi.submit(arg)
+      }
+      return clearanceApi.submit(arg.requestId, arg.stageId)
+    },
     onSuccess: () => {
       toast.success('Submitted for review')
       qc.invalidateQueries({ queryKey: clearanceKeys.all() })

@@ -8,23 +8,24 @@ export const clearanceApi = {
   start:       (sessionId: string, campaignId: string) =>
     apiClient.post<{ success: true; data: ClearanceRequest }>('/clearance/start', { sessionId, campaignId }),
 
-  submit:      (requestId: string) =>
-    apiClient.post(`/clearance/${requestId}/submit`, {}),
+  submit:      (requestId: string, stageId?: string) =>
+    apiClient.post(`/clearance/${requestId}/submit`, { stageId }),
 
-  approve: (requestId: string, remarks?: string, file?: File, issuedData?: any, stampId?: string) => {
+  approve: (requestId: string, remarks?: string, file?: File, issuedData?: any, stampId?: string, stageId?: string) => {
     if (file) {
       const formData = new FormData()
       if (remarks) formData.append('remarks', remarks)
       if (issuedData) formData.append('issuedData', typeof issuedData === 'string' ? issuedData : JSON.stringify(issuedData))
       if (stampId) formData.append('stampId', stampId)
+      if (stageId) formData.append('stageId', stageId)
       formData.append('file', file)
       return apiClient.post(`/clearance/${requestId}/approve`, formData)
     }
-    return apiClient.post(`/clearance/${requestId}/approve`, { remarks, issuedData, stampId })
+    return apiClient.post(`/clearance/${requestId}/approve`, { remarks, issuedData, stampId, stageId })
   },
 
-  reject:      (requestId: string, remarks: string) =>
-    apiClient.post(`/clearance/${requestId}/reject`, { remarks }),
+  reject:      (requestId: string, remarks: string, stageId?: string) =>
+    apiClient.post(`/clearance/${requestId}/reject`, { remarks, stageId }),
 
   getByStudent: (studentId: string) =>
     apiClient.get(`/clearance/by-student/${studentId}`),

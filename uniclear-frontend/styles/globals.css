@@ -115,10 +115,27 @@
   a {
     color: var(--color-primary);
     transition: color 0.15s ease;
+    cursor: pointer;
   }
 
   a:hover {
     color: var(--color-accent);
+  }
+
+  button,
+  [type='button'],
+  [type='reset'],
+  [type='submit'],
+  select {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [type='button']:disabled,
+  [type='reset']:disabled,
+  [type='submit']:disabled,
+  select:disabled {
+    cursor: not-allowed;
   }
 
   /* Login page background image */

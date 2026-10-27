@@ -3,6 +3,30 @@ import { db } from '@/lib/db'
 export class OfficersRepository {
   static async findAll(universityId: string, opts: { page: number; limit: number }) {
     const { page, limit } = opts
+
+    // Auto-link any university admin / super_admin users without an officer profile
+    // so they are visible and manageable in User & Role Management
+    const unlinkedAdmins = await db.user.findMany({
+      where: {
+        universityId,
+        role: { in: ['SUPER_ADMIN', 'ADMIN'] },
+        officer: null,
+      },
+    })
+    if (unlinkedAdmins.length > 0) {
+      for (const admin of unlinkedAdmins) {
+        const isSuper = admin.role === 'SUPER_ADMIN'
+        await db.officer.create({
+          data: {
+            universityId,
+            userId: admin.id,
+            firstName: isSuper ? 'Super' : 'University',
+            lastName: isSuper ? 'Admin' : (admin.email.split('@')[0] || 'Staff'),
+          },
+        }).catch(() => {})
+      }
+    }
+
     const skip = (page - 1) * limit
     const [data, total] = await Promise.all([
       db.officer.findMany({
@@ -46,12 +70,46 @@ export class OfficersRepository {
   }
 
   static async assign(universityId: string, stageId: string, officerId: string, facultyId?: string, departmentId?: string, sessionId?: string) {
+    const existing = await db.stageOfficerAssignment.findFirst({
+      where: {
+        stageId,
+        officerId,
+        facultyId: facultyId ?? null,
+        departmentId: departmentId ?? null,
+        sessionId: sessionId ?? null,
+      }
+    })
+    if (existing) return existing
+
     return db.stageOfficerAssignment.create({
       data: { universityId, stageId, officerId, facultyId, departmentId, sessionId },
     })
   }
 
+  static async assignMultiple(
+    universityId: string,
+    stageIds: string[],
+    officerId: string,
+    facultyId?: string,
+    departmentId?: string,
+    sessionId?: string
+  ) {
+    const results = []
+    for (const stageId of stageIds) {
+      const res = await this.assign(universityId, stageId, officerId, facultyId, departmentId, sessionId)
+      results.push(res)
+    }
+    return results
+  }
+
   static async unassign(id: string) {
-    return db.stageOfficerAssignment.deleteMany({ where: { id } })
+    return db.stageOfficerAssignment.deleteMany({
+      where: {
+        OR: [
+          { id },
+          { officerId: id }
+        ]
+      }
+    })
   }
 }

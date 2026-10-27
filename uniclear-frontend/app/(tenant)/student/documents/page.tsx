@@ -42,8 +42,8 @@ function DocumentsContent() {
     await remove(documentId)
   }
 
-  const handleSubmit = async () => {
-    await submit(requestId)
+  const handleSubmit = async (stageId?: string) => {
+    await submit({ requestId, stageId })
     router.push(ROUTES.student.dashboard)
   }
 

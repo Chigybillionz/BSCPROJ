@@ -3,10 +3,11 @@ import { OfficersService } from './officers.service'
 import { OfficersRepository } from './officers.repository'
 import { ApiResponse } from '@/core/response/ApiResponse'
 import { NotFoundError, ValidationError } from '@/core/errors/AppError'
-import { createOfficerSchema, updateOfficerSchema, listOfficersSchema, assignOfficerSchema } from './officers.schema'
+import { createOfficerSchema, updateOfficerSchema, listOfficersSchema, assignOfficerSchema, assignMultipleStagesSchema } from './officers.schema'
 import { param } from '@/lib/utils/param'
 import { storage } from '@/modules/documents/storage'
 import { db } from '@/lib/db'
+import { AuditService } from '@/modules/audit/audit.service'
 
 export class OfficersController {
   static async getMe(req: Request, res: Response, next: NextFunction) {
@@ -47,6 +48,17 @@ export class OfficersController {
     try {
       const data = createOfficerSchema.parse(req.body)
       const officer = await OfficersService.create(req.universityId!, data)
+      if (req.user?.sub && req.universityId) {
+        AuditService.log({
+          universityId: req.universityId,
+          actorId: req.user.sub,
+          action: 'OFFICER_CREATED',
+          targetId: officer.id,
+          targetType: 'Officer',
+          metadata: { email: data.email, role: data.role || 'OFFICER' },
+          ipAddress: req.ip,
+        }).catch(() => {})
+      }
       return ApiResponse.created(res, officer)
     } catch (err) { next(err) }
   }
@@ -63,13 +75,53 @@ export class OfficersController {
     try {
       const { officerId, facultyId, departmentId, sessionId } = assignOfficerSchema.parse(req.body)
       const result = await OfficersService.assign(param(req.params.stageId), req.universityId!, officerId, facultyId, departmentId, sessionId)
+      if (req.user?.sub && req.universityId) {
+        AuditService.log({
+          universityId: req.universityId,
+          actorId: req.user.sub,
+          action: 'STAGE_OFFICER_ASSIGNED',
+          targetId: officerId,
+          targetType: 'StageOfficerAssignment',
+          metadata: { stageId: req.params.stageId },
+          ipAddress: req.ip,
+        }).catch(() => {})
+      }
       return ApiResponse.created(res, result)
+    } catch (err) { next(err) }
+  }
+
+  static async assignMultiple(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { officerId, stageIds, facultyId, departmentId, sessionId } = assignMultipleStagesSchema.parse(req.body)
+      const results = await OfficersService.assignMultiple(stageIds, req.universityId!, officerId, facultyId, departmentId, sessionId)
+      if (req.user?.sub && req.universityId) {
+        AuditService.log({
+          universityId: req.universityId,
+          actorId: req.user.sub,
+          action: 'STAGE_OFFICER_ASSIGNED_MULTIPLE',
+          targetId: officerId,
+          targetType: 'StageOfficerAssignment',
+          metadata: { stageIds, count: stageIds.length },
+          ipAddress: req.ip,
+        }).catch(() => {})
+      }
+      return ApiResponse.created(res, results)
     } catch (err) { next(err) }
   }
 
   static async unassign(req: Request, res: Response, next: NextFunction) {
     try {
       await OfficersService.unassign(param(req.params.assignmentId))
+      if (req.user?.sub && req.universityId) {
+        AuditService.log({
+          universityId: req.universityId,
+          actorId: req.user.sub,
+          action: 'STAGE_OFFICER_UNASSIGNED',
+          targetId: req.params.assignmentId,
+          targetType: 'StageOfficerAssignment',
+          ipAddress: req.ip,
+        }).catch(() => {})
+      }
       return ApiResponse.noContent(res)
     } catch (err) { next(err) }
   }

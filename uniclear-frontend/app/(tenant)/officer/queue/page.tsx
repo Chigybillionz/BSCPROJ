@@ -1,52 +1,54 @@
 'use client'
 
-import React from 'react'
-import { useRouter, useSearchParams, usePathname } from 'next/navigation'
+import React, { useState } from 'react'
+import { useSearchParams, usePathname } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { useOfficerQueue } from '@/features/clearance/hooks/useClearance'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { CheckCircle } from 'lucide-react'
+import { CheckCircle, Calendar } from 'lucide-react'
 import { EmptyState, ErrorState } from '@/components/shared/EmptyState'
 import { Card } from '@/components/ui/card'
 import { OfficerQueueTable } from '@/components/officer/OfficerQueueTable'
+import { sessionsApi } from '@/lib/api/misc.api'
+import { campaignsApi } from '@/lib/api/campaigns.api'
+import { CustomDropdown } from '@/components/ui/CustomDropdown'
 
 export default function OfficerQueuePage() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const pathname = usePathname()
 
-  const search = searchParams.get('search') || ''
-  const sessionId = searchParams.get('sessionId')
-  const campaignId = searchParams.get('campaignId') || ''
-  const page = Number(searchParams.get('page') || '1')
+  // Controlled UI state for instant, synchronous responsiveness
+  const [search, setSearch] = useState<string>(searchParams.get('search') || '')
+  const [sessionId, setSessionId] = useState<string>(searchParams.get('sessionId') || '')
+  const [campaignId, setCampaignId] = useState<string>(searchParams.get('campaignId') || '')
+  const [stageStatus, setStageStatus] = useState<string>(searchParams.get('stageStatus') || 'SUBMITTED')
+  const [page, setPage] = useState<number>(Number(searchParams.get('page') || '1'))
 
-  const setQueryParam = (key: string, value: string | null) => {
-    const params = new URLSearchParams(searchParams.toString())
-    if (value) params.set(key, value)
-    else params.delete(key)
-    router.push(`${pathname}?${params.toString()}`, { scroll: false })
+  // Sync state changes to browser URL quietly without full page navigation lag
+  const updateUrl = (newParams: Record<string, string | null>) => {
+    const params = new URLSearchParams(window.location.search)
+    Object.entries(newParams).forEach(([key, val]) => {
+      if (val && val !== '') params.set(key, val)
+      else params.delete(key)
+    })
+    const query = params.toString()
+    const newUrl = query ? `${pathname}?${query}` : pathname
+    window.history.replaceState(null, '', newUrl)
   }
 
-  const stageStatus = searchParams.get('stageStatus') || 'SUBMITTED'
-
+  // Load sessions
   const { data: sessionsRes } = useQuery({
     queryKey: ['sessions'],
-    queryFn: () =>
-      import('@/lib/api/misc.api').then(m => m.sessionsApi.list()).then(r => {
-        const active = r.data.data.find((s: any) => s.isActive)
-        if (active && sessionId === null && !searchParams.has('sessionId')) {
-          setQueryParam('sessionId', active.id)
-        }
-        return r.data
-      }),
+    queryFn: () => sessionsApi.list().then(r => r.data),
   })
 
+  // Load campaigns
   const { data: campaignsRes } = useQuery({
     queryKey: ['campaigns'],
-    queryFn: () =>
-      import('@/lib/api/campaigns.api').then(m => m.campaignsApi.list()).then(r => r.data),
+    queryFn: () => campaignsApi.list().then(r => r.data),
   })
 
+  // Fetch officer queue reactively based on controlled state
   const { data, error, isLoading, isError, refetch } = useOfficerQueue(
     page,
     search || undefined,
@@ -55,27 +57,65 @@ export default function OfficerQueuePage() {
     stageStatus
   )
 
+  const handleTabChange = (newStatus: string) => {
+    setStageStatus(newStatus)
+    setPage(1)
+    updateUrl({ stageStatus: newStatus, page: '1' })
+  }
+
+  const handleSessionChange = (newSessionId: string) => {
+    setSessionId(newSessionId)
+    setPage(1)
+    updateUrl({ sessionId: newSessionId, page: '1' })
+  }
+
+  const handleCampaignChange = (newCampaignId: string) => {
+    setCampaignId(newCampaignId)
+    setPage(1)
+    updateUrl({ campaignId: newCampaignId, page: '1' })
+  }
+
+  const handleSearchChange = (newSearch: string) => {
+    setSearch(newSearch)
+    setPage(1)
+    updateUrl({ search: newSearch, page: '1' })
+  }
+
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage)
+    updateUrl({ page: String(newPage) })
+  }
+
+  const selectedSessionObj = sessionsRes?.data?.find((s: any) => s.id === sessionId)
+
   return (
     <div className="space-y-4">
-      <PageHeader title="Clearance Queue" subtitle="Students awaiting your review and approval" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <PageHeader title="Clearance Queue" subtitle="Students awaiting your review and approval" />
+        {selectedSessionObj && (
+          <div className="flex items-center gap-1.5 self-start sm:self-auto px-3 py-1.5 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-800 text-xs font-semibold">
+            <Calendar className="h-3.5 w-3.5 text-indigo-600" />
+            <span>Active Filter: {selectedSessionObj.name}</span>
+          </div>
+        )}
+      </div>
 
       {/* Filter Tabs & Selectors */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-2">
         {/* Status Filter Tabs */}
-        <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-lg overflow-x-auto self-start">
+        <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-lg overflow-x-auto self-start border border-slate-200">
           {[
             { id: 'SUBMITTED', label: 'Awaiting Review' },
             { id: 'PENDING', label: 'In Progress / Pending' },
+            { id: 'APPROVED', label: 'Approved / Cleared' },
             { id: 'REJECTED', label: 'Action / Re-uploaded' },
             { id: 'ALL', label: 'All Records' },
           ].map(tab => (
             <button
               key={tab.id}
-              onClick={() => {
-                setQueryParam('stageStatus', tab.id)
-                setQueryParam('page', '1')
-              }}
-              className={`px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-all ${
+              type="button"
+              onClick={() => handleTabChange(tab.id)}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                 stageStatus === tab.id
                   ? 'bg-white text-[var(--color-primary)] shadow-xs font-bold'
                   : 'text-slate-500 hover:text-slate-900'
@@ -88,39 +128,44 @@ export default function OfficerQueuePage() {
 
         {/* Campaign & Session Selectors */}
         <div className="flex flex-col sm:flex-row gap-2.5 items-center w-full md:w-auto">
-          <select
-            className="text-xs border border-[var(--color-border)] bg-[var(--color-bg)] rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-[var(--color-primary)] w-full sm:w-auto font-medium text-[var(--color-text)]"
-            value={sessionId || ''}
-            onChange={e => {
-              setQueryParam('sessionId', e.target.value)
-              setQueryParam('page', '1')
-            }}
-          >
-            <option value="">All Academic Sessions</option>
-            {sessionsRes?.data?.map((s: any) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
+          <div className="w-full sm:w-56">
+            <CustomDropdown
+              value={sessionId}
+              onChange={val => handleSessionChange(val)}
+              options={[
+                { value: '', label: 'All Academic Sessions' },
+                ...(sessionsRes?.data || []).map((s: any) => ({
+                  value: s.id,
+                  label: `Session ${s.name}`,
+                  badge: s.isActive ? 'Current' : undefined,
+                })),
+              ]}
+              searchable={true}
+              placeholder="All Academic Sessions"
+              triggerClassName="py-1.5 px-3 text-xs font-semibold"
+              align="right"
+            />
+          </div>
 
-          <select
-            className="text-xs border border-[var(--color-border)] bg-[var(--color-bg)] rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-[var(--color-primary)] w-full sm:w-auto font-medium text-[var(--color-text)]"
-            value={campaignId}
-            onChange={e => {
-              setQueryParam('campaignId', e.target.value)
-              setQueryParam('page', '1')
-            }}
-          >
-            <option value="">All Clearance Campaigns</option>
-            {campaignsRes?.data
-              ?.filter((c: any) => !sessionId || c.sessionId === sessionId)
-              .map((c: any) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-          </select>
+          <div className="w-full sm:w-64">
+            <CustomDropdown
+              value={campaignId}
+              onChange={val => handleCampaignChange(val)}
+              options={[
+                { value: '', label: 'All Clearance Campaigns' },
+                ...(campaignsRes?.data || [])
+                  .filter((c: any) => !sessionId || c.sessionId === sessionId)
+                  .map((c: any) => ({
+                    value: c.id,
+                    label: c.name,
+                  })),
+              ]}
+              searchable={true}
+              placeholder="All Clearance Campaigns"
+              triggerClassName="py-1.5 px-3 text-xs font-semibold"
+              align="right"
+            />
+          </div>
         </div>
       </div>
 
@@ -143,10 +188,10 @@ export default function OfficerQueuePage() {
           isLoading={isLoading}
           total={data?.total ?? 0}
           page={page}
-          onPageChange={p => setQueryParam('page', String(p))}
+          onPageChange={handlePageChange}
           onRefresh={() => refetch()}
           search={search}
-          onSearchChange={val => setQueryParam('search', val)}
+          onSearchChange={handleSearchChange}
         />
       )}
     </div>

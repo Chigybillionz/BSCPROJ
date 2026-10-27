@@ -8,6 +8,8 @@ const querySchema = z.object({
   limit:    z.coerce.number().default(20),
   actorId:  z.string().uuid().optional(),
   targetId: z.string().uuid().optional(),
+  action:   z.string().optional(),
+  search:   z.string().optional(),
 })
 
 export class AuditController {

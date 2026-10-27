@@ -18,6 +18,7 @@ export const officersApi = {
     lastName: string
     role?: 'OFFICER' | 'ADMIN'
     stageId?: string
+    stageIds?: string[]
     facultyId?: string
     departmentId?: string
     sessionId?: string
@@ -29,6 +30,31 @@ export const officersApi = {
     apiClient.delete(`/officers/${id}`),
   assign: (stageId: string, data: { officerId: string; facultyId?: string; departmentId?: string; sessionId?: string }) =>
     apiClient.post(`/officers/stage/${stageId}/assign`, data),
+  assignMultiple: async (data: { officerId: string; stageIds: string[]; facultyId?: string; departmentId?: string; sessionId?: string }) => {
+    try {
+      return await apiClient.post('/officers/assign-stages', data)
+    } catch (err: any) {
+      if (err.response?.status === 404 && data.stageIds?.length > 0) {
+        const results = await Promise.all(
+          data.stageIds.map(stageId =>
+            apiClient.post(`/officers/stage/${stageId}/assign`, {
+              officerId: data.officerId,
+              facultyId: data.facultyId,
+              departmentId: data.departmentId,
+              sessionId: data.sessionId,
+            })
+          )
+        )
+        return {
+          data: {
+            success: true,
+            data: results.map(r => r.data?.data || r.data)
+          }
+        } as any
+      }
+      throw err
+    }
+  },
   unassign: (assignmentId: string) =>
     apiClient.delete(`/officers/assignment/${assignmentId}`),
 }

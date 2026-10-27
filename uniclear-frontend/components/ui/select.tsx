@@ -77,3 +77,6 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
 )
 
 Select.displayName = 'Select'
+
+export { CustomDropdown } from './CustomDropdown'
+export type { CustomDropdownProps, DropdownOption } from './CustomDropdown'

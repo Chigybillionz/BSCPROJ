@@ -5,7 +5,7 @@ export class AuditService {
     return AuditRepository.log(data)
   }
 
-  static async list(universityId: string, opts: { page: number; limit: number; actorId?: string; targetId?: string }) {
+  static async list(universityId: string, opts: { page: number; limit: number; actorId?: string; targetId?: string; action?: string; search?: string }) {
     return AuditRepository.findAll(universityId, opts)
   }
 }

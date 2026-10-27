@@ -23,6 +23,19 @@ export class AuthService {
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
     await AuthRepository.saveRefreshToken(user.id, refreshToken, expiresAt)
 
+    if (user.universityId) {
+      import('@/modules/audit/audit.service').then(({ AuditService }) => {
+        AuditService.log({
+          universityId: user.universityId!,
+          actorId: user.id,
+          action: 'USER_LOGIN',
+          targetId: user.id,
+          targetType: 'User',
+          metadata: { email: user.email, role: user.role },
+        }).catch(() => {})
+      }).catch(() => {})
+    }
+
     return { 
       accessToken, 
       refreshToken, 

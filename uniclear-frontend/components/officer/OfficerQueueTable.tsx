@@ -15,7 +15,6 @@ import {
   Building2,
   RefreshCw,
   CheckCircle2,
-  Filter,
   ChevronLeft,
   ChevronRight,
   GraduationCap,
@@ -23,6 +22,7 @@ import {
   Sparkles
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
+import { CustomDropdown } from '@/components/ui/CustomDropdown'
 
 export interface OfficerQueueItem {
   id: string
@@ -31,6 +31,10 @@ export interface OfficerQueueItem {
   currentStageId?: string | null
   updatedAt: string | Date
   createdAt: string | Date
+  session?: {
+    id: string
+    name: string
+  } | null
   student?: {
     id: string
     firstName: string
@@ -188,20 +192,22 @@ export function OfficerQueueTable({
           </button>
 
           {departments.length >= 1 && (
-            <div className="flex items-center gap-1.5 text-xs">
-              <Filter className="h-3.5 w-3.5 text-[var(--color-muted)]" />
-              <select
-                className="text-xs bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg px-2.5 py-1.5 outline-none focus:ring-1 focus:ring-[var(--color-primary)] text-[var(--color-text)] font-medium cursor-pointer"
+            <div className="w-48">
+              <CustomDropdown
                 value={selectedDept}
-                onChange={e => setSelectedDept(e.target.value)}
-              >
-                <option value="ALL">All Departments ({items.length})</option>
-                {departments.map(dept => (
-                  <option key={dept} value={dept}>
-                    {dept}
-                  </option>
-                ))}
-              </select>
+                onChange={val => setSelectedDept(val)}
+                placeholder="All Departments"
+                options={[
+                  { value: 'ALL', label: `All Departments (${items.length})` },
+                  ...departments.map(dept => ({
+                    value: dept,
+                    label: dept,
+                  })),
+                ]}
+                searchable={departments.length > 5}
+                triggerClassName="py-1.5 px-2.5 text-xs font-semibold"
+                align="right"
+              />
             </div>
           )}
 
@@ -312,18 +318,25 @@ export function OfficerQueueTable({
                       </span>
                     </td>
 
-                    {/* Department */}
+                    {/* Department & Academic Session */}
                     <td className="py-3 px-4">
                       <div className="min-w-0">
                         <p className="font-medium text-xs text-[var(--color-text)] truncate flex items-center gap-1.5">
                           <Building2 className="h-3.5 w-3.5 text-[var(--color-muted)] shrink-0" />
                           <span>{item.student?.department?.name || 'Departmental Stage'}</span>
                         </p>
-                        {item.student?.faculty?.name && (
-                          <p className="text-[10px] text-[var(--color-muted)] truncate pl-5">
-                            {item.student.faculty.name}
-                          </p>
-                        )}
+                        <div className="flex items-center gap-2 mt-0.5 pl-5 flex-wrap">
+                          {item.student?.faculty?.name && (
+                            <p className="text-[10px] text-[var(--color-muted)] truncate">
+                              {item.student.faculty.name}
+                            </p>
+                          )}
+                          {item.session?.name && (
+                            <span className="inline-flex items-center text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200">
+                              {item.session.name}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </td>
 
