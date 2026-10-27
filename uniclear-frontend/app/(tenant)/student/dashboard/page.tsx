@@ -22,7 +22,6 @@ import {
   ArrowRight, 
   CheckCircle2, 
   Clock, 
-  Lock, 
   GraduationCap, 
   ShieldCheck, 
   Calendar,
@@ -31,8 +30,7 @@ import {
   Sparkles,
   UploadCloud,
   AlertCircle,
-  Search,
-  FileText
+  Search
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -306,7 +304,7 @@ export default function StudentDashboard() {
                         <UploadCloud className="h-9 w-9 text-slate-400 mx-auto mb-2 opacity-60" />
                         <p className="text-xs font-bold text-slate-700">No Documents Uploaded Yet</p>
                         <p className="text-[11px] text-slate-500 max-w-sm mx-auto mt-0.5 mb-3">
-                          You haven't uploaded clearance documents. You can upload all required documents in advance.
+                          You haven&apos;t uploaded clearance documents. You can upload all required documents in advance.
                         </p>
                         <Link href={`${ROUTES.student.documents}?requestId=${clearance.id}`}>
                           <Button size="sm" className="font-semibold text-xs">
@@ -320,7 +318,7 @@ export default function StudentDashboard() {
                   if (filtered.length === 0) {
                     return (
                       <div className="col-span-full py-6 text-center text-xs text-slate-400 italic">
-                        No documents match the "{docHubFilter.toLowerCase()}" filter.
+                        No documents match the &quot;{docHubFilter.toLowerCase()}&quot; filter.
                       </div>
                     )
                   }

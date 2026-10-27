@@ -13,7 +13,6 @@ import {
   Eye,
   Clock,
   Building2,
-  FileText,
   RefreshCw,
   CheckCircle2,
   Filter,
@@ -204,7 +203,6 @@ export function OfficerQueueTable({
                   ? `${item.student.firstName} ${item.student.lastName}`
                   : 'Unknown Student'
                 const initials = getInitials(fullName)
-                const docCount = item.documents?.length ?? 0
 
                 return (
                   <tr

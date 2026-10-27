@@ -37,8 +37,7 @@ import {
   AlertTriangle,
   ExternalLink,
   RefreshCw,
-  Search,
-  Sparkles
+  Search
 } from 'lucide-react'
 
 export default function ReviewPage({ params }: { params: Promise<{ studentId: string }> }) {

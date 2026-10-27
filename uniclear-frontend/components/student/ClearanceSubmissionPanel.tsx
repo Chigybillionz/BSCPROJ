@@ -195,6 +195,10 @@ export function ClearanceSubmissionPanel({
                 <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
                   <CheckCircle2 className="h-3 w-3" /> Cleared & Approved
                 </span>
+              ) : isRejected ? (
+                <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-rose-100 text-rose-800 border border-rose-200 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" /> Action Required (Rejected)
+                </span>
               ) : isUnderReview ? (
                 <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-amber-100 text-amber-800 border border-amber-200 flex items-center gap-1">
                   <Clock className="h-3 w-3" /> Under Officer Review
@@ -212,6 +216,8 @@ export function ClearanceSubmissionPanel({
             <p className="text-xs sm:text-sm text-slate-500 mt-1">
               {isApproved 
                 ? 'All required documents for this department have been approved and verified.'
+                : isRejected
+                ? 'Officer requested corrections. Please re-upload the flagged documents below.'
                 : isCurrentStage 
                 ? 'Upload and submit required documents for clearance officer review.'
                 : 'Upload all required documents in advance. Files are saved securely and will be reviewed once your clearance reaches this department.'}
@@ -233,7 +239,19 @@ export function ClearanceSubmissionPanel({
         </div>
 
         {/* Informative Notice Banner */}
-        {!isCurrentStage && !isApproved && (
+        {isRejected && (
+          <div className="flex items-start gap-3 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs">
+            <AlertCircle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold">Officer Remarks:</p>
+              <p className="mt-0.5 text-rose-800">
+                {approval?.remarks || 'Please re-upload clear and authentic copies of the requested documents.'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {!isCurrentStage && !isApproved && !isRejected && (
           <div className="flex items-center gap-3 p-3.5 rounded-xl bg-blue-50/70 border border-blue-200 text-blue-900 text-xs">
             <Info className="h-5 w-5 text-blue-600 shrink-0" />
             <p>
