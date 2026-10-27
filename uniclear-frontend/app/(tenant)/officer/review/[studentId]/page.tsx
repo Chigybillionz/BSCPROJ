@@ -20,7 +20,6 @@ const PdfStampViewer = dynamic(
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton'
 import { ErrorState } from '@/components/shared/EmptyState'
 import { clearanceApi } from '@/lib/api/clearance.api'
-import { useStages } from '@/features/stages/hooks/useStages'
 import { documentsApi } from '@/lib/api/documents.api'
 import { formatDateTime, getInitials, normalizeDocUrl } from '@/lib/utils/format'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -245,16 +244,16 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
   const { mutate: approve, isPending: approving } = useApproveStage()
   const { mutate: reject, isPending: rejecting } = useRejectStage()
 
-  const { data: allStages } = useStages()
-
   const [issueDataOpen, setIssueDataOpen] = useState(false)
   const [issuedData, setIssuedData] = useState<Record<string, string>>({})
 
   if (isLoading) return <LoadingSkeleton rows={6} />
   if (isError || !clearance) return <ErrorState />
 
-  const campaignStages = allStages?.filter(s => s.campaignId === clearance.campaignId) || []
-  const sortedStages = [...campaignStages].sort((a, b) => a.orderIndex - b.orderIndex)
+  // Use stages already embedded in the clearance response — avoids a separate
+  // query and prevents isFinalStage being wrong while useStages() is loading.
+  const sortedStages = [...((clearance.campaign?.stages as any[]) || [])]
+    .sort((a: any, b: any) => a.orderIndex - b.orderIndex)
 
   const approvedStageIds = (clearance.stageApprovals || [])
     .filter((a: any) => a.status === 'APPROVED')
