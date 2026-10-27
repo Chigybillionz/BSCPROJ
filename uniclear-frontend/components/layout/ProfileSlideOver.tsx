@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { X, Shield, Mail } from 'lucide-react'
+import { X, Shield, Mail, LogOut } from 'lucide-react'
 import { useAuthStore } from '@/store/useAuthStore'
 import { getInitials } from '@/lib/utils/format'
 import { Button } from '@/components/ui/button'
@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
 import { authApi } from '@/lib/api/auth.api'
 import { useMutation } from '@tanstack/react-query'
+import { useLogout } from '@/features/auth/hooks/useLogout'
+import { LogoutConfirmDialog } from '@/components/shared/LogoutConfirmDialog'
 
 interface ProfileSlideOverProps {
   open: boolean
@@ -16,7 +18,9 @@ interface ProfileSlideOverProps {
 
 export function ProfileSlideOver({ open, onClose }: ProfileSlideOverProps) {
   const user = useAuthStore(s => s.user)
+  const { mutate: logout, isPending: isLoggingOut } = useLogout()
   const [passwordOpen, setPasswordOpen] = useState(false)
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false)
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
 
@@ -115,6 +119,14 @@ export function ProfileSlideOver({ open, onClose }: ProfileSlideOverProps) {
               <Button variant="secondary" className="w-full justify-start text-left" onClick={() => toast.info('To change personal info, please contact your University Admin.')}>
                 Edit Personal Info
               </Button>
+              <Button
+                variant="danger"
+                className="w-full justify-start text-left flex items-center gap-2 mt-4"
+                onClick={() => setLogoutConfirmOpen(true)}
+              >
+                <LogOut className="h-4 w-4" />
+                Sign Out
+              </Button>
             </div>
           </div>
         </div>
@@ -144,6 +156,16 @@ export function ProfileSlideOver({ open, onClose }: ProfileSlideOverProps) {
           </div>
         </form>
       </Dialog>
+
+      <LogoutConfirmDialog
+        open={logoutConfirmOpen}
+        onClose={() => setLogoutConfirmOpen(false)}
+        onConfirm={() => {
+          onClose()
+          logout()
+        }}
+        loading={isLoggingOut}
+      />
     </div>
   )
 }

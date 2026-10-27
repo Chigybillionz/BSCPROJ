@@ -10,6 +10,7 @@ import { useLogout } from '@/features/auth/hooks/useLogout'
 import { getInitials } from '@/lib/utils/format'
 import { NotificationBellDropdown } from './NotificationBellDropdown'
 import { ProfileSlideOver } from './ProfileSlideOver'
+import { LogoutConfirmDialog } from '@/components/shared/LogoutConfirmDialog'
 
 interface TopbarProps {
   title?: string
@@ -19,6 +20,7 @@ export function Topbar({ title }: TopbarProps) {
   const toggleSidebar = useUIStore(s => s.toggleSidebar)
   const { mutate: logout, isPending } = useLogout()
   const [profileOpen, setProfileOpen] = useState(false)
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false)
 
   const user = useAuthStore(s => s.user)
   const tenantName = useTenantStore(s => s.name)
@@ -99,7 +101,7 @@ export function Topbar({ title }: TopbarProps) {
             {/* Logout Button */}
             <motion.button
               whileTap={{ scale: 0.94 }}
-              onClick={() => logout()}
+              onClick={() => setLogoutConfirmOpen(true)}
               disabled={isPending}
               className="text-slate-400 hover:text-rose-600 transition-colors p-2 rounded-lg hover:bg-rose-50"
               title="Sign out"
@@ -111,6 +113,12 @@ export function Topbar({ title }: TopbarProps) {
       </header>
 
       <ProfileSlideOver open={profileOpen} onClose={() => setProfileOpen(false)} />
+      <LogoutConfirmDialog
+        open={logoutConfirmOpen}
+        onClose={() => setLogoutConfirmOpen(false)}
+        onConfirm={() => logout()}
+        loading={isPending}
+      />
     </>
   )
 }
