@@ -26,7 +26,7 @@ export default async function AdminReportsPage({ searchParams }: { searchParams:
     sessionId = undefined
   }
 
-  let summary = { totalStudents: 0, totalClearances: 0, completed: 0, completionRate: 0 }
+  let summary = { totalStudents: 0, totalClearances: 0, completed: 0, completionRate: '0' }
   let campaigns: any[] = []
   
   try {

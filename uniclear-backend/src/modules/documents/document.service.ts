@@ -97,66 +97,10 @@ export class DocumentsService {
     })
 
     // Touch clearance request updatedAt so officers queue reflects fresh uploads
-    // Touch clearance request updatedAt and check stage readiness across all campaign stages
-    const clearance = await db.clearanceRequest.findUnique({
+    await db.clearanceRequest.update({
       where: { id: requestId },
-      include: {
-        campaign: {
-          include: {
-            stages: {
-              where: { isActive: true },
-              include: {
-                documentRequirements: true,
-              },
-            },
-          },
-        },
-        currentStage: {
-          include: {
-            documentRequirements: true,
-          },
-        },
-        documents: true,
-      },
-    })
-
-    if (clearance) {
-      // All existing valid (not rejected) document types for this request
-      const validDocTypeIds = new Set(
-        clearance.documents
-          .filter(d => d.status !== 'REJECTED' || d.documentTypeId === documentTypeId)
-          .map(d => d.documentTypeId)
-      )
-      validDocTypeIds.add(documentTypeId)
-
-      let shouldSetSubmitted = false
-
-      // Check all stages in the campaign
-      const campaignStages = (clearance.campaign as any)?.stages || (clearance.currentStage ? [clearance.currentStage] : [])
-      for (const stage of campaignStages) {
-        const stageReqs = stage.documentRequirements || []
-        const requiredTypeIds = stageReqs.filter((r: any) => r.isRequired).map((r: any) => r.documentTypeId)
-        if (requiredTypeIds.length > 0 && requiredTypeIds.every((id: string) => validDocTypeIds.has(id))) {
-          eventBus.emit('stage.submitted', { requestId, stageId: stage.id, studentId, universityId })
-          if (stage.id === clearance.currentStageId) {
-            shouldSetSubmitted = true
-          }
-        }
-      }
-
-      await db.clearanceRequest.update({
-        where: { id: requestId },
-        data: {
-          updatedAt: new Date(),
-          stageStatus: shouldSetSubmitted && clearance.stageStatus !== 'APPROVED' ? 'SUBMITTED' : clearance.stageStatus,
-        },
-      }).catch(() => {})
-    } else {
-      await db.clearanceRequest.update({
-        where: { id: requestId },
-        data: { updatedAt: new Date() },
-      }).catch(() => {})
-    }
+      data: { updatedAt: new Date() },
+    }).catch(() => {})
 
     eventBus.emit('document.uploaded', { documentId: document.id, studentId, universityId })
     return document

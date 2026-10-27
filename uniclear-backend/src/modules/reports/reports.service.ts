@@ -6,8 +6,14 @@ export class ReportsService {
     if (campaignId) clearanceWhere.campaignId = campaignId
     if (sessionId) clearanceWhere.sessionId = sessionId
 
+    // Count students who have a clearance request in the filtered scope,
+    // falling back to all university students when no filter is applied
+    const studentCountWhere: any = sessionId || campaignId
+      ? { universityId, clearanceRequests: { some: { ...clearanceWhere } } }
+      : { universityId }
+
     const [totalStudents, totalClearances, completed, inProgress] = await Promise.all([
-      db.student.count({ where: { universityId } }),
+      db.student.count({ where: studentCountWhere }),
       db.clearanceRequest.count({ where: clearanceWhere }),
       db.clearanceRequest.count({ where: { ...clearanceWhere, status: 'COMPLETED' } }),
       db.clearanceRequest.count({ where: { ...clearanceWhere, status: 'IN_PROGRESS' } }),

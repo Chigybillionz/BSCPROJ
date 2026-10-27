@@ -501,6 +501,14 @@ export function ClearanceSubmissionPanel({
               <CheckCircle2 className="h-4 w-4" />
               This departmental stage has been officially verified and endorsed.
             </div>
+          ) : !isCurrentStage ? (
+            // Non-current stage: advance upload only, no submit button
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs">
+              <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0" />
+              <span>
+                Documents uploaded here are saved securely. They will be reviewed once your clearance reaches <strong>{activeStage.name}</strong>.
+              </span>
+            </div>
           ) : (
             <>
               {canSubmit && !isUnderReview && (

@@ -42,6 +42,9 @@ export default function OfficerDashboard() {
     refetch: refetchQueue,
   } = useOfficerQueue(page, search || undefined, undefined, undefined, stageStatus)
 
+  // Always fetch the true pending (SUBMITTED) count for the KPI card, independent of the active tab
+  const { data: pendingQueue } = useOfficerQueue(1, undefined, undefined, undefined, 'SUBMITTED')
+
   const { data: meRes, isLoading: meLoading } = useQuery({
     queryKey: ['officer', 'me'],
     queryFn: () => officersApi.getMe().then((r: any) => r.data.data),
@@ -116,7 +119,7 @@ export default function OfficerDashboard() {
     }
   }
 
-  const pending = queue?.total ?? queue?.items?.length ?? 0
+  const pending = pendingQueue?.total ?? 0
   const assignments = meRes?.stageAssignments || []
   const stageNames = assignments.map((a: any) => a.stage?.name).filter(Boolean)
   const stageName = stageNames.length > 0 ? stageNames.join(', ') : 'Assigned Stage'
