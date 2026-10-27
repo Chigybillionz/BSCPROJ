@@ -254,9 +254,10 @@ export class ClearanceRepository {
       }
 
       where.AND.push({
-        student: {
-          OR: searchConditions,
-        },
+        OR: [
+          { clearanceNumber: { contains: trimmed, mode: 'insensitive' } },
+          { student: { OR: searchConditions } },
+        ],
       })
     }
 

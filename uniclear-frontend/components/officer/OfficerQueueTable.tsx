@@ -26,6 +26,7 @@ import { CustomDropdown } from '@/components/ui/CustomDropdown'
 
 export interface OfficerQueueItem {
   id: string
+  clearanceNumber?: string | null
   status: string
   stageStatus: string
   currentStageId?: string | null
@@ -313,9 +314,22 @@ export function OfficerQueueTable({
 
                     {/* Reg Number */}
                     <td className="py-3 px-4">
-                      <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded-md bg-[var(--color-bg)] text-[var(--color-text)] border border-[var(--color-border)] tracking-tight">
-                        {item.student?.jambRegNo || item.student?.matricNo || 'N/A'}
-                      </span>
+                      <div className="space-y-1">
+                        <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded-md bg-[var(--color-bg)] text-[var(--color-text)] border border-[var(--color-border)] tracking-tight block w-fit">
+                          {item.student?.jambRegNo || item.student?.matricNo || 'N/A'}
+                        </span>
+                        {item.clearanceNumber && (
+                          <div className="flex items-center gap-1">
+                            <span 
+                              className="inline-flex items-center gap-1 text-[10px] font-mono font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded shadow-2xs"
+                              title="Generated Official Clearance Registration Number"
+                            >
+                              <span className="text-[9px] text-emerald-600 font-sans uppercase font-semibold">Reg:</span>
+                              {item.clearanceNumber}
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </td>
 
                     {/* Department & Academic Session */}

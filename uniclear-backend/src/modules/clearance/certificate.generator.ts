@@ -553,7 +553,7 @@ export class CertificateGenerator {
         : 'Approved'
 
       if (isDense) {
-        page.drawText(`${officerName} • ${approvalDate}`, {
+        page.drawText(`${officerName} | ${approvalDate}`, {
           x: cellX + 6,
           y: cellY + cellHeight - 22,
           size: 6.2,
@@ -571,8 +571,8 @@ export class CertificateGenerator {
           borderColor: rgb(34 / 255, 197 / 255, 94 / 255),
           borderWidth: 0.6,
         })
-        page.drawText('✓ APPROVED', {
-          x: cellX + 10,
+        page.drawText('APPROVED', {
+          x: cellX + 12,
           y: cellY + 8,
           size: 6,
           font: fontBold,

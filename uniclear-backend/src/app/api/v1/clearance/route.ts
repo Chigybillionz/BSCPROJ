@@ -23,7 +23,7 @@ router.post('/:requestId/submit',           requireRole('STUDENT'),             
 router.post('/:requestId/approve',          requireRole('OFFICER'),                     upload.single('file'), ClearanceController.approve)
 router.post('/:requestId/reject',           requireRole('OFFICER'),                     ClearanceController.reject)
 router.get('/:requestId/history',           requireRole('SUPER_ADMIN', 'ADMIN', 'OFFICER', 'STUDENT'), ClearanceController.getHistory)
-router.get('/:requestId/certificate',       requireRole('STUDENT', 'SUPER_ADMIN', 'ADMIN'), ClearanceController.getCertificate)
-router.get('/:requestId/certificate/pdf',   requireRole('STUDENT', 'SUPER_ADMIN', 'ADMIN'), ClearanceController.downloadCertificatePdf)
+router.get('/:requestId/certificate',       requireRole('STUDENT', 'SUPER_ADMIN', 'ADMIN', 'OFFICER'), ClearanceController.getCertificate)
+router.get('/:requestId/certificate/pdf',   requireRole('STUDENT', 'SUPER_ADMIN', 'ADMIN', 'OFFICER'), ClearanceController.downloadCertificatePdf)
 
 export default router

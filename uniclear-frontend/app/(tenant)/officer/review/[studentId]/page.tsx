@@ -45,7 +45,9 @@ import {
   ZoomOut,
   RotateCw,
   MessageSquare,
-  AlertCircle
+  AlertCircle,
+  Download,
+  Sparkles
 } from 'lucide-react'
 
 function InteractiveImageViewer({ url, alt }: { url: string; alt: string }) {
@@ -502,8 +504,14 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
             <span className="hidden sm:inline">Refresh</span>
           </Button>
 
-          <span className="text-xs text-[var(--color-muted)] font-medium hidden sm:inline">Request:</span>
-          <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-[var(--color-bg)] border border-[var(--color-border)] text-[var(--color-text)]">
+          <span className="text-xs text-[var(--color-muted)] font-medium hidden sm:inline">
+            {clearance.clearanceNumber ? 'Clearance Reg No:' : 'Request:'}
+          </span>
+          <span className={`font-mono text-xs font-bold px-2 py-0.5 rounded-md border ${
+            clearance.clearanceNumber 
+              ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-2xs' 
+              : 'bg-[var(--color-bg)] border-[var(--color-border)] text-[var(--color-text)]'
+          }`}>
             {clearance.clearanceNumber || clearance.id.slice(0, 8)}
           </span>
         </div>
@@ -703,9 +711,17 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
                   <h3 className="text-base font-bold text-[var(--color-text)] truncate">
                     {studentFullName}
                   </h3>
-                  <span className="font-mono text-xs font-semibold text-[var(--color-primary)]">
-                    {clearance.student?.jambRegNo || 'JAMB Reg No N/A'}
-                  </span>
+                  <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                    <span className="font-mono text-xs font-semibold text-[var(--color-primary)]">
+                      {clearance.student?.jambRegNo || 'JAMB Reg No N/A'}
+                    </span>
+                    {clearance.clearanceNumber && (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-emerald-800 bg-emerald-50 border border-emerald-300 px-2 py-0.5 rounded-md shadow-2xs" title="Generated Official Clearance Registration Number">
+                        <span className="text-[9px] text-emerald-600 font-sans uppercase font-bold">Reg:</span>
+                        {clearance.clearanceNumber}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -1050,6 +1066,31 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
                 </div>
               )}
             </div>
+
+            {clearance.status === 'COMPLETED' && (
+              <div className="p-3.5 bg-emerald-50 rounded-xl border border-emerald-200 space-y-2.5">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+                      <Sparkles className="h-4 w-4 text-emerald-600 shrink-0" />
+                      <span>Clearance Completed & Verified</span>
+                    </p>
+                    <p className="text-[11px] font-mono font-bold text-emerald-800 mt-1">
+                      Official Reg: <span className="bg-white px-1.5 py-0.5 rounded border border-emerald-300">{clearance.clearanceNumber}</span>
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="w-full py-2 h-auto text-xs font-bold text-emerald-900 border-emerald-300 bg-white hover:bg-emerald-100 flex items-center justify-center gap-1.5 shadow-2xs"
+                  onClick={() => clearanceApi.downloadCertificatePdf(clearance.id, `Clearance_Certificate_${clearance.student?.jambRegNo || 'student'}.pdf`)}
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  <span>Download Student Certificate (PDF)</span>
+                </Button>
+              </div>
+            )}
 
             {!isAssignedToActiveStage && !isCurrentStageApproved && (
               <div className="flex items-center gap-1.5 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-[11px] leading-tight">
