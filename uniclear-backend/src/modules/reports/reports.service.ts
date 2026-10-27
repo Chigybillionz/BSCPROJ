@@ -12,12 +12,17 @@ export class ReportsService {
       ? { universityId, clearanceRequests: { some: { ...clearanceWhere } } }
       : { universityId }
 
-    const [totalStudents, totalClearances, completed, inProgress] = await Promise.all([
+    let [totalStudents, totalClearances, completed, inProgress] = await Promise.all([
       db.student.count({ where: studentCountWhere }),
       db.clearanceRequest.count({ where: clearanceWhere }),
       db.clearanceRequest.count({ where: { ...clearanceWhere, status: 'COMPLETED' } }),
       db.clearanceRequest.count({ where: { ...clearanceWhere, status: 'IN_PROGRESS' } }),
     ])
+
+    // If filtered count returns 0 because students haven't initiated in this session yet, fallback to university student population
+    if (totalStudents === 0 && (sessionId || campaignId)) {
+      totalStudents = await db.student.count({ where: { universityId } })
+    }
 
     const completedRequests = (await db.clearanceRequest.findMany({
       where: { ...clearanceWhere, status: 'COMPLETED', completedAt: { not: null } },

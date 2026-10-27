@@ -100,6 +100,11 @@ export function registerListeners() {
     const stageName = stage?.name || 'Clearance Stage'
     const studentName = student ? `${student.firstName} ${student.lastName}` : undefined
     const targetUserId = student?.userId
+
+    await AuditService.log({
+      universityId,
+      actorId: officerId,
+      action: 'STAGE_REJECTED',
       targetId: requestId,
       targetType: 'ClearanceRequest',
       metadata: { stageId, stageName, remarks, studentName, jambRegNo: student?.jambRegNo },
