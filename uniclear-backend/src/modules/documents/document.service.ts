@@ -123,8 +123,8 @@ export class DocumentsService {
 
       const allRequirementsMet = requiredTypeIds.every(id => validDocTypeIds.has(id))
 
-      // If student was REJECTED and has now uploaded all required documents, auto-submit for review
-      if (allRequirementsMet && clearance.stageStatus === 'REJECTED') {
+      // If student has now uploaded all required documents, auto-submit for review so officers immediately see it
+      if (allRequirementsMet && (clearance.stageStatus === 'PENDING' || clearance.stageStatus === 'REJECTED')) {
         await db.clearanceRequest.update({
           where: { id: requestId },
           data: { updatedAt: new Date(), stageStatus: 'SUBMITTED' },

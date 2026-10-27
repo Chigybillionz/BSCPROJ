@@ -473,6 +473,20 @@ export function ClearanceSubmissionPanel({
         <div className="pt-2 border-t">
           {isCurrentStage ? (
             <>
+              {canSubmit && !isUnderReview && (
+                <div className="mb-3 flex items-center justify-between p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-amber-600 shrink-0" />
+                    <span>All required documents uploaded! Click <strong>Submit for Review</strong> below to forward your submission to the clearance officer.</span>
+                  </div>
+                </div>
+              )}
+              {isUnderReview && (
+                <div className="mb-3 flex items-center gap-2 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-medium">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <span>Submitted for Officer Review — Your clearance officer has this in their queue.</span>
+                </div>
+              )}
               <Button 
                 className="w-full" 
                 size="lg" 

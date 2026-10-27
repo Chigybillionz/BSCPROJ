@@ -138,6 +138,7 @@ export interface ClearanceRequest {
   stageStatus: 'PENDING' | 'SUBMITTED' | 'REJECTED'
   currentStageId: string | null
   currentStage?: {
+    id?: string
     name: string
     documentRequirements?: {
       id: string

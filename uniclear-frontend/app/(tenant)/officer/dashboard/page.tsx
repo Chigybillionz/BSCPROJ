@@ -312,6 +312,7 @@ export default function OfficerDashboard() {
           <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-lg overflow-x-auto self-start border border-slate-200">
             {[
               { id: 'SUBMITTED', label: 'Awaiting Review' },
+              { id: 'PENDING', label: 'In Progress / Pending' },
               { id: 'REJECTED', label: 'Action / Re-uploaded' },
               { id: 'ALL', label: 'All Records' },
             ].map(tab => (
