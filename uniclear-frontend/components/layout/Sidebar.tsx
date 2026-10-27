@@ -1,12 +1,13 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
 import {
   LayoutDashboard, Users, UserCircle, Settings, FileText,
   CalendarDays, BarChart2, Paintbrush, ClipboardList, University,
-  GraduationCap, FolderOpen, Terminal, ChevronRight,
+  GraduationCap, FolderOpen, Terminal, ChevronRight, LogOut,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
@@ -15,6 +16,8 @@ import { useRole } from '@/hooks/useRole'
 import { useTenant } from '@/hooks/useTenant'
 import { ROUTES } from '@/lib/constants'
 import { BrandLogo } from '@/components/shared/BrandLogo'
+import { useLogout } from '@/features/auth/hooks/useLogout'
+import { LogoutConfirmDialog } from '@/components/shared/LogoutConfirmDialog'
 
 interface NavSection {
   title?: string
@@ -26,6 +29,8 @@ export function Sidebar() {
   const { sidebarOpen, setSidebarOpen } = useUIStore()
   const { isOfficer, isPlatformOwner, isStudent } = useRole()
   const { name, logoUrl } = useTenant()
+  const { mutate: logout, isPending: isLoggingOut } = useLogout()
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false)
 
   const adminSections: NavSection[] = [
     {
@@ -194,8 +199,20 @@ export function Sidebar() {
         ))}
       </nav>
 
-      {/* Footer System Status Banner */}
-      <div className="p-3 border-t border-[var(--color-border)] bg-slate-50/40">
+      {/* Footer System Status Banner & Sign Out */}
+      <div className="p-3 border-t border-[var(--color-border)] bg-slate-50/40 space-y-2">
+        <button
+          type="button"
+          onClick={() => setLogoutConfirmOpen(true)}
+          className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-rose-600 hover:bg-rose-50/80 transition-colors group cursor-pointer"
+        >
+          <div className="flex items-center gap-2.5">
+            <LogOut className="h-4 w-4 text-slate-400 group-hover:text-rose-600 transition-colors" />
+            <span>Sign Out</span>
+          </div>
+          <span className="text-[10px] text-slate-400 group-hover:text-rose-500 font-medium">Exit</span>
+        </button>
+
         <div className="px-2 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200/60 flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -206,6 +223,13 @@ export function Sidebar() {
           <span className="text-[10px] font-mono text-emerald-600 font-semibold">v1.2</span>
         </div>
       </div>
+
+      <LogoutConfirmDialog
+        open={logoutConfirmOpen}
+        onClose={() => setLogoutConfirmOpen(false)}
+        onConfirm={() => logout()}
+        loading={isLoggingOut}
+      />
     </aside>
   )
 }
