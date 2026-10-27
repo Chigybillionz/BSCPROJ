@@ -114,6 +114,10 @@ async function proxy(req: NextRequest, { params }: { params: Promise<{ path: str
     }
   }
 
+  if (res.status === 204 || res.status === 205 || res.status === 304) {
+    return new NextResponse(null, { status: res.status })
+  }
+
   const resContentType = res.headers.get('content-type') ?? ''
   if (resContentType.includes('text/csv')) {
     const csvText = await res.text()

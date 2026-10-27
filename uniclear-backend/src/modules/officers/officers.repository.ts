@@ -79,6 +79,13 @@ export class OfficersRepository {
   }
 
   static async unassign(id: string) {
-    return db.stageOfficerAssignment.deleteMany({ where: { id } })
+    return db.stageOfficerAssignment.deleteMany({
+      where: {
+        OR: [
+          { id },
+          { officerId: id }
+        ]
+      }
+    })
   }
 }

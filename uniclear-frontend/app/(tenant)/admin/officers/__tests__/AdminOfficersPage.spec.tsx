@@ -12,6 +12,7 @@ jest.mock('@/lib/api/officers.api', () => ({
     update: jest.fn(),
     delete: jest.fn(),
     assign: jest.fn(),
+    assignMultiple: jest.fn(),
     unassign: jest.fn(),
   },
 }))
@@ -123,11 +124,14 @@ describe('AdminOfficersPage (User & Role Management)', () => {
     fireEvent.change(screen.getByPlaceholderText('e.g. Eze'), { target: { value: 'Mba' } })
     fireEvent.change(screen.getByPlaceholderText('e.g. samuel.eze@unn.edu.ng'), { target: { value: 'chidi@unn.edu.ng' } })
 
-    // Select Library Clearance stage from dropdown
-    const stageSelect = screen.getByLabelText(/Assign Clearance Stage/i)
-    fireEvent.change(stageSelect, { target: { value: 'stage-lib' } })
+    // Select Library Clearance stage from CustomDropdown
+    const dropdownTrigger = screen.getByText('Select clearance stage(s)...')
+    fireEvent.click(dropdownTrigger)
 
-    const submitBtn = screen.getByRole('button', { name: /Create User & Assign Stage/i })
+    const stageOption = screen.getByText(/Library Clearance \(Stage 1\)/i)
+    fireEvent.click(stageOption)
+
+    const submitBtn = screen.getByRole('button', { name: /Create User & Assign Stages/i })
     fireEvent.click(submitBtn)
 
     await waitFor(() => {
@@ -137,13 +141,14 @@ describe('AdminOfficersPage (User & Role Management)', () => {
         email: 'chidi@unn.edu.ng',
         role: 'OFFICER',
         stageId: 'stage-lib',
+        stageIds: ['stage-lib'],
       }))
     })
   })
 
   it('allows assigning a clearance stage to an unassigned user', async () => {
-    ;(officersApi.assign as jest.Mock).mockResolvedValue({
-      data: { success: true, data: { id: 'asgn-new' } },
+    ;(officersApi.assignMultiple as jest.Mock).mockResolvedValue({
+      data: { success: true, data: [{ id: 'asgn-new' }] },
     })
 
     renderWithClient(<AdminOfficersPage />)
@@ -153,20 +158,22 @@ describe('AdminOfficersPage (User & Role Management)', () => {
     })
 
     // Click assign button for second officer
-    const assignButtons = screen.getAllByRole('button', { name: /\+ Assign Stage/i })
+    const assignButtons = screen.getAllByRole('button', { name: /Assign Stages/i })
     fireEvent.click(assignButtons[1])
 
-    expect(screen.getByText(/Assign Stage to Ngozi Okeke/i)).toBeInTheDocument()
+    expect(screen.getByText(/Assign Clearance Stages to Ngozi Okeke/i)).toBeInTheDocument()
 
-    const stageSelect = screen.getByLabelText(/Select Clearance Stage/i)
-    fireEvent.change(stageSelect, { target: { value: 'stage-lib' } })
+    // Click Select All
+    const selectAllBtn = screen.getByRole('button', { name: /Select All/i })
+    fireEvent.click(selectAllBtn)
 
     const confirmBtn = screen.getByRole('button', { name: /Confirm Assignment/i })
     fireEvent.click(confirmBtn)
 
     await waitFor(() => {
-      expect(officersApi.assign).toHaveBeenCalledWith('stage-lib', expect.objectContaining({
+      expect(officersApi.assignMultiple).toHaveBeenCalledWith(expect.objectContaining({
         officerId: 'officer-2',
+        stageIds: expect.arrayContaining(['stage-lib', 'stage-bur']),
       }))
     })
   })

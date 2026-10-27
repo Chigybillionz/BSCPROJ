@@ -180,10 +180,19 @@ export default function AdminOfficersPage() {
 
   const { mutate: assignStages, isPending: assigning } = useMutation({
     mutationFn: async () => {
-      if (selectedStageIds.length === 0 || !assignTarget) throw new Error('Please select at least one stage')
+      if (!assignTarget) return
+
+      const existingAssignments = assignTarget.stageAssignments || []
+
+      // If all stages are cleared, remove all assignments for this officer
+      if (selectedStageIds.length === 0) {
+        for (const rem of existingAssignments) {
+          await officersApi.unassign(rem.id).catch(() => {})
+        }
+        return { unassignedAll: true }
+      }
 
       // Unassign stages that were unchecked in the multi-stage checklist
-      const existingAssignments = assignTarget.stageAssignments || []
       const toRemove = existingAssignments.filter((a: any) => !selectedStageIds.includes(a.stageId))
       for (const rem of toRemove) {
         await officersApi.unassign(rem.id).catch(() => {})
@@ -200,14 +209,15 @@ export default function AdminOfficersPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['officers'] })
       qc.invalidateQueries({ queryKey: ['stages'] })
+      const wasCleared = selectedStageIds.length === 0
       setAssignTarget(null)
       setSelectedStageIds([])
       setQuickFacultyId('')
       setQuickDeptId('')
       setQuickSessionId('')
-      toast.success('Stages assigned successfully to officer')
+      toast.success(wasCleared ? 'Officer unassigned from all stages' : 'Stages assigned successfully to officer')
     },
-    onError: (e: any) => toast.error(e.response?.data?.message || e.message || 'Failed to assign stages')
+    onError: (e: any) => toast.error(e.response?.data?.message || e.message || 'Failed to update stage assignments')
   })
 
   const { mutate: unassignStage } = useMutation({
@@ -215,9 +225,9 @@ export default function AdminOfficersPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['officers'] })
       qc.invalidateQueries({ queryKey: ['stages'] })
-      toast.success('Assignment removed')
+      toast.success('Stage assignment removed')
     },
-    onError: (e: any) => toast.error(e.response?.data?.message || e.message || 'Failed to remove assignment')
+    onError: (e: any) => toast.error(e.response?.data?.message || e.message || 'Failed to remove stage assignment')
   })
 
   const openEdit = (o: any) => {
@@ -783,12 +793,18 @@ export default function AdminOfficersPage() {
               Cancel
             </Button>
             <Button
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold"
-              disabled={selectedStageIds.length === 0}
+              className={cn(
+                "flex-1 font-bold",
+                selectedStageIds.length === 0
+                  ? "bg-amber-600 hover:bg-amber-700 text-white"
+                  : "bg-blue-600 hover:bg-blue-700 text-white"
+              )}
               loading={assigning}
               onClick={() => assignStages()}
             >
-              Confirm Assignment ({selectedStageIds.length} {selectedStageIds.length === 1 ? 'Stage' : 'Stages'})
+              {selectedStageIds.length === 0
+                ? "Unassign All Stages"
+                : `Confirm Assignment (${selectedStageIds.length} ${selectedStageIds.length === 1 ? 'Stage' : 'Stages'})`}
             </Button>
           </div>
         </div>
