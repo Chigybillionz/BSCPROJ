@@ -65,7 +65,7 @@ describe('OfficersService', () => {
       ;(db.user.findUnique as jest.Mock).mockResolvedValue(null)
       ;(db.user.create as jest.Mock).mockResolvedValue({ id: 'user-1', email: 'officer@uni.ng', role: 'OFFICER', isActive: true })
       jest.spyOn(OfficersRepository, 'create').mockResolvedValue(mockOfficer as any)
-      const assignSpy = jest.spyOn(OfficersRepository, 'assign').mockResolvedValue({ id: 'assignment-1', stageId: 'stage-1', officerId: 'officer-id' } as any)
+      const assignSpy = jest.spyOn(OfficersRepository, 'assignMultiple').mockResolvedValue([{ id: 'assignment-1', stageId: 'stage-1', officerId: 'officer-id' }] as any)
 
       const result = await OfficersService.create('uni-id', {
         email: 'officer@uni.ng',
@@ -76,7 +76,7 @@ describe('OfficersService', () => {
       })
 
       expect(result.firstName).toBe('Ada')
-      expect(assignSpy).toHaveBeenCalledWith('uni-id', 'stage-1', 'officer-id', undefined, undefined, undefined)
+      expect(assignSpy).toHaveBeenCalledWith('uni-id', ['stage-1'], 'officer-id', undefined, undefined, undefined)
       expect(result.stageAssignments).toHaveLength(1)
     })
 

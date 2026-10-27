@@ -138,11 +138,11 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
 
         {/* Clearance Stages Overview */}
         <Card className="col-span-1 md:col-span-2" padding="lg">
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex justify-between items-center mb-3">
             <div>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--color-muted)]">Clearance Progress</h3>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--color-muted)]">Clearance Progress &amp; Milestone Pipeline</h3>
               <p className="text-xs text-[var(--color-muted)] mt-0.5">
-                Campaign: {clearance?.campaign?.name || 'Standard Clearance'}
+                Campaign: <strong className="text-gray-800">{clearance?.campaign?.name || 'Faculty Clearance'}</strong>
               </p>
             </div>
             {clearance && <StatusBadge status={clearance.status} />}
@@ -153,54 +153,159 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
               <FileText className="h-8 w-8 text-gray-300 mx-auto mb-2" />
               <p className="text-sm text-[var(--color-muted)]">This student has not started their clearance process yet.</p>
             </div>
-          ) : (
-            <div className="space-y-3">
-              {approvals.length === 0 ? (
-                <div className="p-4 bg-gray-50 border border-gray-100 rounded-lg text-xs text-[var(--color-muted)] italic flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-amber-500 shrink-0" />
-                  <span>No clearance stages reviewed yet. Student is in progress.</span>
-                </div>
-              ) : (
-                <div className="border border-[var(--color-border)] rounded-lg overflow-hidden divide-y divide-[var(--color-border)]">
-                  {approvals.map((approval: any) => {
-                    const officerName = approval.officerRef 
-                      ? `${approval.officerRef.firstName} ${approval.officerRef.lastName}` 
-                      : (approval.officer?.email || 'Clearance Officer')
-                    
-                    return (
-                      <div key={approval.id} className="p-3.5 bg-white hover:bg-gray-50/80 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-xs text-gray-900">{approval.stage?.name || 'Stage'}</span>
-                            <StatusBadge status={approval.status} />
-                          </div>
+          ) : (() => {
+            const rawStages: any[] = clearance.campaign?.stages || []
+            const sortedStages = [...rawStages].sort((a: any, b: any) => a.orderIndex - b.orderIndex)
+            const approvalMap = new Map<string, any>()
+            for (const app of approvals) {
+              approvalMap.set(app.stageId, app)
+            }
 
-                          <div className="text-[11px] text-[var(--color-muted)] flex flex-wrap items-center gap-x-3 gap-y-1">
-                            <span className="flex items-center gap-1">
-                              <Shield className="h-3 w-3 text-blue-600" />
-                              <span>{officerName}</span>
+            const approvedStagesCount = approvals.filter((a: any) => a.status === 'APPROVED').length
+            const totalStagesCount = sortedStages.length > 0 ? sortedStages.length : approvals.length
+            const percentComplete = totalStagesCount > 0 ? Math.round((approvedStagesCount / totalStagesCount) * 100) : 0
+            const currentStageObj = sortedStages.find((s: any) => s.id === clearance.currentStageId)
+
+            return (
+              <div className="space-y-4">
+                {/* Pipeline Progress Header Banner */}
+                <div className="bg-gradient-to-r from-blue-50/90 to-indigo-50/90 rounded-xl p-3.5 border border-blue-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="space-y-1.5 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-bold text-blue-950 uppercase tracking-wider">Clearance Milestone Track</span>
+                      <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-600 text-white shadow-2xs">
+                        {approvedStagesCount} of {totalStagesCount} Stages Endorsed ({percentComplete}%)
+                      </span>
+                    </div>
+                    {/* Progress Bar */}
+                    <div className="h-2 w-full max-w-sm bg-blue-200/60 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-blue-600 to-emerald-500 transition-all duration-500 rounded-full"
+                        style={{ width: `${percentComplete}%` }}
+                      />
+                    </div>
+                    <p className="text-[11px] text-blue-800 font-medium">
+                      {clearance.status === 'COMPLETED' ? (
+                        <span className="text-emerald-700 font-bold">✓ All stages approved — Clearance completed!</span>
+                      ) : (
+                        <span>
+                          Current Milestone: <strong>Stage #{currentStageObj?.orderIndex || approvedStagesCount + 1} ({currentStageObj?.name || 'Next Review Stage'})</strong>
+                        </span>
+                      )}
+                    </p>
+                  </div>
+
+                  <Link
+                    href={`/officer/review/${id}?requestId=${clearance.id}`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white shadow-xs transition-all shrink-0 self-start sm:self-auto"
+                  >
+                    <Shield className="h-3.5 w-3.5" />
+                    <span>Open Officer Review</span>
+                  </Link>
+                </div>
+
+                {/* Stages List (All 17 Stages Rendered) */}
+                <div className="border border-[var(--color-border)] rounded-xl overflow-hidden divide-y divide-[var(--color-border)] max-h-[460px] overflow-y-auto">
+                  {(sortedStages.length > 0 ? sortedStages : approvals).map((item: any, idx: number) => {
+                    const isStageObject = sortedStages.length > 0
+                    const stage = isStageObject ? item : item.stage
+                    const approval = isStageObject ? approvalMap.get(stage.id) : item
+                    const isApproved = approval?.status === 'APPROVED'
+                    const isRejected = approval?.status === 'REJECTED'
+                    const isCurrent = !isApproved && !isRejected && (stage.id === clearance.currentStageId || (!clearance.currentStageId && idx === approvedStagesCount))
+
+                    // Find corresponding document uploaded for this stage
+                    const matchingDoc = documents.find((d: any) =>
+                      d.documentTypeId === stage.id ||
+                      d.documentType?.name?.toLowerCase() === stage.name?.toLowerCase() ||
+                      d.documentType?.stageRequirements?.some((r: any) => r.stageId === stage.id)
+                    )
+
+                    const officerName = approval?.officerRef 
+                      ? `${approval.officerRef.firstName} ${approval.officerRef.lastName}` 
+                      : (approval?.officer?.email || 'Clearance Officer')
+
+                    return (
+                      <div
+                        key={stage?.id || idx}
+                        className={`p-3 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 ${
+                          isCurrent
+                            ? 'bg-blue-50/60 ring-1 ring-blue-500/20'
+                            : isApproved
+                            ? 'bg-white hover:bg-gray-50/80'
+                            : 'bg-gray-50/50 text-gray-500'
+                        }`}
+                      >
+                        <div className="space-y-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-mono text-[11px] font-bold text-gray-400">
+                              #{stage.orderIndex || idx + 1}
                             </span>
-                            <span>•</span>
-                            <span>{new Date(approval.decidedAt || approval.createdAt).toLocaleDateString()}</span>
-                            {approval.stamp && (
-                              <>
-                                <span>•</span>
-                                <span className="inline-flex items-center gap-1 text-emerald-700 font-medium">
-                                  <CheckCircle2 className="h-3 w-3" />
-                                  <span>Stamped: {approval.stamp.name}</span>
-                                </span>
-                              </>
+                            <span className={`text-xs font-bold ${isCurrent ? 'text-blue-900 font-extrabold' : isApproved ? 'text-gray-900' : 'text-gray-600'}`}>
+                              {stage.name || 'Stage'}
+                            </span>
+                            {isApproved ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                <CheckCircle2 className="h-3 w-3" /> Approved
+                              </span>
+                            ) : isRejected ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-200">
+                                Rejected
+                              </span>
+                            ) : isCurrent ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200 animate-pulse">
+                                <Clock className="h-3 w-3 text-blue-600" /> Current Stage (In Review)
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 border border-gray-200">
+                                Pending
+                              </span>
+                            )}
+
+                            {/* Credential file status badge */}
+                            {matchingDoc ? (
+                              <span className={`text-[10px] px-1.5 py-0.2 rounded font-semibold ${
+                                matchingDoc.status === 'APPROVED'
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                  : 'bg-amber-50 text-amber-700 border border-amber-200'
+                              }`}>
+                                Doc: {matchingDoc.status === 'APPROVED' ? 'Verified' : 'Uploaded (Pending Review)'}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] px-1.5 py-0.2 rounded font-medium bg-gray-100 text-gray-500 border border-gray-200">
+                                Doc: Not Uploaded
+                              </span>
                             )}
                           </div>
 
-                          {approval.remarks && (
+                          {isApproved && (
+                            <div className="text-[11px] text-[var(--color-muted)] flex flex-wrap items-center gap-x-2.5 gap-y-0.5">
+                              <span className="flex items-center gap-1">
+                                <Shield className="h-3 w-3 text-blue-600" />
+                                <span>{officerName}</span>
+                              </span>
+                              <span>•</span>
+                              <span>{new Date(approval.decidedAt || approval.createdAt).toLocaleDateString()}</span>
+                              {approval.stamp && (
+                                <>
+                                  <span>•</span>
+                                  <span className="inline-flex items-center gap-1 text-emerald-700 font-medium">
+                                    <CheckCircle2 className="h-3 w-3" />
+                                    <span>Stamped: {approval.stamp.name}</span>
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          )}
+
+                          {approval?.remarks && (
                             <p className="text-xs text-gray-600 bg-gray-50 p-2 rounded border border-gray-100 mt-1">
                               &ldquo;{approval.remarks}&rdquo;
                             </p>
                           )}
                         </div>
 
-                        {approval.attachmentUrl && (
+                        {approval?.attachmentUrl && (
                           <div className="flex items-center gap-2 shrink-0">
                             <Button 
                               variant="secondary" 
@@ -208,7 +313,7 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
                               className="text-xs h-7 px-2.5"
                               onClick={() => setPreviewDoc({
                                 url: normalizeDocUrl(approval.attachmentUrl),
-                                title: `Signed Endorsement — ${approval.stage?.name || 'Stage'}`
+                                title: `Signed Endorsement — ${stage.name || 'Stage'}`
                               })}
                             >
                               <Eye className="w-3.5 h-3.5 mr-1" /> View Endorsement
@@ -224,9 +329,9 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
                     )
                   })}
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+            )
+          })()}
         </Card>
       </div>
 
@@ -243,8 +348,21 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
             </p>
           </div>
           <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-            {documents.filter((d: any) => d.status === 'APPROVED').length} Approved / {documents.length} Total
+            {documents.filter((d: any) => d.status === 'APPROVED').length} Verified / {documents.length} Total
           </span>
+        </div>
+
+        {/* Informational Callout: Document Verification vs Stage Endorsement */}
+        <div className="p-3 bg-slate-50 border border-slate-200/90 rounded-xl text-xs text-slate-700 flex items-start gap-2.5 mb-4">
+          <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+          <div className="space-y-0.5">
+            <p className="font-bold text-slate-900">
+              Understanding Document Verification vs Clearance Stages
+            </p>
+            <p className="text-[11px] text-slate-600 leading-relaxed">
+              When documents show <strong>&quot;Approved&quot; (Verified)</strong> below, it confirms the uploaded PDF/image credential is valid and legible. However, the student&apos;s clearance is only completed when each of the <strong>Clearance Milestones above</strong> is officially stamped and endorsed by the assigned office/officer in sequence.
+            </p>
+          </div>
         </div>
 
         {documents.length === 0 ? (

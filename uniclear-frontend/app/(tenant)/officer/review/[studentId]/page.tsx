@@ -177,6 +177,7 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
   const [docFilter, setDocFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL')
   const [docSearch, setDocSearch] = useState('')
   const [chosenStageId, setChosenStageId] = useState<string | null>(null)
+  const [fastTracking, setFastTracking] = useState(false)
 
   // Load officer profile for assigned stages
   const { data: meRes } = useQuery({
@@ -280,6 +281,16 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
 
   // Stage-specific document requirements
   const stageReqTypeIds = (activeStage?.documentRequirements || []).map((r: any) => r.documentTypeId)
+  
+  // Required docs uploaded and not rejected
+  const areRequiredDocsUploaded = stageReqTypeIds.length > 0
+    ? stageReqTypeIds.every(typeId => {
+        const matchingDoc = documents?.find(d => d.documentTypeId === typeId)
+        return !!matchingDoc && (matchingDoc as any).status !== 'REJECTED'
+      })
+    : true
+
+  // Required docs verified
   const areRequiredDocsVerified = stageReqTypeIds.length > 0
     ? stageReqTypeIds.every(typeId => {
         const matchingDoc = documents?.find(d => d.documentTypeId === typeId)
@@ -287,7 +298,7 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
       })
     : true
 
-  const canApproveStage = !isCurrentStageApproved && areRequiredDocsVerified
+  const canApproveStage = !isCurrentStageApproved && areRequiredDocsUploaded
 
   // Check how many documents have been approved overall
   const approvedDocsCount = documents?.filter(d => (d as any).status === 'APPROVED').length ?? 0
@@ -295,6 +306,8 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
   const rejectedDocsCount = documents?.filter(d => (d as any).status === 'REJECTED').length ?? 0
   const totalDocsCount = documents?.length ?? 0
   const allDocsApproved = totalDocsCount > 0 && approvedDocsCount === totalDocsCount
+
+  const unapprovedAssignedStages = officerAssignedStages.filter(s => !approvedStageIds.includes(s.id))
 
   const handleApproveAll = async () => {
     const pendingDocs = documents?.filter(d => (d as any).status !== 'APPROVED') || []
@@ -342,19 +355,74 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
     }
   }
 
-  const handleApproveClick = () => {
+  const handleApproveClick = async () => {
     if (needsIssuedData) {
       setIssueDataOpen(true)
-    } else {
-      approve(
-        { requestId: clearance.id, stageId: activeStageId, file: stampedFile, stampId: selectedStampId },
-        {
-          onSuccess: () => {
-            qc.invalidateQueries()
+      return
+    }
+
+    // Auto-verify any unverified required documents for this stage
+    const unverifiedStageDocs = (documents || []).filter(
+      d => stageReqTypeIds.includes(d.documentTypeId) && (d as any).status !== 'APPROVED'
+    )
+    if (unverifiedStageDocs.length > 0) {
+      setDocActionPending(true)
+      try {
+        await Promise.all(unverifiedStageDocs.map(d => documentsApi.approve(d.id)))
+        refetchDocs()
+      } catch {
+        // Proceed even if background verification had an error
+      } finally {
+        setDocActionPending(false)
+      }
+    }
+
+    approve(
+      { requestId: clearance.id, stageId: activeStageId, file: stampedFile, stampId: selectedStampId },
+      {
+        onSuccess: () => {
+          qc.invalidateQueries()
+          refetchClearance()
+          // Check if there are other unapproved stages assigned to this officer
+          const nextStage = officerAssignedStages.find(
+            s => s.id !== activeStageId && !approvedStageIds.includes(s.id)
+          )
+          if (nextStage) {
+            toast.success(`Stage "${activeStage?.name}" approved! Advanced to next stage: "${nextStage.name}"`)
+            setChosenStageId(nextStage.id)
+          } else {
+            toast.success(`All assigned stages for this student have been officially endorsed!`)
             router.push(ROUTES.officer.queue)
-          },
-        }
-      )
+          }
+        },
+      }
+    )
+  }
+
+  const handleFastTrackAll = async () => {
+    if (unapprovedAssignedStages.length === 0) return
+    setFastTracking(true)
+    try {
+      // 1. Auto-verify all pending documents first
+      const pendingDocs = documents?.filter(d => (d as any).status !== 'APPROVED') || []
+      if (pendingDocs.length > 0) {
+        await Promise.all(pendingDocs.map(d => documentsApi.approve(d.id)))
+        refetchDocs()
+      }
+
+      // 2. Sequentially approve each assigned stage with the officer's stamp
+      for (const stage of unapprovedAssignedStages) {
+        await clearanceApi.approve(clearance.id, undefined, stampedFile, undefined, selectedStampId, stage.id)
+      }
+
+      toast.success(`Fast-Track Complete: All ${unapprovedAssignedStages.length} assigned clearance stages endorsed!`)
+      qc.invalidateQueries()
+      router.push(ROUTES.officer.queue)
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Fast-track stopped on an error')
+      qc.invalidateQueries()
+    } finally {
+      setFastTracking(false)
     }
   }
 
@@ -365,7 +433,15 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
         onSuccess: () => {
           setIssueDataOpen(false)
           qc.invalidateQueries()
-          router.push(ROUTES.officer.queue)
+          refetchClearance()
+          const nextStage = officerAssignedStages.find(
+            s => s.id !== activeStageId && !approvedStageIds.includes(s.id)
+          )
+          if (nextStage) {
+            setChosenStageId(nextStage.id)
+          } else {
+            router.push(ROUTES.officer.queue)
+          }
         },
       }
     )
@@ -974,11 +1050,20 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
               )}
             </div>
 
-            {!areRequiredDocsVerified && stageReqTypeIds.length > 0 && !isCurrentStageApproved && (
+            {!areRequiredDocsUploaded && stageReqTypeIds.length > 0 && !isCurrentStageApproved && (
               <div className="flex items-center gap-1.5 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-[11px] leading-tight">
                 <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
                 <span>
-                  Please verify each document required for <strong>{activeStage?.name}</strong> before approving this stage.
+                  Missing required document for <strong>{activeStage?.name}</strong>. Student has not uploaded all required credentials.
+                </span>
+              </div>
+            )}
+
+            {areRequiredDocsUploaded && !areRequiredDocsVerified && !isCurrentStageApproved && (
+              <div className="flex items-center gap-1.5 p-2.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-900 text-[11px] leading-tight">
+                <ShieldCheck className="h-4 w-4 shrink-0 text-blue-600" />
+                <span>
+                  <strong>1-Click Endorsement:</strong> Required document is ready. Clicking below will verify the credential and apply your official seal to this stage.
                 </span>
               </div>
             )}
@@ -992,22 +1077,43 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
               </div>
             )}
 
+            {/* Fast-Track Batch Endorse Button (when multiple assigned stages remain) */}
+            {unapprovedAssignedStages.length > 1 && !isCurrentStageApproved && (
+              <Button
+                type="button"
+                variant="secondary"
+                loading={fastTracking}
+                disabled={fastTracking}
+                onClick={handleFastTrackAll}
+                className="w-full py-2.5 h-auto text-xs font-bold text-indigo-700 bg-indigo-50/90 hover:bg-indigo-100/90 border border-indigo-200/90 rounded-xl flex items-center justify-center gap-2 shadow-2xs"
+                title="Verify all documents and approve all stages assigned to you in one click"
+              >
+                <ShieldCheck className="h-4 w-4 text-indigo-600" />
+                <span>
+                  {fastTracking
+                    ? 'Fast-tracking endorsements...'
+                    : `Fast-Track: Endorse All My Stages (${unapprovedAssignedStages.length})`}
+                </span>
+              </Button>
+            )}
 
             {/* 1. Main Action Button: APPROVE (Green) */}
             <Button
               className="w-full py-3 h-auto text-sm font-bold bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white shadow-xs rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              loading={approving}
-              disabled={!canApproveStage || approving}
+              loading={approving || docActionPending}
+              disabled={!canApproveStage || approving || docActionPending}
               onClick={handleApproveClick}
             >
               <CheckCircle2 className="h-4 w-4" />
               <span>
-                {approving
-                  ? 'Approving...'
+                {approving || docActionPending
+                  ? 'Processing Endorsement...'
                   : isCurrentStageApproved
                   ? 'Stage Approved'
                   : isFinalStage
                   ? 'Approve & Issue Final Clearance'
+                  : !areRequiredDocsVerified && areRequiredDocsUploaded
+                  ? `Verify Docs & Approve ${activeStage?.name || 'Stage'}`
                   : `Approve ${activeStage?.name || 'Clearance Stage'}`}
               </span>
             </Button>

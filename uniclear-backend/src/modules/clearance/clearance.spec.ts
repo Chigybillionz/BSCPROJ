@@ -18,7 +18,11 @@ jest.mock('@/modules/students/students.repository')
 jest.mock('@/core/events/EventBus', () => ({ eventBus: { emit: jest.fn() } }))
 jest.mock('@/lib/db', () => {
   const dbMock: any = { 
-    clearanceStage: { findUnique: jest.fn() }, 
+    clearanceStage: { 
+      findUnique: jest.fn().mockResolvedValue({ id: 'stage-id', orderIndex: 1, isActive: true }),
+      findMany: jest.fn().mockResolvedValue([{ id: 'stage-id', orderIndex: 1, isActive: true }]),
+      findFirst: jest.fn().mockResolvedValue({ id: 'stage-id', orderIndex: 1, isActive: true }),
+    }, 
     clearanceCampaign: { findFirst: jest.fn().mockResolvedValue({ id: 'camp-id', isActive: true, eligibilityRules: [] }) },
     academicSession: { findFirst: jest.fn() },
     student: { findUnique: jest.fn(), findFirst: jest.fn() },
@@ -45,6 +49,8 @@ describe('ClearanceService', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     jest.spyOn(StudentsRepository, 'findByUserId').mockResolvedValue({ id: 'student-id' } as any)
+    jest.spyOn(DocumentTypesRepository, 'findByStage').mockResolvedValue([])
+    jest.spyOn(DocumentsRepository, 'findByStage').mockResolvedValue([])
   })
 
   describe('start', () => {

@@ -4,7 +4,13 @@ import { Prisma } from '@prisma/client'
 export class CampaignsRepository {
   static async findAll(universityId: string, sessionId?: string) {
     const where: any = { universityId }
-    if (sessionId) where.sessionId = sessionId
+    if (sessionId) {
+      where.OR = [
+        { sessionId },
+        { clearanceRequests: { some: { sessionId } } },
+        { isActive: true },
+      ]
+    }
     return db.clearanceCampaign.findMany({
       where,
       orderBy: { createdAt: 'desc' },
