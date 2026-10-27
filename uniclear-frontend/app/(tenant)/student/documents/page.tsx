@@ -14,6 +14,7 @@ function DocumentsContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const urlRequestId = searchParams.get('requestId')
+  const urlStageId = searchParams.get('stageId')
 
   const { data: clearances, isLoading: loadingClearance, isError } = useClearanceStatus()
   
@@ -50,6 +51,7 @@ function DocumentsContent() {
     <ClearanceSubmissionPanel
       request={clearance as any}
       documents={documents || []}
+      initialStageId={urlStageId || undefined}
       onUploadDocument={handleUpload}
       onDeleteDocument={handleDelete}
       onSubmitStage={handleSubmit}
@@ -59,10 +61,10 @@ function DocumentsContent() {
 
 export default function StudentDocumentsPage() {
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto space-y-6">
       <PageHeader
-        title="Required Documents"
-        subtitle="Upload all required documents for your current stage"
+        title="Clearance Documents Hub"
+        subtitle="Upload all required departmental documents in advance or manage your submissions"
       />
       <Suspense fallback={<LoadingSkeleton rows={3} />}>
         <DocumentsContent />

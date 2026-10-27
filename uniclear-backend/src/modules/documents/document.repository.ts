@@ -4,7 +4,16 @@ export class DocumentsRepository {
   static async findByRequest(requestId: string, universityId: string) {
     return db.document.findMany({
       where: { requestId, universityId },
-      include: { documentType: true },
+      include: {
+        documentType: {
+          include: {
+            stageRequirements: {
+              include: { stage: true },
+            },
+          },
+        },
+      },
+      orderBy: { uploadedAt: 'desc' },
     })
   }
 

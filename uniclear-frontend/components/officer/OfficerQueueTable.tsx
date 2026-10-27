@@ -19,7 +19,8 @@ import {
   Filter,
   ChevronLeft,
   ChevronRight,
-  GraduationCap
+  GraduationCap,
+  AlertCircle
 } from 'lucide-react'
 
 export interface OfficerQueueItem {
@@ -46,6 +47,9 @@ export interface OfficerQueueItem {
   } | null
   documents?: Array<{
     id: string
+    status?: string
+    fileName?: string
+    uploadedAt?: string | Date
     documentType?: { name: string } | null
   }> | null
 }
@@ -259,12 +263,55 @@ export function OfficerQueueTable({
                       </div>
                     </td>
 
-                    {/* Documents Count */}
+                    {/* Documents Status Breakdown */}
                     <td className="py-3 px-4 text-center">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-[var(--color-bg)] text-[var(--color-text)] border border-[var(--color-border)]">
-                        <FileText className="h-3 w-3 text-[var(--color-muted)]" />
-                        <span>{docCount}</span>
-                      </span>
+                      {(() => {
+                        const docs = item.documents || []
+                        const approved = docs.filter(d => (d as any).status === 'APPROVED').length
+                        const rejected = docs.filter(d => (d as any).status === 'REJECTED').length
+                        const pending = docs.filter(d => (d as any).status !== 'APPROVED' && (d as any).status !== 'REJECTED').length
+                        const total = docs.length
+
+                        if (total === 0) {
+                          return (
+                            <span className="text-[11px] text-slate-400 font-mono">0 files</span>
+                          )
+                        }
+
+                        if (rejected > 0) {
+                          return (
+                            <span 
+                              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200"
+                              title={`${rejected} document(s) flagged/rejected, ${approved} approved, ${pending} pending`}
+                            >
+                              <AlertCircle className="h-3 w-3 text-rose-600 shrink-0" />
+                              <span>{approved}/{total} • {rejected} Flagged</span>
+                            </span>
+                          )
+                        }
+
+                        if (approved === total && total > 0) {
+                          return (
+                            <span 
+                              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              title={`All ${total} documents verified & approved`}
+                            >
+                              <CheckCircle2 className="h-3 w-3 text-emerald-600 shrink-0" />
+                              <span>{approved}/{total} Verified</span>
+                            </span>
+                          )
+                        }
+
+                        return (
+                          <span 
+                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200"
+                            title={`${approved} verified, ${pending} pending verification`}
+                          >
+                            <Clock className="h-3 w-3 text-amber-600 shrink-0" />
+                            <span>{approved}/{total} ({pending} Pending)</span>
+                          </span>
+                        )
+                      })()}
                     </td>
 
                     {/* Status */}

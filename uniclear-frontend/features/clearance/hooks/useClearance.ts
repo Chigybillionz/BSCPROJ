@@ -28,13 +28,14 @@ export function useClearanceStatus() {
   })
 }
 
-export function useOfficerQueue(page = 1, search?: string, sessionId?: string, campaignId?: string) {
+export function useOfficerQueue(page = 1, search?: string, sessionId?: string, campaignId?: string, stageStatus?: string) {
   return useQuery({
-    queryKey: [...clearanceKeys.queue(), page, search, sessionId, campaignId],
-    queryFn:  () => clearanceApi.getQueue(page, 20, search, sessionId, campaignId).then((r: any) => ({
+    queryKey: [...clearanceKeys.queue(), page, search, sessionId, campaignId, stageStatus],
+    queryFn:  () => clearanceApi.getQueue(page, 20, search, sessionId, campaignId, stageStatus).then((r: any) => ({
       items: r.data.data,
       total: r.data.pagination.total
     })),
+    refetchInterval: 10000,
   })
 }
 

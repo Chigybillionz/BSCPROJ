@@ -2,9 +2,11 @@
 
 import React, { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Check, Lock, Clock, X, ArrowRight, Sparkles, Layers } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Check, Clock, X, ArrowRight, Sparkles, Layers, UploadCloud, FileCheck } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { formatDate } from '@/lib/utils/format'
+import { ROUTES } from '@/lib/constants'
 import type { ClearanceRequest, ClearanceStage } from '@/types'
 
 interface ClearanceStepperProps {
@@ -13,6 +15,7 @@ interface ClearanceStepperProps {
 }
 
 export function ClearanceStepper({ stages, request }: ClearanceStepperProps) {
+  const router = useRouter()
   const isLargeStageSet = stages.length > 6
 
   // Dynamically calculate phase groups if there are many stages (e.g. 7+ stages)
@@ -187,7 +190,14 @@ export function ClearanceStepper({ stages, request }: ClearanceStepperProps) {
             const isCompleted = approval?.status === 'APPROVED'
             const isRejected = approval?.status === 'REJECTED'
             const isSubmitted = isActive && request.stageStatus === 'SUBMITTED'
-            const isLocked = !isActive && !isCompleted && !isRejected
+
+            // Check if required documents are uploaded for this stage
+            const stageRequirements = stage.documentRequirements || []
+            const uploadedForThisStage = request.documents?.filter(d =>
+              stageRequirements.some(r => r.documentTypeId === d.documentTypeId && d.status !== 'REJECTED')
+            ) || []
+            const requiredCount = stageRequirements.filter(r => r.isRequired).length
+            const isDocsReady = requiredCount > 0 && uploadedForThisStage.length >= requiredCount
 
             const globalOrder = stage.orderIndex || stages.findIndex(s => s.id === stage.id) + 1
 
@@ -199,21 +209,28 @@ export function ClearanceStepper({ stages, request }: ClearanceStepperProps) {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.2, delay: idx * 0.03 }}
+                onClick={() => {
+                  router.push(`${ROUTES.student.documents}?requestId=${request.id}&stageId=${stage.id}`)
+                }}
                 className={cn(
-                  'relative rounded-xl p-4 border transition-all flex flex-col justify-between group overflow-hidden',
+                  'relative rounded-xl p-4 border transition-all flex flex-col justify-between group overflow-hidden cursor-pointer hover:shadow-md hover:border-[var(--color-primary)] active:scale-[0.99]',
                   isCompleted && 'bg-emerald-50/40 border-emerald-200/80 shadow-xs',
                   isActive && !isSubmitted && 'bg-white border-[var(--color-primary)] ring-2 ring-[var(--color-primary)]/15 shadow-sm',
                   isSubmitted && 'bg-amber-50/40 border-amber-200/80 shadow-xs',
                   isRejected && 'bg-rose-50/40 border-rose-200/80 shadow-xs',
-                  isLocked && 'bg-slate-50/70 border-slate-200 text-slate-400'
+                  !isCompleted && !isActive && !isRejected && 'bg-white border-slate-200 hover:border-slate-300'
                 )}
               >
                 {/* Active current stage indicator */}
-                {isActive && !isSubmitted && (
+                {isActive && !isSubmitted ? (
                   <span className="absolute top-3 right-3 text-[10px] font-semibold text-[var(--color-primary)] bg-[var(--color-primary)]/10 px-2 py-0.5 rounded-md">
-                    Current
+                    Current Review
                   </span>
-                )}
+                ) : isDocsReady && !isCompleted ? (
+                  <span className="absolute top-3 right-3 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                    Docs Uploaded
+                  </span>
+                ) : null}
 
                 <div>
                   <div className="flex items-center gap-2.5 mb-2.5">
@@ -224,13 +241,13 @@ export function ClearanceStepper({ stages, request }: ClearanceStepperProps) {
                         isActive && !isSubmitted && 'bg-[var(--color-primary)] text-white shadow-xs',
                         isSubmitted && 'bg-amber-500 text-white',
                         isRejected && 'bg-rose-600 text-white',
-                        isLocked && 'bg-slate-200 text-slate-500'
+                        !isCompleted && !isActive && !isRejected && 'bg-slate-100 text-slate-700 border border-slate-200'
                       )}
                     >
                       {isCompleted ? (
                         <Check className="h-4 w-4 stroke-[3]" />
-                      ) : isLocked ? (
-                        <Lock className="h-3.5 w-3.5 opacity-60" />
+                      ) : isRejected ? (
+                        <X className="h-4 w-4 stroke-[3]" />
                       ) : (
                         globalOrder
                       )}
@@ -239,7 +256,7 @@ export function ClearanceStepper({ stages, request }: ClearanceStepperProps) {
                     <div className="min-w-0 flex-1">
                       <p className={cn(
                         'text-xs font-bold truncate leading-snug',
-                        isCompleted ? 'text-emerald-950' : isActive ? 'text-slate-900' : isLocked ? 'text-slate-500' : 'text-slate-800'
+                        isCompleted ? 'text-emerald-950' : isActive ? 'text-slate-900' : 'text-slate-800'
                       )}>
                         {stage.name}
                       </p>
@@ -264,7 +281,7 @@ export function ClearanceStepper({ stages, request }: ClearanceStepperProps) {
                       isSubmitted && 'text-amber-700',
                       isRejected && 'text-rose-700',
                       isActive && !isSubmitted && 'text-[var(--color-primary)]',
-                      isLocked && 'text-slate-400'
+                      !isCompleted && !isSubmitted && !isRejected && !isActive && 'text-slate-600'
                     )}
                   >
                     {isCompleted ? (
@@ -285,10 +302,18 @@ export function ClearanceStepper({ stages, request }: ClearanceStepperProps) {
                     ) : isActive ? (
                       <>
                         <Sparkles className="h-3 w-3" />
-                        <span>Ready for Upload</span>
+                        <span>Active Review</span>
+                      </>
+                    ) : isDocsReady ? (
+                      <>
+                        <FileCheck className="h-3 w-3 text-emerald-600" />
+                        <span className="text-emerald-700">Uploaded</span>
                       </>
                     ) : (
-                      <span>Locked</span>
+                      <>
+                        <UploadCloud className="h-3 w-3 text-slate-500" />
+                        <span>Ready to Upload</span>
+                      </>
                     )}
                   </span>
 
@@ -296,11 +321,11 @@ export function ClearanceStepper({ stages, request }: ClearanceStepperProps) {
                     <span className="text-[10px] text-slate-400">
                       {formatDate(approval.createdAt)}
                     </span>
-                  ) : isActive && !isSubmitted ? (
-                    <span className="text-[10px] font-bold text-[var(--color-primary)] flex items-center gap-0.5">
-                      Proceed <ArrowRight className="h-2.5 w-2.5" />
+                  ) : (
+                    <span className="text-[10px] font-bold text-[var(--color-primary)] flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
+                      {isCompleted ? 'View' : 'Upload'} <ArrowRight className="h-2.5 w-2.5" />
                     </span>
-                  ) : null}
+                  )}
                 </div>
               </motion.div>
             )

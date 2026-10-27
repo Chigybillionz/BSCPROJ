@@ -32,8 +32,8 @@ export const clearanceApi = {
   getById: (requestId: string) =>
     apiClient.get(`/clearance/${requestId}`),
 
-  getQueue:    (page = 1, limit = 20, search?: string, sessionId?: string, campaignId?: string) =>
-    apiClient.get(`/clearance/queue?page=${page}&limit=${limit}${search ? `&search=${search}` : ''}${sessionId ? `&sessionId=${sessionId}` : ''}${campaignId ? `&campaignId=${campaignId}` : ''}`),
+  getQueue:    (page = 1, limit = 20, search?: string, sessionId?: string, campaignId?: string, stageStatus?: string) =>
+    apiClient.get(`/clearance/queue?page=${page}&limit=${limit}${search ? `&search=${encodeURIComponent(search)}` : ''}${sessionId ? `&sessionId=${sessionId}` : ''}${campaignId ? `&campaignId=${campaignId}` : ''}${stageStatus ? `&stageStatus=${stageStatus}` : ''}`),
 
   getHistory:  (requestId: string) =>
     apiClient.get(`/clearance/${requestId}/history`),

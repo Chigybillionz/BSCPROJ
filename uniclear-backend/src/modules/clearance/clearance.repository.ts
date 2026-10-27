@@ -12,11 +12,34 @@ export class ClearanceRepository {
     return db.clearanceRequest.findFirst({
       where: { id, universityId },
       include: {
-        campaign: true,
+        campaign: {
+          include: {
+            stages: {
+              where: { isActive: true },
+              orderBy: { orderIndex: 'asc' },
+              include: {
+                documentRequirements: {
+                  include: { documentType: true },
+                },
+              },
+            },
+          },
+        },
         student: true,
         session: true,
-        stageApprovals: { include: { stage: true }, orderBy: { decidedAt: 'desc' } },
-        documents: { include: { documentType: true } },
+        stageApprovals: { include: { stage: true, stamp: true }, orderBy: { decidedAt: 'desc' } },
+        documents: {
+          include: {
+            documentType: {
+              include: {
+                stageRequirements: {
+                  include: { stage: true },
+                },
+              },
+            },
+          },
+          orderBy: { uploadedAt: 'desc' },
+        },
         currentStage: {
           include: {
             documentRequirements: {
@@ -79,7 +102,19 @@ export class ClearanceRepository {
     return db.clearanceRequest.findMany({
       where: { studentId, universityId },
       include: {
-        campaign: true,
+        campaign: {
+          include: {
+            stages: {
+              where: { isActive: true },
+              orderBy: { orderIndex: 'asc' },
+              include: {
+                documentRequirements: {
+                  include: { documentType: true },
+                },
+              },
+            },
+          },
+        },
         session: true,
         student: {
           select: {
@@ -94,7 +129,18 @@ export class ClearanceRepository {
           },
         },
         stageApprovals: { include: { stage: true, stamp: true }, orderBy: { decidedAt: 'asc' } },
-        documents: { include: { documentType: true } },
+        documents: {
+          include: {
+            documentType: {
+              include: {
+                stageRequirements: {
+                  include: { stage: true },
+                },
+              },
+            },
+          },
+          orderBy: { uploadedAt: 'desc' },
+        },
         currentStage: {
           include: {
             documentRequirements: {
@@ -181,9 +227,20 @@ export class ClearanceRepository {
           currentStage: true,
           campaign: true,
           session: true,
-          documents: { include: { documentType: true } },
+          documents: {
+            include: {
+              documentType: {
+                include: {
+                  stageRequirements: {
+                    include: { stage: true },
+                  },
+                },
+              },
+            },
+            orderBy: { uploadedAt: 'desc' },
+          },
         },
-        orderBy: { updatedAt: 'asc' },
+        orderBy: { updatedAt: 'desc' },
       }),
       db.clearanceRequest.count({ where }),
     ])

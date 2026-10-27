@@ -27,6 +27,8 @@ export default function OfficerQueuePage() {
     router.push(`${pathname}?${params.toString()}`, { scroll: false })
   }
 
+  const stageStatus = searchParams.get('stageStatus') || 'SUBMITTED'
+
   const { data: sessionsRes } = useQuery({
     queryKey: ['sessions'],
     queryFn: () =>
@@ -49,42 +51,76 @@ export default function OfficerQueuePage() {
     page,
     search || undefined,
     sessionId || undefined,
-    campaignId || undefined
+    campaignId || undefined,
+    stageStatus
   )
 
   return (
     <div className="space-y-4">
       <PageHeader title="Clearance Queue" subtitle="Students awaiting your review and approval" />
 
-      {/* Campaign & Session Selectors */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center mb-2">
-        <select
-          className="text-xs border border-[var(--color-border)] bg-[var(--color-bg)] rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-[var(--color-primary)] w-full sm:w-auto font-medium text-[var(--color-text)]"
-          value={sessionId || ''}
-          onChange={e => setQueryParam('sessionId', e.target.value)}
-        >
-          <option value="">All Academic Sessions</option>
-          {sessionsRes?.data?.map((s: any) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
+      {/* Filter Tabs & Selectors */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-2">
+        {/* Status Filter Tabs */}
+        <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-lg overflow-x-auto self-start">
+          {[
+            { id: 'SUBMITTED', label: 'Awaiting Review' },
+            { id: 'REJECTED', label: 'Action / Re-uploaded' },
+            { id: 'ALL', label: 'All Records' },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => {
+                setQueryParam('stageStatus', tab.id)
+                setQueryParam('page', '1')
+              }}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-all ${
+                stageStatus === tab.id
+                  ? 'bg-white text-[var(--color-primary)] shadow-xs font-bold'
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              {tab.label}
+            </button>
           ))}
-        </select>
+        </div>
 
-        <select
-          className="text-xs border border-[var(--color-border)] bg-[var(--color-bg)] rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-[var(--color-primary)] w-full sm:w-auto font-medium text-[var(--color-text)]"
-          value={campaignId}
-          onChange={e => setQueryParam('campaignId', e.target.value)}
-        >
-          <option value="">All Clearance Campaigns</option>
-          {campaignsRes?.data
-            ?.filter((c: any) => !sessionId || c.sessionId === sessionId)
-            .map((c: any) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
+        {/* Campaign & Session Selectors */}
+        <div className="flex flex-col sm:flex-row gap-2.5 items-center w-full md:w-auto">
+          <select
+            className="text-xs border border-[var(--color-border)] bg-[var(--color-bg)] rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-[var(--color-primary)] w-full sm:w-auto font-medium text-[var(--color-text)]"
+            value={sessionId || ''}
+            onChange={e => {
+              setQueryParam('sessionId', e.target.value)
+              setQueryParam('page', '1')
+            }}
+          >
+            <option value="">All Academic Sessions</option>
+            {sessionsRes?.data?.map((s: any) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
               </option>
             ))}
-        </select>
+          </select>
+
+          <select
+            className="text-xs border border-[var(--color-border)] bg-[var(--color-bg)] rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-[var(--color-primary)] w-full sm:w-auto font-medium text-[var(--color-text)]"
+            value={campaignId}
+            onChange={e => {
+              setQueryParam('campaignId', e.target.value)
+              setQueryParam('page', '1')
+            }}
+          >
+            <option value="">All Clearance Campaigns</option>
+            {campaignsRes?.data
+              ?.filter((c: any) => !sessionId || c.sessionId === sessionId)
+              .map((c: any) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+          </select>
+        </div>
       </div>
 
       {isError && (error as any)?.response?.status === 403 ? (

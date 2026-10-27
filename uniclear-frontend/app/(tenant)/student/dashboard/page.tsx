@@ -28,7 +28,11 @@ import {
   Calendar,
   FileCheck2,
   ExternalLink,
-  Sparkles
+  Sparkles,
+  UploadCloud,
+  AlertCircle,
+  Search,
+  FileText
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -38,6 +42,8 @@ export default function StudentDashboard() {
   const { data: stages, isLoading: loadingStages } = useStages()
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
   const [stageFilter, setStageFilter] = useState<'ALL' | 'ACTION' | 'APPROVED' | 'PENDING'>('ALL')
+  const [docHubFilter, setDocHubFilter] = useState<'ALL' | 'APPROVED' | 'PENDING' | 'REJECTED'>('ALL')
+  const [docHubSearch, setDocHubSearch] = useState('')
 
   const isLoading = loadingClearance || loadingStages
 
@@ -212,6 +218,224 @@ export default function StudentDashboard() {
               <ClearanceStepper stages={campaignStages} request={clearance} />
             </Card>
 
+            {/* Individual Document Verification Hub */}
+            <Card padding="lg" className="shadow-md bg-white border border-slate-200">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-slate-100">
+                <div>
+                  <h3 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                    Individual Document Verification Hub
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Real-time status and clearance officer remarks for all your uploaded files
+                  </p>
+                </div>
+
+                {/* Filter Tabs */}
+                <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg overflow-x-auto self-start sm:self-auto">
+                  {(() => {
+                    const docs = clearance.documents || []
+                    const approved = docs.filter((d: any) => d.status === 'APPROVED').length
+                    const rejected = docs.filter((d: any) => d.status === 'REJECTED').length
+                    const pending = docs.filter((d: any) => d.status !== 'APPROVED' && d.status !== 'REJECTED').length
+
+                    return [
+                      { id: 'ALL', label: `All (${docs.length})` },
+                      { id: 'APPROVED', label: `Verified (${approved})` },
+                      { id: 'PENDING', label: `Under Review (${pending})` },
+                      { id: 'REJECTED', label: `Action Needed (${rejected})` },
+                    ].map(tab => (
+                      <button
+                        key={tab.id}
+                        onClick={() => setDocHubFilter(tab.id as any)}
+                        className={cn(
+                          'px-2.5 py-1 rounded-md text-xs font-semibold whitespace-nowrap transition-all',
+                          docHubFilter === tab.id
+                            ? 'bg-white text-[var(--color-primary)] shadow-xs font-bold'
+                            : 'text-slate-500 hover:text-slate-900'
+                        )}
+                      >
+                        {tab.label}
+                      </button>
+                    ))
+                  })()}
+                </div>
+              </div>
+
+              {/* Search & Stats Bar */}
+              <div className="pt-3 pb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div className="relative max-w-xs w-full">
+                  <Search className="h-3.5 w-3.5 absolute left-3 top-2.5 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search documents by name..."
+                    value={docHubSearch}
+                    onChange={e => setDocHubSearch(e.target.value)}
+                    className="w-full text-xs pl-8 pr-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50/50 outline-none focus:ring-1 focus:ring-[var(--color-primary)] focus:bg-white text-slate-800"
+                  />
+                </div>
+
+                <Link href={`${ROUTES.student.documents}?requestId=${clearance.id}`}>
+                  <Button size="sm" variant="secondary" className="gap-1.5 text-xs font-semibold w-full sm:w-auto">
+                    <UploadCloud className="h-3.5 w-3.5 text-[var(--color-primary)]" />
+                    Manage & Upload Files
+                  </Button>
+                </Link>
+              </div>
+
+              {/* Document Cards Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                {(() => {
+                  const docs = clearance.documents || []
+                  const filtered = docs.filter((doc: any) => {
+                    if (docHubFilter === 'APPROVED' && doc.status !== 'APPROVED') return false
+                    if (docHubFilter === 'REJECTED' && doc.status !== 'REJECTED') return false
+                    if (docHubFilter === 'PENDING' && (doc.status === 'APPROVED' || doc.status === 'REJECTED')) return false
+                    if (docHubSearch) {
+                      const q = docHubSearch.toLowerCase()
+                      const name = doc.documentType?.name?.toLowerCase() || ''
+                      const file = doc.fileName?.toLowerCase() || ''
+                      if (!name.includes(q) && !file.includes(q)) return false
+                    }
+                    return true
+                  })
+
+                  if (docs.length === 0) {
+                    return (
+                      <div className="col-span-full py-8 text-center bg-slate-50/60 rounded-xl border border-dashed border-slate-200">
+                        <UploadCloud className="h-9 w-9 text-slate-400 mx-auto mb-2 opacity-60" />
+                        <p className="text-xs font-bold text-slate-700">No Documents Uploaded Yet</p>
+                        <p className="text-[11px] text-slate-500 max-w-sm mx-auto mt-0.5 mb-3">
+                          You haven't uploaded clearance documents. You can upload all required documents in advance.
+                        </p>
+                        <Link href={`${ROUTES.student.documents}?requestId=${clearance.id}`}>
+                          <Button size="sm" className="font-semibold text-xs">
+                            Start Uploading Now
+                          </Button>
+                        </Link>
+                      </div>
+                    )
+                  }
+
+                  if (filtered.length === 0) {
+                    return (
+                      <div className="col-span-full py-6 text-center text-xs text-slate-400 italic">
+                        No documents match the "{docHubFilter.toLowerCase()}" filter.
+                      </div>
+                    )
+                  }
+
+                  return filtered.map((doc: any) => {
+                    const isApproved = doc.status === 'APPROVED'
+                    const isRejected = doc.status === 'REJECTED'
+                    const isPending = !isApproved && !isRejected
+
+                    // Associated stage name
+                    const associatedStage = doc.documentType?.stageRequirements?.[0]?.stage?.name || 'Institutional Requirement'
+
+                    return (
+                      <div
+                        key={doc.id}
+                        className={cn(
+                          "p-3.5 rounded-xl border transition-all flex flex-col justify-between gap-2.5",
+                          isApproved && "bg-emerald-50/30 border-emerald-200",
+                          isPending && "bg-white border-slate-200 hover:border-slate-300",
+                          isRejected && "bg-rose-50/40 border-rose-200"
+                        )}
+                      >
+                        <div className="space-y-1.5">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-primary)]">
+                                {associatedStage}
+                              </span>
+                              <h4 className="text-xs sm:text-sm font-bold text-slate-900 truncate" title={doc.documentType?.name}>
+                                {doc.documentType?.name || 'Document'}
+                              </h4>
+                            </div>
+
+                            <div className="shrink-0">
+                              {isApproved && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                  <CheckCircle2 className="h-3 w-3 text-emerald-600" /> Verified
+                                </span>
+                              )}
+                              {isPending && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                  <Clock className="h-3 w-3 text-amber-600" /> Under Review
+                                </span>
+                              )}
+                              {isRejected && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                                  <AlertCircle className="h-3 w-3 text-rose-600" /> Action Required
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="text-[11px] text-slate-500 space-y-0.5">
+                            <p className="truncate font-mono text-[10px] text-slate-600" title={doc.fileName}>
+                              {doc.fileName}
+                            </p>
+                            <p className="flex items-center gap-2 text-[10px]">
+                              <span>Uploaded {doc.uploadedAt ? formatDate(doc.uploadedAt) : 'Recently'}</span>
+                              {doc.fileSizeMB && <span>• {Number(doc.fileSizeMB).toFixed(2)} MB</span>}
+                            </p>
+                          </div>
+
+                          {/* Rejection Remarks Box */}
+                          {isRejected && (
+                            <div className="p-2 rounded-lg bg-rose-100/70 border border-rose-200 text-rose-800 text-xs">
+                              <p className="font-bold flex items-center gap-1">
+                                <AlertCircle className="h-3.5 w-3.5 text-rose-600" />
+                                Officer Feedback:
+                              </p>
+                              <p className="mt-0.5 text-[11px] text-rose-700">
+                                {doc.rejectionReason || 'Document was flagged. Please re-upload a clear and valid copy.'}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Card Actions */}
+                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                          {doc.fileUrl ? (
+                            <a
+                              href={doc.fileUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-xs text-[var(--color-primary)] font-semibold hover:underline"
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                              <span>Preview Document</span>
+                            </a>
+                          ) : <span />}
+
+                          {isRejected ? (
+                            <Link href={`${ROUTES.student.documents}?requestId=${clearance.id}`}>
+                              <Button size="sm" className="bg-rose-600 hover:bg-rose-700 text-white h-7 px-2.5 text-xs font-bold">
+                                Re-upload Now
+                              </Button>
+                            </Link>
+                          ) : !isApproved ? (
+                            <Link href={`${ROUTES.student.documents}?requestId=${clearance.id}`}>
+                              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-slate-600 hover:text-slate-900">
+                                Replace
+                              </Button>
+                            </Link>
+                          ) : (
+                            <span className="text-[10px] font-semibold text-emerald-700 flex items-center gap-1">
+                              <ShieldCheck className="h-3.5 w-3.5" /> Endorsed
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })
+                })()}
+              </div>
+            </Card>
+
             {/* Stage-by-Stage Detailed Status Cards */}
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-2 border-b border-slate-100">
@@ -257,7 +481,7 @@ export default function StudentDashboard() {
                   const isApproved = approval?.status === 'APPROVED'
                   const isRejected = approval?.status === 'REJECTED'
                   const isUnderReview = isCurrent && clearance.stageStatus === 'SUBMITTED'
-                  const isLocked = !isCurrent && !isApproved && !isRejected
+                  const isUpcoming = !isCurrent && !isApproved && !isRejected
 
                   return (
                     <div 
@@ -268,7 +492,7 @@ export default function StudentDashboard() {
                         isCurrent && !isUnderReview && "bg-blue-50/30 border-[var(--color-primary)] ring-1 ring-[var(--color-primary)]/20",
                         isUnderReview && "bg-amber-50/20 border-amber-200",
                         isRejected && "bg-red-50/20 border-red-200",
-                        isLocked && "bg-[var(--color-surface)] border-gray-200 opacity-70"
+                        isUpcoming && "bg-white border-slate-200 hover:border-slate-300"
                       )}
                     >
                       <div className="flex items-start gap-3">
@@ -278,9 +502,9 @@ export default function StudentDashboard() {
                           isCurrent && "bg-[var(--color-primary)] text-white",
                           isUnderReview && "bg-amber-100 text-amber-700",
                           isRejected && "bg-red-100 text-red-700",
-                          isLocked && "bg-gray-100 text-gray-500"
+                          isUpcoming && "bg-blue-50 text-[var(--color-primary)] border border-blue-100"
                         )}>
-                          {isApproved ? <CheckCircle2 className="h-5 w-5" /> : isLocked ? <Lock className="h-4 w-4" /> : idx + 1}
+                          {isApproved ? <CheckCircle2 className="h-5 w-5" /> : isUpcoming ? <UploadCloud className="h-4 w-4" /> : idx + 1}
                         </div>
 
                         <div>
@@ -294,7 +518,7 @@ export default function StudentDashboard() {
                               isCurrent && !isUnderReview && "bg-blue-100 text-blue-800",
                               isUnderReview && "bg-amber-100 text-amber-800",
                               isRejected && "bg-red-100 text-red-800",
-                              isLocked && "bg-gray-100 text-gray-600"
+                              isUpcoming && "bg-slate-100 text-slate-700"
                             )}>
                               {isApproved 
                                 ? 'Cleared' 
@@ -304,7 +528,7 @@ export default function StudentDashboard() {
                                 ? 'In Progress' 
                                 : isRejected 
                                 ? 'Rejected' 
-                                : 'Pending'}
+                                : 'Ready to Upload'}
                             </span>
                           </div>
 
@@ -328,8 +552,10 @@ export default function StudentDashboard() {
                                 Remarks: {approval?.remarks || 'Please re-upload requested clearance documents.'}
                               </span>
                             )}
-                            {isLocked && (
-                              <span>Locked until prior departments complete verification.</span>
+                            {isUpcoming && (
+                              <span className="text-slate-500">
+                                Unlocked: You can upload your documents for this department in advance.
+                              </span>
                             )}
                           </p>
                         </div>
@@ -338,10 +564,26 @@ export default function StudentDashboard() {
                       {/* Stage Action Buttons */}
                       <div className="flex items-center gap-2 sm:self-center shrink-0">
                         {isCurrent && (
-                          <Link href={`${ROUTES.student.documents}?requestId=${clearance.id}`}>
+                          <Link href={`${ROUTES.student.documents}?requestId=${clearance.id}&stageId=${stage.id}`}>
                             <Button size="sm">
                               {isUnderReview ? 'View Documents' : 'Upload Documents'}
                               <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                            </Button>
+                          </Link>
+                        )}
+                        {isUpcoming && (
+                          <Link href={`${ROUTES.student.documents}?requestId=${clearance.id}&stageId=${stage.id}`}>
+                            <Button size="sm" variant="secondary" className="gap-1.5 text-xs font-semibold">
+                              <UploadCloud className="h-3.5 w-3.5 text-[var(--color-primary)]" />
+                              Upload in Advance
+                            </Button>
+                          </Link>
+                        )}
+                        {isRejected && (
+                          <Link href={`${ROUTES.student.documents}?requestId=${clearance.id}&stageId=${stage.id}`}>
+                            <Button size="sm" className="bg-rose-600 hover:bg-rose-700 text-white gap-1.5 text-xs font-semibold">
+                              <ArrowRight className="h-3.5 w-3.5" />
+                              Re-upload
                             </Button>
                           </Link>
                         )}

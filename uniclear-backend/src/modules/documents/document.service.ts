@@ -55,6 +55,9 @@ export class DocumentsService {
     // Remove existing upload for same doc type in same request
     const existing = await DocumentsRepository.findExisting(requestId, documentTypeId)
     if (existing) {
+      if (existing.status === 'APPROVED') {
+        throw new ValidationError('This document has already been verified and approved by an officer and cannot be replaced.')
+      }
       await storage.delete(existing.fileKey)
       await DocumentsRepository.delete(existing.id)
     }
@@ -68,6 +71,53 @@ export class DocumentsService {
       fileName: safeName, fileUrl: url, fileKey: key,
       fileSizeMB, mimeType: file.mimetype,
     })
+
+    // Touch clearance request updatedAt so officers queue reflects fresh uploads
+    const clearance = await db.clearanceRequest.findUnique({
+      where: { id: requestId },
+      include: {
+        currentStage: {
+          include: {
+            documentRequirements: true,
+          },
+        },
+        documents: true,
+      },
+    })
+
+    if (clearance && clearance.currentStageId) {
+      const stageRequirements = clearance.currentStage?.documentRequirements || []
+      const requiredTypeIds = stageRequirements.filter(r => r.isRequired).map(r => r.documentTypeId)
+      
+      // All existing valid (not rejected) documents for this request
+      const validDocTypeIds = new Set(
+        clearance.documents
+          .filter(d => d.status !== 'REJECTED' || d.documentTypeId === documentTypeId) // current document was just created/updated with PENDING
+          .map(d => d.documentTypeId)
+      )
+      validDocTypeIds.add(documentTypeId)
+
+      const allRequirementsMet = requiredTypeIds.every(id => validDocTypeIds.has(id))
+
+      // If student was REJECTED and has now uploaded all required documents, auto-submit for review
+      if (allRequirementsMet && clearance.stageStatus === 'REJECTED') {
+        await db.clearanceRequest.update({
+          where: { id: requestId },
+          data: { updatedAt: new Date(), stageStatus: 'SUBMITTED' },
+        }).catch(() => {})
+        eventBus.emit('stage.submitted', { requestId, stageId: clearance.currentStageId, studentId, universityId })
+      } else {
+        await db.clearanceRequest.update({
+          where: { id: requestId },
+          data: { updatedAt: new Date() },
+        }).catch(() => {})
+      }
+    } else {
+      await db.clearanceRequest.update({
+        where: { id: requestId },
+        data: { updatedAt: new Date() },
+      }).catch(() => {})
+    }
 
     eventBus.emit('document.uploaded', { documentId: document.id, studentId, universityId })
     return document

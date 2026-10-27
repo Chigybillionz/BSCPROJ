@@ -35,7 +35,10 @@ import {
   ChevronRight,
   ShieldCheck,
   AlertTriangle,
-  ExternalLink
+  ExternalLink,
+  RefreshCw,
+  Search,
+  Sparkles
 } from 'lucide-react'
 
 export default function ReviewPage({ params }: { params: Promise<{ studentId: string }> }) {
@@ -49,9 +52,11 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
   const [stampedFile, setStampedFile] = useState<File | undefined>()
   const [selectedStampId, setSelectedStampId] = useState<string | undefined>()
   const [docActionPending, setDocActionPending] = useState(false)
+  const [docFilter, setDocFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL')
+  const [docSearch, setDocSearch] = useState('')
 
-  // Resilient query: handles both requestId and studentId
-  const { data: clearance, isLoading, isError } = useQuery({
+  // Resilient query: handles both requestId and studentId, with 8s polling for real-time sync
+  const { data: clearance, isLoading, isError, refetch: refetchClearance, isFetching: fetchingClearance } = useQuery({
     queryKey: ['clearance', 'review', studentId],
     queryFn: async () => {
       try {
@@ -62,13 +67,23 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
         return Array.isArray(res.data.data) ? res.data.data[0] : res.data.data
       }
     },
+    refetchInterval: 8000,
+    staleTime: 0,
   })
 
-  const { data: documents, refetch: refetchDocs } = useQuery({
+  const { data: documents, refetch: refetchDocs, isFetching: fetchingDocs } = useQuery({
     queryKey: ['documents', clearance?.id],
     queryFn: () => documentsApi.getByRequest(clearance!.id).then(r => r.data.data),
     enabled: !!clearance?.id,
+    refetchInterval: 8000,
+    staleTime: 0,
   })
+
+  const handleManualRefresh = () => {
+    refetchClearance()
+    refetchDocs()
+    toast.success('Document verification list refreshed', { id: 'manual-refresh' })
+  }
 
   const { mutate: approve, isPending: approving } = useApproveStage()
   const { mutate: reject, isPending: rejecting } = useRejectStage()
@@ -91,8 +106,25 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
 
   // Check how many documents have been approved
   const approvedDocsCount = documents?.filter(d => (d as any).status === 'APPROVED').length ?? 0
+  const pendingDocsCount = documents?.filter(d => (d as any).status !== 'APPROVED' && (d as any).status !== 'REJECTED').length ?? 0
+  const rejectedDocsCount = documents?.filter(d => (d as any).status === 'REJECTED').length ?? 0
   const totalDocsCount = documents?.length ?? 0
   const allDocsApproved = totalDocsCount > 0 && approvedDocsCount === totalDocsCount
+
+  const handleApproveAll = async () => {
+    const pendingDocs = documents?.filter(d => (d as any).status !== 'APPROVED') || []
+    if (pendingDocs.length === 0) return
+    setDocActionPending(true)
+    try {
+      await Promise.all(pendingDocs.map(d => documentsApi.approve(d.id)))
+      toast.success(`All ${pendingDocs.length} pending documents marked verified!`)
+      refetchDocs()
+    } catch {
+      toast.error('Failed to verify some documents')
+    } finally {
+      setDocActionPending(false)
+    }
+  }
 
   const handleApproveDoc = async (docId: string) => {
     setDocActionPending(true)
@@ -195,8 +227,20 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
           <span>Back to Officer Queue</span>
         </button>
 
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-[var(--color-muted)] font-medium">Clearance Request:</span>
+        <div className="flex items-center gap-2.5">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={handleManualRefresh}
+            disabled={fetchingClearance || fetchingDocs}
+            className="h-7 text-xs gap-1.5 border border-[var(--color-border)] px-2.5"
+            title="Refresh latest uploads & verification state"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${fetchingClearance || fetchingDocs ? 'animate-spin text-[var(--color-primary)]' : 'text-slate-500'}`} />
+            <span className="hidden sm:inline">Refresh</span>
+          </Button>
+
+          <span className="text-xs text-[var(--color-muted)] font-medium hidden sm:inline">Request:</span>
           <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-[var(--color-bg)] border border-[var(--color-border)] text-[var(--color-text)]">
             {clearance.clearanceNumber || clearance.id.slice(0, 8)}
           </span>
@@ -219,6 +263,8 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
                 documents.map((doc, idx) => {
                   const isCurrent = idx === selectedDocIdx
                   const status = (doc as any).status ?? 'PENDING'
+                  const isRecent = doc.uploadedAt && (new Date().getTime() - new Date(doc.uploadedAt).getTime() < 24 * 60 * 60 * 1000)
+
                   return (
                     <button
                       key={doc.id}
@@ -231,6 +277,11 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
                     >
                       <FileText className="h-3.5 w-3.5" />
                       <span>{doc.documentType?.name || `Doc ${idx + 1}`}</span>
+                      {isRecent && status !== 'APPROVED' && (
+                        <span className="px-1 py-0.2 rounded text-[9px] font-extrabold bg-blue-100 text-blue-700 animate-pulse">
+                          NEW
+                        </span>
+                      )}
                       <span
                         className={`w-2 h-2 rounded-full ${
                           status === 'APPROVED'
@@ -434,14 +485,29 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
             </div>
 
             {/* Document Verification Checklist */}
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <div className="flex items-center justify-between">
-                <p className="text-[11px] uppercase tracking-wider font-semibold text-[var(--color-muted)]">
-                  Documents Verified
-                </p>
-                <span className="text-xs font-semibold text-[var(--color-text)]">
-                  {approvedDocsCount} of {totalDocsCount} Verified
-                </span>
+                <div>
+                  <p className="text-[11px] uppercase tracking-wider font-semibold text-[var(--color-muted)]">
+                    Documents Verification Hub
+                  </p>
+                  <p className="text-xs font-semibold text-[var(--color-text)]">
+                    {approvedDocsCount} of {totalDocsCount} Verified
+                  </p>
+                </div>
+
+                {pendingDocsCount > 0 && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    loading={docActionPending}
+                    onClick={handleApproveAll}
+                    className="text-[11px] h-7 px-2.5 text-emerald-700 hover:border-emerald-600 bg-emerald-50 hover:bg-emerald-100 font-semibold"
+                  >
+                    <CheckCircle2 className="h-3 w-3 mr-1 text-emerald-600" />
+                    Verify All ({pendingDocsCount})
+                  </Button>
+                )}
               </div>
 
               {/* Progress Bar */}
@@ -456,26 +522,122 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
                 />
               </div>
 
-              {/* Document items list */}
+              {/* Filter Tabs & Search */}
               <div className="space-y-1.5 pt-1">
-                {documents?.map((doc, idx) => {
-                  const isCurrent = idx === selectedDocIdx
-                  const status = (doc as any).status ?? 'PENDING'
-                  return (
-                    <div
-                      key={doc.id}
-                      onClick={() => setSelectedDocIdx(idx)}
-                      className={`flex items-center justify-between p-2 rounded-lg text-xs cursor-pointer transition-colors ${
-                        isCurrent
-                          ? 'bg-[var(--color-bg)] border border-[var(--color-border)] font-semibold'
-                          : 'hover:bg-[var(--color-bg)] text-[var(--color-muted)]'
+                <div className="flex items-center gap-1 p-0.5 bg-[var(--color-bg)] rounded-lg border border-[var(--color-border)]">
+                  {[
+                    { id: 'ALL', label: `All (${totalDocsCount})` },
+                    { id: 'PENDING', label: `Pending (${pendingDocsCount})` },
+                    { id: 'APPROVED', label: `Verified (${approvedDocsCount})` },
+                    { id: 'REJECTED', label: `Flagged (${rejectedDocsCount})` },
+                  ].map(tab => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setDocFilter(tab.id as any)}
+                      className={`flex-1 py-1 rounded-md text-[10px] font-semibold transition-all ${
+                        docFilter === tab.id
+                          ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-2xs font-bold'
+                          : 'text-[var(--color-muted)] hover:text-[var(--color-text)]'
                       }`}
                     >
-                      <span className="truncate pr-2">{doc.documentType?.name}</span>
-                      <span className="shrink-0">{docStatusBadge(status)}</span>
-                    </div>
-                  )
-                })}
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                {totalDocsCount > 3 && (
+                  <div className="relative">
+                    <Search className="h-3 w-3 absolute left-2.5 top-2 text-[var(--color-muted)]" />
+                    <input
+                      type="text"
+                      placeholder="Filter documents..."
+                      value={docSearch}
+                      onChange={e => setDocSearch(e.target.value)}
+                      className="w-full text-[11px] pl-7 pr-2.5 py-1 rounded-md bg-[var(--color-bg)] border border-[var(--color-border)] outline-none focus:ring-1 focus:ring-[var(--color-primary)] text-[var(--color-text)]"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Document items list */}
+              <div className="space-y-1.5 pt-1 max-h-[220px] overflow-y-auto pr-0.5">
+                {(() => {
+                  const filtered = (documents || []).filter((doc) => {
+                    const status = (doc as any).status ?? 'PENDING'
+                    if (docFilter === 'APPROVED' && status !== 'APPROVED') return false
+                    if (docFilter === 'REJECTED' && status !== 'REJECTED') return false
+                    if (docFilter === 'PENDING' && (status === 'APPROVED' || status === 'REJECTED')) return false
+                    if (docSearch) {
+                      const name = doc.documentType?.name?.toLowerCase() || ''
+                      const file = doc.fileName?.toLowerCase() || ''
+                      if (!name.includes(docSearch.toLowerCase()) && !file.includes(docSearch.toLowerCase())) return false
+                    }
+                    return true
+                  })
+
+                  if (filtered.length === 0) {
+                    return (
+                      <p className="text-center py-4 text-xs text-[var(--color-muted)] italic">
+                        No documents match this filter
+                      </p>
+                    )
+                  }
+
+                  return filtered.map((doc) => {
+                    const originalIdx = (documents || []).findIndex(d => d.id === doc.id)
+                    const isCurrent = originalIdx === selectedDocIdx
+                    const status = (doc as any).status ?? 'PENDING'
+                    const isRecent = doc.uploadedAt && (new Date().getTime() - new Date(doc.uploadedAt).getTime() < 24 * 60 * 60 * 1000)
+
+                    return (
+                      <div
+                        key={doc.id}
+                        onClick={() => setSelectedDocIdx(originalIdx)}
+                        className={`flex items-center justify-between p-2 rounded-lg text-xs cursor-pointer transition-colors border ${
+                          isCurrent
+                            ? 'bg-[var(--color-bg)] border-[var(--color-primary)] ring-1 ring-[var(--color-primary)]/20 font-semibold'
+                            : 'border-[var(--color-border)] hover:bg-[var(--color-bg)] text-[var(--color-muted)]'
+                        }`}
+                      >
+                        <div className="min-w-0 pr-2">
+                          <div className="flex items-center gap-1.5">
+                            <span className="truncate text-xs font-medium text-[var(--color-text)]">
+                              {doc.documentType?.name}
+                            </span>
+                            {isRecent && status !== 'APPROVED' && (
+                              <span className="px-1 py-0.2 rounded text-[9px] font-extrabold bg-blue-100 text-blue-700 animate-pulse">
+                                NEW
+                              </span>
+                            )}
+                          </div>
+                          {doc.uploadedAt && (
+                            <p className="text-[10px] text-[var(--color-muted)]">
+                              {formatDateTime(doc.uploadedAt)}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {docStatusBadge(status)}
+                          {status !== 'APPROVED' && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleApproveDoc(doc.id)
+                              }}
+                              disabled={docActionPending}
+                              title="Mark this document as verified"
+                              className="p-1 rounded text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 transition-colors"
+                            >
+                              <CheckCircle2 className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })
+                })()}
               </div>
             </div>
           </div>
