@@ -29,7 +29,8 @@ export class LocalStorage implements IStorageProvider {
     const key = `${crypto.randomUUID()}${ext}`
     const fullPath = path.join(this.baseDir, key)
     fs.mkdirSync(this.baseDir, { recursive: true })
-    const port = process.env.PORT ?? '5001'
+    fs.writeFileSync(fullPath, buffer)
+    const port = process.env.PORT ?? '5000'
     const baseUrl = process.env.API_URL ?? `http://localhost:${port}`
     return { url: `${baseUrl}/uploads/${key}`, key }
   }
