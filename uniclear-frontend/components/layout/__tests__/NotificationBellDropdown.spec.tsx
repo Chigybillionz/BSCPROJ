@@ -4,6 +4,14 @@ import { NotificationBellDropdown } from '../NotificationBellDropdown'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { notificationsApi } from '@/lib/api/notifications.api'
 
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: jest.fn(),
+    replace: jest.fn(),
+    refresh: jest.fn(),
+  }),
+}))
+
 jest.mock('@/lib/api/notifications.api', () => ({
   notificationsApi: {
     list: jest.fn(),

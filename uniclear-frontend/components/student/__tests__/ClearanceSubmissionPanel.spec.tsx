@@ -23,6 +23,7 @@ const baseRequest: ClearanceRequest = {
   stageApprovals: [],
   documents: [],
   currentStage: {
+    id: 'stage-1',
     name: 'Library Clearance',
     documentRequirements: [
       {

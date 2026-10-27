@@ -67,7 +67,7 @@ export function ClearanceSubmissionPanel({
     )
   }
 
-  const isCurrentStage = activeStage.id === request.currentStageId
+  const isCurrentStage = !activeStage.id || activeStage.id === request.currentStageId
   const approval = request.stageApprovals?.find(a => a.stageId === activeStage.id)
   const isApproved = approval?.status === 'APPROVED'
   const isRejected = approval?.status === 'REJECTED'
@@ -189,7 +189,7 @@ export function ClearanceSubmissionPanel({
           <div>
             <div className="flex items-center gap-2.5">
               <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-                {activeStage.name}
+                Stage: {activeStage.name}
               </h2>
               {isApproved ? (
                 <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">

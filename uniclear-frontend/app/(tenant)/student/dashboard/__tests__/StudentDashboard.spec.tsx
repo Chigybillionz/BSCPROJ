@@ -5,6 +5,14 @@ import { useClearanceStatus } from '@/features/clearance/hooks/useClearance'
 import { useStages } from '@/features/stages/hooks/useStages'
 import { clearanceApi } from '@/lib/api/clearance.api'
 
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: jest.fn(),
+    replace: jest.fn(),
+    refresh: jest.fn(),
+  }),
+}))
+
 jest.mock('@/features/clearance/hooks/useClearance', () => ({
   useClearanceStatus: jest.fn(),
 }))

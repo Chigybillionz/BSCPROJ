@@ -15,6 +15,7 @@ jest.mock('./storage', () => ({
 jest.mock('@/lib/db', () => ({
   db: {
     documentType: { findFirst: jest.fn() },
+    clearanceRequest: { findUnique: jest.fn().mockResolvedValue(null), update: jest.fn().mockResolvedValue({}) },
   },
 }))
 jest.mock('@/core/events/EventBus', () => ({
