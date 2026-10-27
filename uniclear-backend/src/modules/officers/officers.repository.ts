@@ -3,6 +3,30 @@ import { db } from '@/lib/db'
 export class OfficersRepository {
   static async findAll(universityId: string, opts: { page: number; limit: number }) {
     const { page, limit } = opts
+
+    // Auto-link any university admin / super_admin users without an officer profile
+    // so they are visible and manageable in User & Role Management
+    const unlinkedAdmins = await db.user.findMany({
+      where: {
+        universityId,
+        role: { in: ['SUPER_ADMIN', 'ADMIN'] },
+        officer: null,
+      },
+    })
+    if (unlinkedAdmins.length > 0) {
+      for (const admin of unlinkedAdmins) {
+        const isSuper = admin.role === 'SUPER_ADMIN'
+        await db.officer.create({
+          data: {
+            universityId,
+            userId: admin.id,
+            firstName: isSuper ? 'Super' : 'University',
+            lastName: isSuper ? 'Admin' : (admin.email.split('@')[0] || 'Staff'),
+          },
+        }).catch(() => {})
+      }
+    }
+
     const skip = (page - 1) * limit
     const [data, total] = await Promise.all([
       db.officer.findMany({

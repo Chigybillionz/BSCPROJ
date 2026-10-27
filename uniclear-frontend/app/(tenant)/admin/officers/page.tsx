@@ -255,7 +255,8 @@ export default function AdminOfficersPage() {
       const matchesSearch = fullName.includes(q) || email.includes(q)
 
       const officerRole = o.user?.role || 'OFFICER'
-      const matchesRole = roleFilter === 'ALL' || officerRole === roleFilter
+      const isRoleAdmin = officerRole === 'ADMIN' || officerRole === 'SUPER_ADMIN'
+      const matchesRole = roleFilter === 'ALL' || (roleFilter === 'ADMIN' ? isRoleAdmin : officerRole === roleFilter)
 
       let matchesStage = true
       if (stageFilter === 'UNASSIGNED') {
@@ -272,7 +273,7 @@ export default function AdminOfficersPage() {
   const totalOfficers = data?.items?.length || 0
   const assignedOfficersCount = data?.items?.filter((o: any) => o.stageAssignments && o.stageAssignments.length > 0).length || 0
   const unassignedCount = totalOfficers - assignedOfficersCount
-  const adminUsersCount = data?.items?.filter((o: any) => o.user?.role === 'ADMIN').length || 0
+  const adminUsersCount = data?.items?.filter((o: any) => o.user?.role === 'ADMIN' || o.user?.role === 'SUPER_ADMIN').length || 0
 
   return (
     <div className="space-y-6">
@@ -414,10 +415,12 @@ export default function AdminOfficersPage() {
                         <td className="py-3 px-3">
                           <span className={cn(
                             'text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full inline-flex items-center gap-1',
-                            role === 'ADMIN' ? 'bg-purple-100 text-purple-800 border border-purple-200' : 'bg-blue-100 text-blue-800 border border-blue-200'
+                            (role === 'ADMIN' || role === 'SUPER_ADMIN')
+                              ? 'bg-purple-100 text-purple-800 border border-purple-200'
+                              : 'bg-blue-100 text-blue-800 border border-blue-200'
                           )}>
-                            {role === 'ADMIN' && <Shield className="h-3 w-3" />}
-                            {role}
+                            {(role === 'ADMIN' || role === 'SUPER_ADMIN') && <Shield className="h-3 w-3" />}
+                            {role === 'SUPER_ADMIN' ? 'SUPER ADMIN' : role}
                           </span>
                         </td>
 
@@ -481,13 +484,15 @@ export default function AdminOfficersPage() {
                             >
                               <Pencil className="h-3.5 w-3.5" />
                             </button>
-                            <button
-                              onClick={() => setDeleteTarget(o)}
-                              title="Remove user"
-                              className="p-1.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
+                            {role !== 'SUPER_ADMIN' && (
+                              <button
+                                onClick={() => setDeleteTarget(o)}
+                                title="Remove user"
+                                className="p-1.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>

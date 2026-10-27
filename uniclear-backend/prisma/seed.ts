@@ -59,6 +59,16 @@ async function main() {
       passwordSetAt: new Date(),
     },
   });
+  await db.officer.upsert({
+    where: { userId: superAdminUser.id },
+    update: {},
+    create: {
+      universityId: unn.id,
+      userId: superAdminUser.id,
+      firstName: "Super",
+      lastName: "Admin",
+    },
+  });
   console.log("✅ UNN super admin created:", superAdminUser.email);
 
   // Stable seed UUIDs
