@@ -30,6 +30,7 @@ jest.mock('@/lib/db', () => {
       update: jest.fn().mockResolvedValue({}),
       findUnique: jest.fn().mockResolvedValue({ currentStageId: 'stage-id', stageStatus: 'SUBMITTED' })
     },
+    user: { findUnique: jest.fn().mockResolvedValue(null) },
     $transaction: jest.fn(async (fn: any) => fn(dbMock)),
   }
   return { db: dbMock }

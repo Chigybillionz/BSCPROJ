@@ -8,7 +8,7 @@ const router = Router()
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } })
 
 // Public verification endpoint for employers, institutions, and QR code scans
-router.get('/verify/:clearanceNumber', ClearanceController.verify)
+router.get(['/verify/:clearanceNumber(*)', '/verify'], ClearanceController.verify)
 
 router.use(authMiddleware, requireTenant)
 

@@ -28,6 +28,7 @@ jest.mock('@/lib/db', () => {
       update: jest.fn(),
       findUnique: jest.fn().mockResolvedValue({ currentStageId: 'stage-1', stageStatus: 'SUBMITTED' }),
     },
+    user: { findUnique: jest.fn().mockResolvedValue(null) },
     $transaction: jest.fn(async (fn: any) => fn(dbMock)),
   }
   return { db: dbMock }
@@ -96,7 +97,7 @@ describe('ClearanceService', () => {
       ;(DocumentTypesRepository.findByStage as jest.Mock).mockResolvedValue([
         { documentTypeId: 'doc-type-1', isRequired: true, documentType: { name: 'O-Level Result' } },
       ])
-      ;(DocumentsRepository.findByStage as jest.Mock).mockResolvedValue([
+      ;(DocumentsRepository.findByRequest as jest.Mock).mockResolvedValue([
         { documentTypeId: 'doc-type-1' },
       ])
 
@@ -358,6 +359,18 @@ describe('ClearanceService', () => {
       expect(result.pdfBytes).toBeInstanceOf(Uint8Array)
       expect(result.pdfBytes.length).toBeGreaterThan(100)
       expect(result.fileName).toContain('Clearance_Certificate_202400123456AB.pdf')
+    })
+  })
+
+  describe('generateUniqueClearanceNumber', () => {
+    it('should generate clearance number matching YYYY/XXXXXX based on session name', async () => {
+      const regNo = await ClearanceService.generateUniqueClearanceNumber('session-2022', { name: '2022/2023' })
+      expect(regNo).toMatch(/^2022\/\d{6}$/)
+    })
+
+    it('should extract start year from session dates if name does not contain year', async () => {
+      const regNo = await ClearanceService.generateUniqueClearanceNumber('session-dates', { startDate: new Date('2023-09-01') })
+      expect(regNo).toMatch(/^2023\/\d{6}$/)
     })
   })
 })

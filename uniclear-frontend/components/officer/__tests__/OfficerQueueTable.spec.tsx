@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { OfficerQueueTable, OfficerQueueItem } from '../OfficerQueueTable'
 
 const mockPush = jest.fn()
@@ -94,7 +94,7 @@ describe('OfficerQueueTable', () => {
     expect(mockPush).toHaveBeenCalledWith('/officer/review/req-1')
   })
 
-  it('filters items by department dropdown', () => {
+  it('filters items by department dropdown', async () => {
     render(<OfficerQueueTable items={mockItems} total={2} />)
 
     expect(screen.getByText('Emeka Nwankwo')).toBeInTheDocument()
@@ -104,11 +104,13 @@ describe('OfficerQueueTable', () => {
     fireEvent.click(dropdownTrigger)
 
     const csElements = screen.getAllByText('Computer Science')
-    // Click the dropdown option (the last occurrence)
-    fireEvent.click(csElements[csElements.length - 1])
+    const csOption = csElements.find(el => el.tagName === 'P') || csElements[0]
+    fireEvent.click(csOption)
 
-    expect(screen.getByText('Emeka Nwankwo')).toBeInTheDocument()
-    expect(screen.queryByText('Chidinma Okafor')).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('Emeka Nwankwo')).toBeInTheDocument()
+      expect(screen.queryByText('Chidinma Okafor')).not.toBeInTheDocument()
+    })
   })
 
   it('calls onSearchChange when search form is submitted', () => {

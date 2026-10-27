@@ -57,7 +57,21 @@ export default function CertificatePage() {
       </div>
 
       {/* Certificate card */}
-      <Card className="border-2 border-[var(--color-primary)] text-center space-y-4 py-8">
+      <Card className="relative border-2 border-[var(--color-primary)] text-center space-y-4 py-8 px-6 overflow-hidden">
+        {/* Top-Right Badge: Clearance Reg Number & JAMB Reg Number */}
+        <div className="sm:absolute sm:top-5 sm:right-5 text-right bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 shadow-xs inline-block mx-auto mb-2 sm:mb-0">
+          <p className="text-[10px] uppercase font-bold tracking-wider text-[var(--color-muted)]">Clearance Reg No</p>
+          <p className="font-mono font-bold text-sm text-[var(--color-primary)]">
+            {clearance.clearanceNumber || 'Pending'}
+          </p>
+          {clearance.student?.jambRegNo && (
+            <p className="font-mono text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              <span className="text-[9px] uppercase font-semibold text-[var(--color-muted)]">JAMB: </span>
+              {clearance.student.jambRegNo}
+            </p>
+          )}
+        </div>
+
         <BrandLogo
           logoUrl={tenant.logoUrl}
           alt={tenant.name || 'UniClear'}
@@ -70,19 +84,29 @@ export default function CertificatePage() {
           <p className="text-lg font-bold text-[var(--color-text)] mt-1">{tenant.name}</p>
         </div>
 
-        <div className="border-t border-b border-[var(--color-border)] py-4 space-y-1">
+        <div className="border-t border-b border-[var(--color-border)] py-4 space-y-2">
           <p className="text-sm text-[var(--color-muted)]">This certifies that</p>
           <p className="text-base font-semibold text-[var(--color-text)]">
             {clearance.student?.firstName} {clearance.student?.lastName}
           </p>
-          {clearance.student?.jambRegNo ? (
-            <div className="mt-2 inline-block bg-[var(--color-primary)] text-white px-4 py-1.5 rounded-full">
-              <p className="text-xs font-medium uppercase tracking-wide opacity-80">JAMB Reg Number</p>
-              <p className="text-base font-bold font-mono">{clearance.student.jambRegNo}</p>
-            </div>
-          ) : (
-            <p className="text-xs text-amber-500 mt-1">⏳ JAMB Reg Number not available</p>
-          )}
+
+          <div className="flex items-center justify-center gap-2 mt-2 flex-wrap">
+            {clearance.clearanceNumber && (
+              <div className="inline-block bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3.5 py-1.5 rounded-lg text-left">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted)] block">Reg Number</span>
+                <span className="text-sm font-bold font-mono text-[var(--color-primary)]">{clearance.clearanceNumber}</span>
+              </div>
+            )}
+            {clearance.student?.jambRegNo ? (
+              <div className="inline-block bg-[var(--color-primary)] text-white px-3.5 py-1.5 rounded-lg text-left">
+                <span className="text-[10px] font-medium uppercase tracking-wide opacity-80 block">JAMB Reg Number</span>
+                <span className="text-sm font-bold font-mono">{clearance.student.jambRegNo}</span>
+              </div>
+            ) : (
+              <p className="text-xs text-amber-500 mt-1">⏳ JAMB Reg Number not available</p>
+            )}
+          </div>
+
           <p className="text-sm text-[var(--color-muted)] mt-2">
             has satisfactorily completed all clearance requirements
           </p>

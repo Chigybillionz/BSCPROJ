@@ -189,6 +189,7 @@ describe('ClearanceSubmissionPanel', () => {
   it('renders administrative desk info when stage requires 0 documents', async () => {
     const zeroDocRequest: ClearanceRequest = {
       ...baseRequest,
+      currentStageId: 'stage-bursary',
       currentStage: {
         id: 'stage-bursary',
         name: 'Bursary / Finance',

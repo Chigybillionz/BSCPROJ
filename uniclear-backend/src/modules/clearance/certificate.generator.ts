@@ -181,29 +181,101 @@ export class CertificateGenerator {
     // Bottom-right
     page.drawLine({ start: { x: pageWidth - 26 - cornerSize, y: 26 }, end: { x: pageWidth - 26, y: 26 + cornerSize }, color: goldColor, thickness: 1.5 })
 
+    const clearObj = data.clearance || data
+    const rawId = clearObj.id || '2026'
+    const certNumber = clearObj.clearanceNumber || `CLR-${rawId.substring(0, 8).toUpperCase()}`
+    const rawCompletedAt = clearObj.completedAt
+    const completionDate = rawCompletedAt 
+      ? new Date(rawCompletedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+      : new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+
+    // ==========================================
+    // TOP-RIGHT CORNER: REGISTRATION & JAMB IDENTIFIER
+    // ==========================================
+    const topBoxWidth = 148
+    const topBoxHeight = 36
+    const topBoxX = pageWidth - 45 - topBoxWidth
+    const topBoxY = pageHeight - 72
+
+    page.drawRectangle({
+      x: topBoxX,
+      y: topBoxY,
+      width: topBoxWidth,
+      height: topBoxHeight,
+      color: rgb(248 / 255, 250 / 255, 252 / 255), // light slate
+      borderColor: goldColor,
+      borderWidth: 1.2,
+    })
+
+    // Clearance Reg Number
+    page.drawText('REG NO:', {
+      x: topBoxX + 7,
+      y: topBoxY + 22,
+      size: 7.5,
+      font: fontBold,
+      color: mutedTextColor,
+    })
+    page.drawText(certNumber, {
+      x: topBoxX + 46,
+      y: topBoxY + 21,
+      size: 9,
+      font: fontBold,
+      color: primaryColor,
+    })
+
+    // Student JAMB Reg Number
+    page.drawText('JAMB REG:', {
+      x: topBoxX + 7,
+      y: topBoxY + 8,
+      size: 7,
+      font: fontBold,
+      color: mutedTextColor,
+    })
+    page.drawText(data.student.jambRegNo || 'N/A', {
+      x: topBoxX + 54,
+      y: topBoxY + 7,
+      size: 8,
+      font: fontBold,
+      color: darkTextColor,
+    })
+
     // ==========================================
     // 2. HEADER: UNIVERSITY & REGISTRY
     // ==========================================
     let cursorY = pageHeight - 55
 
+    // Header title centered between left margin and top-right box
+    const headerLeftLimit = 45
+    const headerRightLimit = topBoxX - 10
+    const headerCenter = (headerLeftLimit + headerRightLimit) / 2
+    const maxHeaderWidth = headerRightLimit - headerLeftLimit
+
     // University Name
+    let uniFontSize = 16
     const uniName = data.university.name.toUpperCase()
-    const uniNameWidth = fontBold.widthOfTextAtSize(uniName, 17)
+    while (fontBold.widthOfTextAtSize(uniName, uniFontSize) > maxHeaderWidth && uniFontSize > 10) {
+      uniFontSize -= 0.5
+    }
+    const uniNameWidth = fontBold.widthOfTextAtSize(uniName, uniFontSize)
     page.drawText(uniName, {
-      x: (pageWidth - uniNameWidth) / 2,
+      x: headerCenter - uniNameWidth / 2,
       y: cursorY,
-      size: 17,
+      size: uniFontSize,
       font: fontBold,
       color: primaryColor,
     })
 
     cursorY -= 17
     const subHeader = 'OFFICE OF THE REGISTRAR | STUDENT AFFAIRS & ACADEMIC CLEARANCE'
-    const subWidth = fontRegular.widthOfTextAtSize(subHeader, 8.5)
+    let subFontSize = 8
+    while (fontRegular.widthOfTextAtSize(subHeader, subFontSize) > maxHeaderWidth && subFontSize > 6) {
+      subFontSize -= 0.5
+    }
+    const subWidth = fontRegular.widthOfTextAtSize(subHeader, subFontSize)
     page.drawText(subHeader, {
-      x: (pageWidth - subWidth) / 2,
+      x: headerCenter - subWidth / 2,
       y: cursorY,
-      size: 8.5,
+      size: subFontSize,
       font: fontRegular,
       color: mutedTextColor,
     })
@@ -244,14 +316,6 @@ export class CertificateGenerator {
     })
 
     cursorY -= 22
-    const clearObj = data.clearance || data
-    const rawId = clearObj.id || '2026'
-    const certNumber = clearObj.clearanceNumber || `CLR-${rawId.substring(0, 8).toUpperCase()}`
-    const rawCompletedAt = clearObj.completedAt
-    const completionDate = rawCompletedAt 
-      ? new Date(rawCompletedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-      : new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-    
     const metaText = `Certificate Reference: ${certNumber}    |    Issued: ${completionDate}    |    Status: FULLY CLEARED`
     const metaWidth = fontBold.widthOfTextAtSize(metaText, 9)
     page.drawText(metaText, {
@@ -370,8 +434,8 @@ export class CertificateGenerator {
 
     // Student Information Table (Left of Photo)
     const infoX = profileBoxX + 16
-    let infoY = profileBoxY + profileBoxHeight - 22
-    const rowHeight = 17
+    let infoY = profileBoxY + profileBoxHeight - 19
+    const rowHeight = 16
 
     const drawInfoRow = (label: string, value: string) => {
       page.drawText(label.toUpperCase(), {
@@ -393,6 +457,7 @@ export class CertificateGenerator {
 
     const studentFullName = `${data.student.firstName} ${data.student.lastName}`.toUpperCase()
     drawInfoRow('Student Full Name:', studentFullName)
+    drawInfoRow('Clearance Reg No:', certNumber)
     drawInfoRow('JAMB Reg Number:', data.student.jambRegNo)
     drawInfoRow('Matriculation No:', data.student.matricNo || 'N/A')
     drawInfoRow('Faculty:', data.student.faculty?.name || 'N/A')
@@ -637,7 +702,7 @@ export class CertificateGenerator {
 
     // Generate Verification QR Code
     const appUrl = process.env.APP_URL || 'http://localhost:3000'
-    const verifyUrl = `${appUrl}/verify/${certNumber}`
+    const verifyUrl = `${appUrl}/verify?number=${encodeURIComponent(certNumber)}`
     let qrPngBuffer: Buffer | null = null
     try {
       qrPngBuffer = await QRCode.toBuffer(verifyUrl, {

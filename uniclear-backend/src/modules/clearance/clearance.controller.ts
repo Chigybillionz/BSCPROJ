@@ -125,7 +125,7 @@ export class ClearanceController {
 
   static async verify(req: Request, res: Response, next: NextFunction) {
     try {
-      const clearanceNumber = param(req.params.clearanceNumber)
+      const clearanceNumber = param(req.params.clearanceNumber) || (req.query.number as string) || (req.query.clearanceNumber as string) || ''
       const data = await ClearanceService.verify(clearanceNumber)
       return ApiResponse.success(res, data, 'Clearance record verified successfully')
     } catch (err) { next(err) }

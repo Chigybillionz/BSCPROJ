@@ -45,6 +45,42 @@ export async function generateCertificatePDF(data: {
       p.drawText(text1, { x: width / 2 - (hFont.widthOfTextAtSize(text1, 14) / 2), y: height - 160, size: 14, font: hFont, color: rgb(0.3, 0.3, 0.3) })
       const text2 = 'has satisfactorily completed all requirements for final clearance.'
       p.drawText(text2, { x: width / 2 - (hFont.widthOfTextAtSize(text2, 14) / 2), y: height - 250, size: 14, font: hFont, color: rgb(0.3, 0.3, 0.3) })
+
+      // Top-Right Corner Identifier
+      if (data.clearanceNumber || data.jambRegNo) {
+        const boxWidth = 145
+        const boxHeight = 32
+        const boxX = width - 35 - boxWidth
+        const boxY = height - 58
+
+        p.drawRectangle({
+          x: boxX,
+          y: boxY,
+          width: boxWidth,
+          height: boxHeight,
+          borderColor: primaryColor,
+          borderWidth: 1,
+        })
+
+        if (data.clearanceNumber) {
+          p.drawText(`REG NO: ${data.clearanceNumber}`, {
+            x: boxX + 6,
+            y: boxY + 18,
+            size: 7.5,
+            font: hBold,
+            color: primaryColor,
+          })
+        }
+        if (data.jambRegNo && data.jambRegNo !== 'N/A') {
+          p.drawText(`JAMB: ${data.jambRegNo}`, {
+            x: boxX + 6,
+            y: boxY + 6,
+            size: 7,
+            font: hFont,
+            color: rgb(0.2, 0.2, 0.2),
+          })
+        }
+      }
     }
   }
 

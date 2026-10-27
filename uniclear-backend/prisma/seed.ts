@@ -305,15 +305,16 @@ async function main() {
   });
   console.log("✅ Officer created:", officerUser.email);
 
-  if (firstStage) {
+  const allStages = await db.clearanceStage.findMany({ where: { campaignId: IDS.campaign } });
+  for (const stg of allStages) {
     const existingAssignment = await db.stageOfficerAssignment.findFirst({
-      where: { officerId: officer.id, stageId: firstStage.id },
+      where: { officerId: officer.id, stageId: stg.id },
     });
     if (!existingAssignment) {
       await db.stageOfficerAssignment.create({
         data: {
           officerId: officer.id,
-          stageId: firstStage.id,
+          stageId: stg.id,
           universityId: unn.id,
         },
       });

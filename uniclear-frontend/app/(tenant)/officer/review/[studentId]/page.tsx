@@ -259,8 +259,9 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
     .filter((a: any) => a.status === 'APPROVED')
     .map((a: any) => a.stageId)
 
+  const isSuperOrAdmin = meRes?.user?.role === 'SUPER_ADMIN' || meRes?.user?.role === 'ADMIN'
   const officerAssignedStages = sortedStages.filter(s =>
-    meRes?.stageAssignments?.some((a: any) => a.stageId === s.id)
+    isSuperOrAdmin || meRes?.stageAssignments?.some((a: any) => a.stageId === s.id)
   )
 
   const activeStageId = 
@@ -272,6 +273,7 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
 
   const activeStage = sortedStages.find(s => s.id === activeStageId) || sortedStages[0]
   const isCurrentStageApproved = approvedStageIds.includes(activeStageId)
+  const isAssignedToActiveStage = isSuperOrAdmin || officerAssignedStages.some(s => s.id === activeStageId)
 
   const remainingUnapprovedStages = sortedStages.filter(s => !approvedStageIds.includes(s.id) && s.id !== activeStageId)
   const isFinalStage = remainingUnapprovedStages.length === 0
@@ -297,7 +299,7 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
       })
     : true
 
-  const canApproveStage = !isCurrentStageApproved && areRequiredDocsUploaded
+  const canApproveStage = !isCurrentStageApproved && areRequiredDocsUploaded && isAssignedToActiveStage
 
   // Check how many documents have been approved overall
   const approvedDocsCount = documents?.filter(d => (d as any).status === 'APPROVED').length ?? 0
@@ -537,7 +539,7 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
                     >
                       <FileText className="h-3.5 w-3.5" />
                       <span>{doc.documentType?.name || `Doc ${idx + 1}`}</span>
-                      {stageReqTypeIds.includes(doc.documentTypeId) && (
+                      {stageReqTypeIds.includes(doc.documentTypeId) && status !== 'APPROVED' && (
                         <span className="px-1 py-0.2 rounded text-[8px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
                           Required
                         </span>
@@ -939,7 +941,7 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
                             <span className="truncate text-xs font-medium text-[var(--color-text)]">
                               {doc.documentType?.name}
                             </span>
-                            {stageReqTypeIds.includes(doc.documentTypeId) && (
+                            {stageReqTypeIds.includes(doc.documentTypeId) && status !== 'APPROVED' && (
                               <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
                                 Required
                               </span>
@@ -1049,6 +1051,15 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
               )}
             </div>
 
+            {!isAssignedToActiveStage && !isCurrentStageApproved && (
+              <div className="flex items-center gap-1.5 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-[11px] leading-tight">
+                <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
+                <span>
+                  You are viewing <strong>{activeStage?.name}</strong> in read-only mode. Only assigned clearance officers or administrators can endorse or reject this stage.
+                </span>
+              </div>
+            )}
+
             {!areRequiredDocsUploaded && stageReqTypeIds.length > 0 && !isCurrentStageApproved && (
               <div className="flex items-center gap-1.5 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-[11px] leading-tight">
                 <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
@@ -1120,9 +1131,9 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
             {/* 2. Main Action Button: REJECT (Red) */}
             <Button
               variant="danger"
-              className="w-full py-3 h-auto text-sm font-bold bg-rose-600 hover:bg-rose-700 active:scale-[0.99] text-white shadow-xs rounded-xl flex items-center justify-center gap-2"
+              className="w-full py-3 h-auto text-sm font-bold bg-rose-600 hover:bg-rose-700 active:scale-[0.99] text-white shadow-xs rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               loading={rejecting}
-              disabled={rejecting || isCurrentStageApproved}
+              disabled={rejecting || isCurrentStageApproved || !isAssignedToActiveStage}
               onClick={() => setRejectOpen(true)}
             >
               <XCircle className="h-4 w-4" />
