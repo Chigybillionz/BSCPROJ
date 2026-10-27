@@ -62,7 +62,7 @@ describe('ClearanceSubmissionPanel', () => {
     expect(screen.getByText('Library Card')).toBeInTheDocument()
     expect(screen.getByText('Optional Overdue Fee Receipt')).toBeInTheDocument()
 
-    const submitBtn = screen.getByRole('button', { name: /Submit for Review/i })
+    const submitBtn = screen.getByRole('button', { name: /Submit.*for Review/i })
     expect(submitBtn).toBeDisabled()
   })
 
@@ -94,7 +94,7 @@ describe('ClearanceSubmissionPanel', () => {
 
     expect(screen.getByText('my_card.pdf')).toBeInTheDocument()
     
-    const submitBtn = screen.getByRole('button', { name: /Submit for Review/i })
+    const submitBtn = screen.getByRole('button', { name: /Submit.*for Review/i })
     expect(submitBtn).not.toBeDisabled()
   })
 
@@ -177,12 +177,46 @@ describe('ClearanceSubmissionPanel', () => {
       />
     )
 
-    const submitBtn = screen.getByRole('button', { name: /Submit for Review/i })
+    const submitBtn = screen.getByRole('button', { name: /Submit.*for Review/i })
     
     await act(async () => {
       fireEvent.click(submitBtn)
     })
     
+    expect(mockOnSubmitStage).toHaveBeenCalled()
+  })
+
+  it('renders administrative desk info when stage requires 0 documents', async () => {
+    const zeroDocRequest: ClearanceRequest = {
+      ...baseRequest,
+      currentStage: {
+        id: 'stage-bursary',
+        name: 'Bursary / Finance',
+        documentRequirements: []
+      }
+    }
+
+    render(
+      <ClearanceSubmissionPanel
+        request={zeroDocRequest}
+        documents={[]}
+        onUploadDocument={mockOnUploadDocument}
+        onDeleteDocument={mockOnDeleteDocument}
+        onSubmitStage={mockOnSubmitStage}
+      />
+    )
+
+    expect(screen.getByText('Stage: Bursary / Finance')).toBeInTheDocument()
+    expect(screen.getByText('Administrative Verification Desk')).toBeInTheDocument()
+    expect(screen.getByText('Internal Desk Check')).toBeInTheDocument()
+
+    const requestBtn = screen.getByRole('button', { name: /Request Bursary \/ Finance Verification/i })
+    expect(requestBtn).not.toBeDisabled()
+
+    await act(async () => {
+      fireEvent.click(requestBtn)
+    })
+
     expect(mockOnSubmitStage).toHaveBeenCalled()
   })
 })

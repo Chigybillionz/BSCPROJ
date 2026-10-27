@@ -13,7 +13,8 @@ import {
   ShieldCheck,
   Clock,
   Sparkles,
-  Info
+  Info,
+  Building2
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { formatFileSize } from '@/lib/utils/format'
@@ -215,26 +216,43 @@ export function ClearanceSubmissionPanel({
             </div>
             <p className="text-xs sm:text-sm text-slate-500 mt-1">
               {isApproved 
-                ? 'All required documents for this department have been approved and verified.'
+                ? 'All required documents and administrative checks for this department have been approved.'
                 : isRejected
                 ? 'Officer requested corrections. Please re-upload the flagged documents below.'
+                : isUnderReview
+                ? (requirements.length === 0
+                    ? 'Internal office verification in progress. Officer is checking institutional records.'
+                    : 'Documents submitted. Clearance officer is reviewing your credentials.')
                 : isCurrentStage 
-                ? 'Upload and submit required documents for clearance officer review.'
-                : 'Upload all required documents in advance. Files are saved securely and will be reviewed once your clearance reaches this department.'}
+                ? (requirements.length === 0
+                    ? 'Internal records desk. No student file upload required for this office.'
+                    : 'Upload and submit required documents for clearance officer review.')
+                : (requirements.length === 0
+                    ? 'Internal desk check. No files needed when your clearance reaches this stage.'
+                    : 'Upload all required documents in advance. Files are saved securely and will be reviewed once your clearance reaches this department.')}
             </p>
           </div>
 
           {/* Progress indicator */}
           <div className="sm:text-right min-w-[150px]">
-            <p className="text-xs font-semibold text-slate-600">
-              {uploadedRequiredCount} of {requiredCount} Required Uploaded
-            </p>
-            <div className="w-full sm:w-36 h-2 bg-slate-100 rounded-full overflow-hidden mt-1.5 border border-slate-200">
-              <div 
-                className="h-full bg-[var(--color-primary)] transition-all duration-300 rounded-full"
-                style={{ width: `${percentComplete}%` }}
-              />
-            </div>
+            {requirements.length > 0 ? (
+              <>
+                <p className="text-xs font-semibold text-slate-600">
+                  {uploadedRequiredCount} of {requiredCount} Required Uploaded
+                </p>
+                <div className="w-full sm:w-36 h-2 bg-slate-100 rounded-full overflow-hidden mt-1.5 border border-slate-200">
+                  <div 
+                    className="h-full bg-[var(--color-primary)] transition-all duration-300 rounded-full"
+                    style={{ width: `${percentComplete}%` }}
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1.5 rounded-lg shadow-2xs">
+                <Building2 className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Internal Desk Check</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -462,9 +480,16 @@ export function ClearanceSubmissionPanel({
           })}
 
           {requirements.length === 0 && (
-            <div className="text-center py-6 text-sm text-[var(--color-muted)]">
-              <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
-              <p>No documents required for this stage.</p>
+            <div className="rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50/50 via-white to-blue-50/40 p-6 text-center">
+              <div className="w-12 h-12 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center mx-auto mb-3 shadow-2xs">
+                <Building2 className="w-6 h-6" />
+              </div>
+              <h4 className="text-sm font-bold text-slate-900">
+                Administrative Verification Desk
+              </h4>
+              <p className="text-xs text-slate-600 max-w-md mx-auto mt-1 leading-relaxed">
+                No file uploads are required from you for <strong>{activeStage.name}</strong>. The clearance officer verifies your status directly using internal university records (e.g. tuition payment, bursary ledger, or institutional registration).
+              </p>
             </div>
           )}
         </div>
@@ -482,14 +507,25 @@ export function ClearanceSubmissionPanel({
                 <div className="mb-3 flex items-center justify-between p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs">
                   <div className="flex items-center gap-2">
                     <Sparkles className="h-4 w-4 text-amber-600 shrink-0" />
-                    <span>All required documents uploaded for <strong>{activeStage.name}</strong>! Click <strong>Submit for Review</strong> below to forward your submission to the clearance officer.</span>
+                    <span>
+                      {requirements.length > 0 ? (
+                        <>All required documents uploaded for <strong>{activeStage.name}</strong>! Click <strong>Submit for Review</strong> below to forward your submission to the clearance officer.</>
+                      ) : (
+                        <>Ready to proceed! Click <strong>Request {activeStage.name} Verification</strong> below to notify the clearance officer to inspect your internal records.</>
+                      )}
+                    </span>
                   </div>
                 </div>
               )}
               {isUnderReview && (
                 <div className="mb-3 flex items-center gap-2 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-medium">
                   <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                  <span>Submitted for Officer Review — Your clearance officer has this in their queue.</span>
+                  <span>
+                    {requirements.length > 0 
+                      ? 'Submitted for Officer Review — Your clearance officer has this in their queue.'
+                      : `Verification Requested — The ${activeStage.name} clearance desk is verifying your institutional records.`
+                    }
+                  </span>
                 </div>
               )}
               <Button 
@@ -501,11 +537,15 @@ export function ClearanceSubmissionPanel({
                 {isSubmitting ? (
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
                 ) : null}
-                {isUnderReview ? 'Submitted — Awaiting Officer Review' : `Submit ${activeStage.name} for Review`}
+                {isUnderReview 
+                  ? (requirements.length > 0 ? 'Submitted — Awaiting Officer Review' : 'Verification Requested — Awaiting Desk Check')
+                  : (requirements.length > 0 ? `Submit ${activeStage.name} for Review` : `Request ${activeStage.name} Verification`)}
               </Button>
               {isUnderReview ? (
                 <p className="text-xs text-center text-emerald-600 mt-2 font-medium">
-                  This stage has been submitted and is currently in the officer queue for verification.
+                  {requirements.length > 0 
+                    ? 'This stage has been submitted and is currently in the officer queue for verification.'
+                    : `Your clearance request is in the ${activeStage.name} queue for internal administrative record check.`}
                 </p>
               ) : !canSubmit && requirements.length > 0 ? (
                 <p className="text-xs text-center text-[var(--color-muted)] mt-2">

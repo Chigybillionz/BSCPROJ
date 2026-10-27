@@ -100,8 +100,12 @@ describe('OfficerQueueTable', () => {
     expect(screen.getByText('Emeka Nwankwo')).toBeInTheDocument()
     expect(screen.getByText('Chidinma Okafor')).toBeInTheDocument()
 
-    const select = screen.getByRole('combobox')
-    fireEvent.change(select, { target: { value: 'Computer Science' } })
+    const dropdownTrigger = screen.getByText(/All Departments/i)
+    fireEvent.click(dropdownTrigger)
+
+    const csElements = screen.getAllByText('Computer Science')
+    // Click the dropdown option (the last occurrence)
+    fireEvent.click(csElements[csElements.length - 1])
 
     expect(screen.getByText('Emeka Nwankwo')).toBeInTheDocument()
     expect(screen.queryByText('Chidinma Okafor')).not.toBeInTheDocument()
