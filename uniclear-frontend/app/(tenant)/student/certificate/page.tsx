@@ -58,20 +58,6 @@ export default function CertificatePage() {
 
       {/* Certificate card */}
       <Card className="relative border-2 border-[var(--color-primary)] text-center space-y-4 py-8 px-6 overflow-hidden">
-        {/* Top-Right Badge: Clearance Reg Number & JAMB Reg Number */}
-        <div className="sm:absolute sm:top-5 sm:right-5 text-right bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 shadow-xs inline-block mx-auto mb-2 sm:mb-0">
-          <p className="text-[10px] uppercase font-bold tracking-wider text-[var(--color-muted)]">Clearance Reg No</p>
-          <p className="font-mono font-bold text-sm text-[var(--color-primary)]">
-            {clearance.clearanceNumber || 'Pending'}
-          </p>
-          {clearance.student?.jambRegNo && (
-            <p className="font-mono text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              <span className="text-[9px] uppercase font-semibold text-[var(--color-muted)]">JAMB: </span>
-              {clearance.student.jambRegNo}
-            </p>
-          )}
-        </div>
-
         <BrandLogo
           logoUrl={tenant.logoUrl}
           alt={tenant.name || 'UniClear'}
@@ -80,7 +66,7 @@ export default function CertificatePage() {
         />
 
         <div>
-          <p className="text-xs text-[var(--color-muted)] uppercase tracking-wide">University Clearance Certificate</p>
+          <p className="text-xs text-[var(--color-muted)] uppercase tracking-wide">Physical Science Clearance Certificate</p>
           <p className="text-lg font-bold text-[var(--color-text)] mt-1">{tenant.name}</p>
         </div>
 

@@ -190,65 +190,15 @@ export class CertificateGenerator {
       : new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 
     // ==========================================
-    // TOP-RIGHT CORNER: REGISTRATION & JAMB IDENTIFIER
-    // ==========================================
-    const topBoxWidth = 148
-    const topBoxHeight = 36
-    const topBoxX = pageWidth - 45 - topBoxWidth
-    const topBoxY = pageHeight - 72
-
-    page.drawRectangle({
-      x: topBoxX,
-      y: topBoxY,
-      width: topBoxWidth,
-      height: topBoxHeight,
-      color: rgb(248 / 255, 250 / 255, 252 / 255), // light slate
-      borderColor: goldColor,
-      borderWidth: 1.2,
-    })
-
-    // Clearance Reg Number
-    page.drawText('REG NO:', {
-      x: topBoxX + 7,
-      y: topBoxY + 22,
-      size: 7.5,
-      font: fontBold,
-      color: mutedTextColor,
-    })
-    page.drawText(certNumber, {
-      x: topBoxX + 46,
-      y: topBoxY + 21,
-      size: 9,
-      font: fontBold,
-      color: primaryColor,
-    })
-
-    // Student JAMB Reg Number
-    page.drawText('JAMB REG:', {
-      x: topBoxX + 7,
-      y: topBoxY + 8,
-      size: 7,
-      font: fontBold,
-      color: mutedTextColor,
-    })
-    page.drawText(data.student.jambRegNo || 'N/A', {
-      x: topBoxX + 54,
-      y: topBoxY + 7,
-      size: 8,
-      font: fontBold,
-      color: darkTextColor,
-    })
-
-    // ==========================================
     // 2. HEADER: UNIVERSITY & REGISTRY
     // ==========================================
     let cursorY = pageHeight - 55
 
-    // Header title centered between left margin and top-right box
+    // Header title centered across page
     const headerLeftLimit = 45
-    const headerRightLimit = topBoxX - 10
-    const headerCenter = (headerLeftLimit + headerRightLimit) / 2
-    const maxHeaderWidth = headerRightLimit - headerLeftLimit
+    const headerRightLimit = pageWidth - 45
+    const headerCenter = pageWidth / 2
+    const maxHeaderWidth = pageWidth - 90
 
     // University Name
     let uniFontSize = 16
@@ -292,7 +242,7 @@ export class CertificateGenerator {
     // 3. CERTIFICATE TITLE BANNER
     // ==========================================
     cursorY -= 32
-    const bannerTitle = 'OFFICIAL FINAL CLEARANCE CERTIFICATE'
+    const bannerTitle = 'PHYSICAL SCIENCE CLEARANCE CERTIFICATE'
     const bannerWidth = fontBold.widthOfTextAtSize(bannerTitle, 16)
     
     // Draw subtle badge backdrop

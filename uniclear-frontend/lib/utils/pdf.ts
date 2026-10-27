@@ -39,48 +39,12 @@ export async function generateCertificatePDF(data: {
       const hBold = await doc.embedFont(StandardFonts.HelveticaBold)
       const hFont = await doc.embedFont(StandardFonts.Helvetica)
       p.drawText(uniName, { x: width / 2 - (hBold.widthOfTextAtSize(uniName, 24) / 2), y: height - 80, size: 24, font: hBold, color: primaryColor })
-      const title = 'CLEARANCE CERTIFICATE'
+      const title = 'PHYSICAL SCIENCE CLEARANCE CERTIFICATE'
       p.drawText(title, { x: width / 2 - (hBold.widthOfTextAtSize(title, 20) / 2), y: height - 120, size: 20, font: hBold, color: rgb(0, 0, 0) })
       const text1 = 'This is to certify that'
       p.drawText(text1, { x: width / 2 - (hFont.widthOfTextAtSize(text1, 14) / 2), y: height - 160, size: 14, font: hFont, color: rgb(0.3, 0.3, 0.3) })
       const text2 = 'has satisfactorily completed all requirements for final clearance.'
       p.drawText(text2, { x: width / 2 - (hFont.widthOfTextAtSize(text2, 14) / 2), y: height - 250, size: 14, font: hFont, color: rgb(0.3, 0.3, 0.3) })
-
-      // Top-Right Corner Identifier
-      if (data.clearanceNumber || data.jambRegNo) {
-        const boxWidth = 145
-        const boxHeight = 32
-        const boxX = width - 35 - boxWidth
-        const boxY = height - 58
-
-        p.drawRectangle({
-          x: boxX,
-          y: boxY,
-          width: boxWidth,
-          height: boxHeight,
-          borderColor: primaryColor,
-          borderWidth: 1,
-        })
-
-        if (data.clearanceNumber) {
-          p.drawText(`REG NO: ${data.clearanceNumber}`, {
-            x: boxX + 6,
-            y: boxY + 18,
-            size: 7.5,
-            font: hBold,
-            color: primaryColor,
-          })
-        }
-        if (data.jambRegNo && data.jambRegNo !== 'N/A') {
-          p.drawText(`JAMB: ${data.jambRegNo}`, {
-            x: boxX + 6,
-            y: boxY + 6,
-            size: 7,
-            font: hFont,
-            color: rgb(0.2, 0.2, 0.2),
-          })
-        }
-      }
     }
   }
 
