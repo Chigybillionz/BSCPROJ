@@ -25,7 +25,12 @@ export class ClearanceRepository {
             },
           },
         },
-        student: true,
+        student: {
+          include: {
+            faculty: { select: { id: true, name: true } },
+            department: { select: { id: true, name: true } },
+          },
+        },
         session: true,
         stageApprovals: { include: { stage: true, stamp: true }, orderBy: { decidedAt: 'desc' } },
         documents: {

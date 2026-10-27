@@ -13,6 +13,7 @@ import { ROUTES } from '@/lib/constants'
 import { useState, useEffect, use } from 'react'
 import { Dialog } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { CustomDropdown } from '@/components/ui/CustomDropdown'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -20,10 +21,12 @@ import { toast } from 'sonner'
 import { normalizeDocUrl, formatDate } from '@/lib/utils/format'
 
 const editSchema = z.object({
-  firstName: z.string().min(1, 'Required'),
-  lastName:  z.string().min(1, 'Required'),
-  jambRegNo: z.string().min(1, 'Required'),
-  matricNo:  z.string().optional(),
+  firstName:    z.string().min(1, 'Required'),
+  lastName:     z.string().min(1, 'Required'),
+  jambRegNo:    z.string().min(1, 'Required'),
+  matricNo:     z.string().optional(),
+  facultyId:    z.string().optional(),
+  departmentId: z.string().optional(),
 })
 type EditForm = z.infer<typeof editSchema>
 
@@ -32,8 +35,23 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
   const qc = useQueryClient()
   const [previewDoc, setPreviewDoc] = useState<{ url: string; title: string } | null>(null)
   const [editOpen, setEditOpen] = useState(false)
-  
+
   const form = useForm<EditForm>({ resolver: zodResolver(editSchema) })
+  const selectedFacultyId = form.watch('facultyId')
+
+  const { data: faculties } = useQuery({
+    queryKey: ['faculties'],
+    queryFn: () => import('@/lib/api/structure.api').then(m => m.structureApi.getFaculties()).then(r => r.data.data),
+    enabled: editOpen,
+  })
+
+  const { data: departments } = useQuery({
+    queryKey: ['departments'],
+    queryFn: () => import('@/lib/api/structure.api').then(m => m.structureApi.getDepartments()).then(r => r.data.data),
+    enabled: editOpen,
+  })
+
+  const filteredDepartments = (departments || []).filter((d: any) => d.facultyId === selectedFacultyId)
 
   const { data: student, isLoading: loadingStudent } = useQuery({
     queryKey: ['student', id],
@@ -48,10 +66,12 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
   useEffect(() => {
     if (student && editOpen) {
       form.reset({
-        firstName: student.firstName,
-        lastName: student.lastName,
-        jambRegNo: student.jambRegNo,
-        matricNo: student.matricNo || '',
+        firstName:    student.firstName,
+        lastName:     student.lastName,
+        jambRegNo:    student.jambRegNo,
+        matricNo:     student.matricNo || '',
+        facultyId:    student.faculty?.id || '',
+        departmentId: student.department?.id || '',
       })
     }
   }, [student, editOpen, form])
@@ -479,6 +499,29 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
           </div>
           <Input label="JAMB Reg Number" error={form.formState.errors.jambRegNo?.message} {...form.register('jambRegNo')} />
           <Input label="Matriculation Number" placeholder="Leave empty if pending" error={form.formState.errors.matricNo?.message} {...form.register('matricNo')} />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-[var(--color-text)]">Faculty</label>
+              <CustomDropdown
+                value={form.watch('facultyId') || ''}
+                onChange={val => { form.setValue('facultyId', val); form.setValue('departmentId', '') }}
+                placeholder="Select Faculty..."
+                searchable
+                options={[{ value: '', label: 'None' }, ...(faculties || []).map((f: any) => ({ value: f.id, label: f.name }))]}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-[var(--color-text)]">Department</label>
+              <CustomDropdown
+                disabled={!selectedFacultyId}
+                value={form.watch('departmentId') || ''}
+                onChange={val => form.setValue('departmentId', val)}
+                placeholder="Select Department..."
+                searchable
+                options={[{ value: '', label: 'None' }, ...filteredDepartments.map((d: any) => ({ value: d.id, label: d.name }))]}
+              />
+            </div>
+          </div>
           <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded border border-amber-100">
             Note: Changes to primary identifiers are securely logged to the Global Audit Trail.
           </p>
