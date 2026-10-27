@@ -1,19 +1,19 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
-import { useRouter, useSearchParams, usePathname } from 'next/navigation'
+import React, { useState } from 'react'
+import { useSearchParams, usePathname } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { useOfficerQueue } from '@/features/clearance/hooks/useClearance'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { CheckCircle, Calendar, Filter } from 'lucide-react'
+import { CheckCircle, Calendar } from 'lucide-react'
 import { EmptyState, ErrorState } from '@/components/shared/EmptyState'
 import { Card } from '@/components/ui/card'
 import { OfficerQueueTable } from '@/components/officer/OfficerQueueTable'
 import { sessionsApi } from '@/lib/api/misc.api'
 import { campaignsApi } from '@/lib/api/campaigns.api'
+import { CustomDropdown } from '@/components/ui/CustomDropdown'
 
 export default function OfficerQueuePage() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const pathname = usePathname()
 
@@ -128,40 +128,43 @@ export default function OfficerQueuePage() {
 
         {/* Campaign & Session Selectors */}
         <div className="flex flex-col sm:flex-row gap-2.5 items-center w-full md:w-auto">
-          <div className="flex items-center gap-1.5 w-full sm:w-auto">
-            <Calendar className="h-4 w-4 text-[var(--color-muted)] shrink-0 hidden sm:block" />
-            <select
-              className="text-xs border border-[var(--color-border)] bg-[var(--color-bg)] rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-[var(--color-primary)] w-full sm:w-auto font-medium text-[var(--color-text)] cursor-pointer"
+          <div className="w-full sm:w-56">
+            <CustomDropdown
               value={sessionId}
-              onChange={e => handleSessionChange(e.target.value)}
-              title="Filter by Academic Session"
-            >
-              <option value="">All Academic Sessions</option>
-              {sessionsRes?.data?.map((s: any) => (
-                <option key={s.id} value={s.id}>
-                  Session {s.name} {s.isActive ? '(Current)' : ''}
-                </option>
-              ))}
-            </select>
+              onChange={val => handleSessionChange(val)}
+              options={[
+                { value: '', label: 'All Academic Sessions' },
+                ...(sessionsRes?.data || []).map((s: any) => ({
+                  value: s.id,
+                  label: `Session ${s.name}`,
+                  badge: s.isActive ? 'Current' : undefined,
+                })),
+              ]}
+              searchable={true}
+              placeholder="All Academic Sessions"
+              triggerClassName="py-1.5 px-3 text-xs font-semibold"
+              align="right"
+            />
           </div>
 
-          <div className="flex items-center gap-1.5 w-full sm:w-auto">
-            <Filter className="h-4 w-4 text-[var(--color-muted)] shrink-0 hidden sm:block" />
-            <select
-              className="text-xs border border-[var(--color-border)] bg-[var(--color-bg)] rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-[var(--color-primary)] w-full sm:w-auto font-medium text-[var(--color-text)] cursor-pointer"
+          <div className="w-full sm:w-64">
+            <CustomDropdown
               value={campaignId}
-              onChange={e => handleCampaignChange(e.target.value)}
-              title="Filter by Clearance Campaign"
-            >
-              <option value="">All Clearance Campaigns</option>
-              {campaignsRes?.data
-                ?.filter((c: any) => !sessionId || c.sessionId === sessionId)
-                .map((c: any) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-            </select>
+              onChange={val => handleCampaignChange(val)}
+              options={[
+                { value: '', label: 'All Clearance Campaigns' },
+                ...(campaignsRes?.data || [])
+                  .filter((c: any) => !sessionId || c.sessionId === sessionId)
+                  .map((c: any) => ({
+                    value: c.id,
+                    label: c.name,
+                  })),
+              ]}
+              searchable={true}
+              placeholder="All Clearance Campaigns"
+              triggerClassName="py-1.5 px-3 text-xs font-semibold"
+              align="right"
+            />
           </div>
         </div>
       </div>

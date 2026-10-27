@@ -18,17 +18,18 @@ import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton'
 import { EmptyState, ErrorState } from '@/components/shared/EmptyState'
 import {
   UserCircle, AlertTriangle, Pencil, Trash2, Shield,
-  Search, CheckCircle2, UserPlus, Layers, X, CheckSquare, Square
+  Search, CheckCircle2, UserPlus, Layers, X
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { toast } from 'sonner'
+import { CustomDropdown } from '@/components/ui/CustomDropdown'
 
 const inviteUserSchema = z.object({
   firstName:    z.string().min(1, 'First name is required'),
   lastName:     z.string().min(1, 'Last name is required'),
   email:        z.string().email('Please enter a valid email address'),
   role:         z.enum(['OFFICER', 'ADMIN']).default('OFFICER'),
-  stageId:      z.string().optional(),
+  stageIds:     z.array(z.string()).default([]),
   facultyId:    z.string().optional(),
   departmentId: z.string().optional(),
 })
@@ -98,15 +99,14 @@ export default function AdminOfficersPage() {
       lastName: '',
       email: '',
       role: 'OFFICER',
-      stageId: '',
+      stageIds: [],
       facultyId: '',
       departmentId: '',
     }
   })
 
   const selectedRole = inviteForm.watch('role')
-  const selectedStageId = inviteForm.watch('stageId')
-  const selectedStage = stages.find(s => s.id === selectedStageId)
+  const inviteStageIds = inviteForm.watch('stageIds') || []
 
   const editForm = useForm<EditForm>({ resolver: zodResolver(editSchema) })
 
@@ -116,7 +116,7 @@ export default function AdminOfficersPage() {
       lastName: d.lastName.trim(),
       email: d.email.trim().toLowerCase(),
       role: d.role,
-      stageId: d.stageId ? d.stageId : undefined,
+      stageIds: d.stageIds && d.stageIds.length > 0 ? d.stageIds : undefined,
       facultyId: d.facultyId ? d.facultyId : undefined,
       departmentId: d.departmentId ? d.departmentId : undefined,
     }),
@@ -292,32 +292,38 @@ export default function AdminOfficersPage() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-1.5 text-xs text-gray-600">
-            <span className="font-medium text-gray-500">Role:</span>
-            <select
+          <div className="w-36">
+            <CustomDropdown
               value={roleFilter}
-              onChange={e => setRoleFilter(e.target.value as any)}
-              className="text-xs border border-gray-200 rounded-md px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-            >
-              <option value="ALL">All Roles</option>
-              <option value="OFFICER">Officers Only</option>
-              <option value="ADMIN">Admins Only</option>
-            </select>
+              onChange={val => setRoleFilter(val)}
+              searchable={false}
+              placeholder="All Roles"
+              options={[
+                { value: 'ALL', label: 'All Roles' },
+                { value: 'OFFICER', label: 'Officers Only' },
+                { value: 'ADMIN', label: 'Admins Only' },
+              ]}
+              triggerClassName="py-1.5 px-2.5 text-xs font-semibold"
+            />
           </div>
 
-          <div className="flex items-center gap-1.5 text-xs text-gray-600">
-            <span className="font-medium text-gray-500">Stage:</span>
-            <select
+          <div className="w-48">
+            <CustomDropdown
               value={stageFilter}
-              onChange={e => setStageFilter(e.target.value)}
-              className="text-xs border border-gray-200 rounded-md px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-            >
-              <option value="ALL">All Stages</option>
-              <option value="UNASSIGNED">Unassigned Only</option>
-              {stages.map(s => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </select>
+              onChange={val => setStageFilter(val)}
+              searchable={true}
+              placeholder="All Stages"
+              options={[
+                { value: 'ALL', label: 'All Stages' },
+                { value: 'UNASSIGNED', label: 'Unassigned Only' },
+                ...stages.map(s => ({
+                  value: s.id,
+                  label: s.name,
+                  badge: `Stage ${s.orderIndex}`,
+                })),
+              ]}
+              triggerClassName="py-1.5 px-2.5 text-xs font-semibold"
+            />
           </div>
         </div>
       </div>
@@ -422,10 +428,11 @@ export default function AdminOfficersPage() {
                           <div className="flex items-center gap-1 justify-end">
                             <button
                               onClick={() => openAssign(o)}
-                              title="Assign to Clearance Stage"
-                              className="px-2 py-1 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded transition-colors"
+                              title="Assign Clearance Stages"
+                              className="px-2.5 py-1 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors flex items-center gap-1 cursor-pointer"
                             >
-                              + Assign Stage
+                              <Layers className="h-3 w-3" />
+                              <span>Assign Stages</span>
                             </button>
                             <button
                               onClick={() => openEdit(o)}
@@ -520,59 +527,73 @@ export default function AdminOfficersPage() {
 
           {/* Stage Assignment Dropdown (populated from stages) */}
           <div className="space-y-2 p-3.5 bg-blue-50/40 rounded-xl border border-blue-100">
-            <label htmlFor="stageSelect" className="text-xs font-semibold text-blue-900 uppercase tracking-wide block">
-              Assign Clearance Stage (Optional)
-            </label>
-            <select
-              id="stageSelect"
-              {...inviteForm.register('stageId')}
-              className="w-full text-xs rounded-lg border border-gray-300 bg-white p-2.5 text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium"
-            >
-              <option value="">(None — Assign Stage Later)</option>
-              {stages.map(s => (
-                <option key={s.id} value={s.id}>
-                  {s.name} (Stage {s.orderIndex}) — {s.scope || 'UNIVERSITY'}
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-blue-900 uppercase tracking-wide block">
+                Assign Clearance Stages (Optional)
+              </label>
+              {inviteStageIds.length > 0 && (
+                <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
+                  {inviteStageIds.length} selected
+                </span>
+              )}
+            </div>
+            <CustomDropdown
+              multiple={true}
+              selectAll={true}
+              value={inviteStageIds}
+              onChange={val => inviteForm.setValue('stageIds', val)}
+              placeholder="Select clearance stage(s)..."
+              searchable={true}
+              options={stages.map(s => ({
+                value: s.id,
+                label: `${s.name} (Stage ${s.orderIndex})`,
+                subtitle: s.scope ? `Scope: ${s.scope}` : 'Scope: UNIVERSITY',
+                badge: `Stage ${s.orderIndex}`,
+              }))}
+            />
 
-            {selectedStage && selectedStage.scope === 'FACULTY' && (
-              <div className="space-y-1 pt-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+              <div className="space-y-1">
                 <label className="text-[11px] font-medium text-gray-700">Specific Faculty (Optional)</label>
-                <select
-                  {...inviteForm.register('facultyId')}
-                  className="w-full text-xs rounded border border-gray-300 bg-white p-2 text-gray-800"
-                >
-                  <option value="">All Faculties</option>
-                  {faculties.map((f: any) => (
-                    <option key={f.id} value={f.id}>{f.name}</option>
-                  ))}
-                </select>
+                <CustomDropdown
+                  value={inviteForm.watch('facultyId') || ''}
+                  onChange={val => {
+                    inviteForm.setValue('facultyId', val)
+                    inviteForm.setValue('departmentId', '')
+                  }}
+                  placeholder="All Faculties (Universal)"
+                  searchable={true}
+                  options={[
+                    { value: '', label: 'All Faculties (Universal)' },
+                    ...faculties.map((f: any) => ({ value: f.id, label: f.name })),
+                  ]}
+                />
               </div>
-            )}
 
-            {selectedStage && selectedStage.scope === 'DEPARTMENT' && (
-              <div className="space-y-1 pt-1">
+              <div className="space-y-1">
                 <label className="text-[11px] font-medium text-gray-700">Specific Department (Optional)</label>
-                <select
-                  {...inviteForm.register('departmentId')}
-                  className="w-full text-xs rounded border border-gray-300 bg-white p-2 text-gray-800"
-                >
-                  <option value="">All Departments</option>
-                  {departments.map((d: any) => (
-                    <option key={d.id} value={d.id}>{d.name}</option>
-                  ))}
-                </select>
+                <CustomDropdown
+                  value={inviteForm.watch('departmentId') || ''}
+                  onChange={val => inviteForm.setValue('departmentId', val)}
+                  placeholder="All Departments"
+                  searchable={true}
+                  options={[
+                    { value: '', label: 'All Departments' },
+                    ...departments
+                      .filter((d: any) => !inviteForm.watch('facultyId') || d.facultyId === inviteForm.watch('facultyId'))
+                      .map((d: any) => ({ value: d.id, label: d.name })),
+                  ]}
+                />
               </div>
-            )}
+            </div>
           </div>
 
           <div className="flex gap-2 pt-2">
             <Button type="button" variant="secondary" className="flex-1" onClick={() => setInviteOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700 text-white" loading={creating}>
-              Create User & Assign Stage
+            <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold" loading={creating}>
+              Create User & Assign Stages
             </Button>
           </div>
         </form>
@@ -677,46 +698,53 @@ export default function AdminOfficersPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
             <div className="space-y-1">
               <label className="text-xs font-medium text-gray-700">Session (Optional)</label>
-              <select
+              <CustomDropdown
                 value={quickSessionId}
-                onChange={e => setQuickSessionId(e.target.value)}
-                className="w-full text-xs rounded-lg border border-gray-300 bg-white p-2 text-gray-800"
-              >
-                <option value="">All Sessions (Universal)</option>
-                {sessions.map((s: any) => (
-                  <option key={s.id} value={s.id}>{s.name} {s.isActive ? '(Current)' : ''}</option>
-                ))}
-              </select>
+                onChange={val => setQuickSessionId(val)}
+                placeholder="All Sessions (Universal)"
+                searchable={true}
+                options={[
+                  { value: '', label: 'All Sessions (Universal)' },
+                  ...sessions.map((s: any) => ({
+                    value: s.id,
+                    label: `${s.name} ${s.isActive ? '(Current)' : ''}`,
+                    badge: s.isActive ? 'Active' : undefined,
+                  })),
+                ]}
+              />
             </div>
 
             <div className="space-y-1">
               <label className="text-xs font-medium text-gray-700">Faculty (Optional)</label>
-              <select
+              <CustomDropdown
                 value={quickFacultyId}
-                onChange={e => setQuickFacultyId(e.target.value)}
-                className="w-full text-xs rounded border border-gray-300 bg-white p-2 text-gray-800"
-              >
-                <option value="">All Faculties (Universal)</option>
-                {faculties.map((f: any) => (
-                  <option key={f.id} value={f.id}>{f.name}</option>
-                ))}
-              </select>
+                onChange={val => {
+                  setQuickFacultyId(val)
+                  setQuickDeptId('')
+                }}
+                placeholder="All Faculties (Universal)"
+                searchable={true}
+                options={[
+                  { value: '', label: 'All Faculties (Universal)' },
+                  ...faculties.map((f: any) => ({ value: f.id, label: f.name })),
+                ]}
+              />
             </div>
 
             <div className="space-y-1">
               <label className="text-xs font-medium text-gray-700">Department (Optional)</label>
-              <select
+              <CustomDropdown
                 value={quickDeptId}
-                onChange={e => setQuickDeptId(e.target.value)}
-                className="w-full text-xs rounded border border-gray-300 bg-white p-2 text-gray-800"
-              >
-                <option value="">All Departments</option>
-                {departments
-                  .filter((d: any) => !quickFacultyId || d.facultyId === quickFacultyId)
-                  .map((d: any) => (
-                    <option key={d.id} value={d.id}>{d.name}</option>
-                  ))}
-              </select>
+                onChange={val => setQuickDeptId(val)}
+                placeholder="All Departments"
+                searchable={true}
+                options={[
+                  { value: '', label: 'All Departments' },
+                  ...departments
+                    .filter((d: any) => !quickFacultyId || d.facultyId === quickFacultyId)
+                    .map((d: any) => ({ value: d.id, label: d.name })),
+                ]}
+              />
             </div>
           </div>
 

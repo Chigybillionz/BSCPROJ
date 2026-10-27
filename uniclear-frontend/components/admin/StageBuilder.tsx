@@ -24,6 +24,7 @@ import { structureApi, sessionsApi } from '@/lib/api/misc.api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog } from '@/components/ui/dialog'
+import { CustomDropdown } from '@/components/ui/CustomDropdown'
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton'
 import { ErrorState } from '@/components/shared/EmptyState'
 import { cn } from '@/lib/utils/cn'
@@ -274,15 +275,18 @@ function StagePanel({ stage, campaignId, onClose }: { stage: ClearanceStage; cam
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-700">Scope</label>
-                  <select
-                    value={editScope}
-                    onChange={e => setEditScope(e.target.value as any)}
-                    className="mt-1 w-full text-xs rounded border border-gray-300 bg-white p-2 text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  >
-                    <option value="UNIVERSITY">UNIVERSITY (All students)</option>
-                    <option value="FACULTY">FACULTY (Specific faculties)</option>
-                    <option value="DEPARTMENT">DEPARTMENT (Specific departments)</option>
-                  </select>
+                  <div className="mt-1">
+                    <CustomDropdown
+                      value={editScope}
+                      onChange={val => setEditScope(val as any)}
+                      searchable={false}
+                      options={[
+                        { value: 'UNIVERSITY', label: 'UNIVERSITY (All students)' },
+                        { value: 'FACULTY', label: 'FACULTY (Specific faculties)' },
+                        { value: 'DEPARTMENT', label: 'DEPARTMENT (Specific departments)' },
+                      ]}
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-700">Description</label>
@@ -856,20 +860,22 @@ export function StageBuilder({ campaignId: initialCampaignId }: { campaignId?: s
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border border-gray-200 bg-white shadow-xs">
         <div className="flex items-center gap-3">
           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide shrink-0">Clearance Campaign:</span>
-          <select
-            value={campaignId}
-            onChange={e => {
-              setSelectedCampaignId(e.target.value)
-              setItems([])
-            }}
-            className="text-sm font-semibold border border-gray-200 rounded-lg px-3 py-1.5 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            {campaigns.map((c: any) => (
-              <option key={c.id} value={c.id}>
-                {c.name} {c.isActive ? '• Active' : ''}
-              </option>
-            ))}
-          </select>
+          <div className="w-64">
+            <CustomDropdown
+              value={campaignId}
+              onChange={val => {
+                setSelectedCampaignId(val)
+                setItems([])
+              }}
+              searchable={true}
+              options={campaigns.map((c: any) => ({
+                value: c.id,
+                label: c.name,
+                badge: c.isActive ? 'Active' : undefined,
+              }))}
+              triggerClassName="py-1.5 px-3 text-xs font-semibold"
+            />
+          </div>
         </div>
 
         <Button onClick={() => setAddDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white shrink-0">
@@ -1013,17 +1019,17 @@ export function StageBuilder({ campaignId: initialCampaignId }: { campaignId?: s
           </div>
 
           <div className="space-y-1">
-            <label htmlFor="stageScope" className="text-xs font-medium text-gray-700">Administrative Scope</label>
-            <select
-              id="stageScope"
+            <label className="text-xs font-medium text-gray-700">Administrative Scope</label>
+            <CustomDropdown
               value={newStageScope}
-              onChange={e => setNewStageScope(e.target.value as any)}
-              className="w-full text-sm rounded border border-gray-300 bg-white p-2 text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            >
-              <option value="UNIVERSITY">UNIVERSITY — Applies universally across all faculties & departments</option>
-              <option value="FACULTY">FACULTY — Handled by faculty officers</option>
-              <option value="DEPARTMENT">DEPARTMENT — Handled by departmental officers</option>
-            </select>
+              onChange={val => setNewStageScope(val as any)}
+              searchable={false}
+              options={[
+                { value: 'UNIVERSITY', label: 'UNIVERSITY — Universal across all faculties & departments' },
+                { value: 'FACULTY', label: 'FACULTY — Handled by faculty officers' },
+                { value: 'DEPARTMENT', label: 'DEPARTMENT — Handled by departmental officers' },
+              ]}
+            />
           </div>
 
           <div className="space-y-1">

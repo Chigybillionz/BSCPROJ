@@ -18,6 +18,7 @@ export const officersApi = {
     lastName: string
     role?: 'OFFICER' | 'ADMIN'
     stageId?: string
+    stageIds?: string[]
     facultyId?: string
     departmentId?: string
     sessionId?: string

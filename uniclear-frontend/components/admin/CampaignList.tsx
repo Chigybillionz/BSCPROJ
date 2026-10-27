@@ -11,6 +11,7 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { CustomDropdown } from '@/components/ui/CustomDropdown'
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton'
 import Link from 'next/link'
 import { ROUTES } from '@/lib/constants'
@@ -254,16 +255,19 @@ export function CampaignList({ initialSessions = [] }: { initialSessions?: any[]
                     No academic sessions found. Please create one in the <Link href="/admin/sessions" className="font-semibold underline">Sessions</Link> tab first.
                   </div>
                 ) : (
-                  <select
-                    value={sessionId}
-                    onChange={e => setSessionId(e.target.value)}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
-                  >
-                    <option value="">Select an academic session</option>
-                    {sessions.map((s: any) => (
-                      <option key={s.id} value={s.id}>{s.name} {s.isActive ? '(Current)' : ''}</option>
-                    ))}
-                  </select>
+                  <div className="mt-1">
+                    <CustomDropdown
+                      value={sessionId}
+                      onChange={val => setSessionId(val)}
+                      placeholder="Select an academic session"
+                      searchable={true}
+                      options={sessions.map((s: any) => ({
+                        value: s.id,
+                        label: s.name,
+                        badge: s.isActive ? 'Current' : undefined,
+                      }))}
+                    />
+                  </div>
                 )}
               </div>
             </div>

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Dialog } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { CustomDropdown } from '@/components/ui/CustomDropdown'
 import { officerStampsApi, OfficerStamp } from '@/lib/api/officerStamps.api'
 import { StampManagerDialog } from '@/components/officer/StampManagerDialog'
 import dynamic from 'next/dynamic'
@@ -689,17 +690,17 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
               </div>
               {officerAssignedStages.length > 1 ? (
                 <div className="space-y-1">
-                  <select
+                  <CustomDropdown
                     value={activeStageId}
-                    onChange={e => setChosenStageId(e.target.value)}
-                    className="w-full text-xs font-bold border border-[var(--color-border)] bg-[var(--color-bg)] rounded-lg p-2 text-[var(--color-text)] outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
-                  >
-                    {officerAssignedStages.map(s => (
-                      <option key={s.id} value={s.id}>
-                        {s.name} {approvedStageIds.includes(s.id) ? '✓ (Approved)' : ''}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={val => setChosenStageId(val)}
+                    searchable={officerAssignedStages.length > 4}
+                    options={officerAssignedStages.map(s => ({
+                      value: s.id,
+                      label: s.name,
+                      badge: approvedStageIds.includes(s.id) ? 'Approved' : `Stage ${s.orderIndex}`,
+                    }))}
+                    triggerClassName="py-1.5 px-3 text-xs font-bold"
+                  />
                 </div>
               ) : (
                 <p className="text-sm font-bold text-[var(--color-text)]">

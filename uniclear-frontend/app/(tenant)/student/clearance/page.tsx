@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton'
 import { CalendarDays, ArrowRight, FolderKanban } from 'lucide-react'
 import { EmptyState } from '@/components/shared/EmptyState'
+import { CustomDropdown } from '@/components/ui/CustomDropdown'
 import { ROUTES } from '@/lib/constants'
 
 export default function StudentClearancePage() {
@@ -65,17 +66,17 @@ export default function StudentClearancePage() {
           <div className="mb-6 pb-6 border-b border-[var(--color-border)]">
             <h3 className="text-sm font-semibold text-[var(--color-text)] mb-2">Select Academic Session</h3>
             <p className="text-xs text-[var(--color-muted)] mb-3">Which session are you performing this clearance for?</p>
-            <select 
-              value={selectedSessionId || ''} 
-              onChange={e => setSelectedSessionId(e.target.value)}
-              className="w-full p-2.5 text-sm border border-[var(--color-border)] rounded-md bg-[var(--color-surface)] text-[var(--color-text)]"
-            >
-              {sessions.map((session: any) => (
-                <option key={session.id} value={session.id}>
-                  {session.name} {session.isActive ? '(Current Active)' : ''}
-                </option>
-              ))}
-            </select>
+            <CustomDropdown
+              value={selectedSessionId || ''}
+              onChange={val => setSelectedSessionId(val)}
+              placeholder="Select an academic session..."
+              searchable={true}
+              options={(sessions || []).map((session: any) => ({
+                value: session.id,
+                label: `Session ${session.name}`,
+                badge: session.isActive ? 'Current Active' : undefined,
+              }))}
+            />
           </div>
 
           <h3 className="text-sm font-semibold text-[var(--color-text)] mb-3">Available Clearance Campaigns</h3>

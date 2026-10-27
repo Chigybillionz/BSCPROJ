@@ -8,6 +8,7 @@ import { campaignsApi } from '@/lib/api/campaigns.api'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { CustomDropdown } from '@/components/ui/CustomDropdown'
 import { Plus, Upload, Save, Eye, EyeOff, Trash2 } from 'lucide-react'
 
 interface DraggableField {
@@ -320,13 +321,15 @@ export function CertificateBuilder({ campaign }: { campaign: any }) {
               <div key={field.id} className={`space-y-3 p-3 rounded border ${field.isVisible ? 'bg-gray-50' : 'bg-gray-100 opacity-60'}`}>
                 <div className="flex items-center justify-between">
                   <div className="flex flex-col gap-1 w-3/4">
-                    <select
-                      value={field.type}
-                      onChange={e => handleTypeChange(field.id, e.target.value)}
-                      className="text-xs font-semibold uppercase tracking-wider text-blue-700 bg-transparent border-none p-0 focus:ring-0 cursor-pointer"
-                    >
-                      {FIELD_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                    </select>
+                    <div className="w-52">
+                      <CustomDropdown
+                        value={field.type}
+                        onChange={val => handleTypeChange(field.id, val)}
+                        searchable={false}
+                        options={FIELD_TYPES.map(t => ({ value: t.value, label: t.label }))}
+                        triggerClassName="py-1 px-2 text-xs font-semibold text-blue-700 bg-white"
+                      />
+                    </div>
                     
                     {field.type === 'STATIC' ? (
                       <Input 

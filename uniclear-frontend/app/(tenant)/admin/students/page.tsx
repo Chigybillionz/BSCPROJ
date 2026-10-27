@@ -13,6 +13,7 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { InviteResultDialog } from '@/components/shared/InviteResultDialog'
+import { CustomDropdown } from '@/components/ui/CustomDropdown'
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton'
 import { EmptyState, ErrorState } from '@/components/shared/EmptyState'
 import { Users, Search, Trash2 } from 'lucide-react'
@@ -227,24 +228,33 @@ export default function AdminStudentsPage() {
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-[var(--color-text)]">Faculty (Optional)</label>
-              <select 
-                className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text)] shadow-[var(--shadow-sm)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
-                {...form.register('facultyId')}
-              >
-                <option value="">Select Faculty...</option>
-                {faculties?.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
-              </select>
+              <CustomDropdown
+                value={form.watch('facultyId') || ''}
+                onChange={val => {
+                  form.setValue('facultyId', val)
+                  form.setValue('departmentId', '')
+                }}
+                placeholder="Select Faculty..."
+                searchable={true}
+                options={[
+                  { value: '', label: 'Select Faculty...' },
+                  ...(faculties || []).map(f => ({ value: f.id, label: f.name })),
+                ]}
+              />
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-[var(--color-text)]">Department (Optional)</label>
-              <select 
+              <CustomDropdown
                 disabled={!selectedFacultyId}
-                className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text)] shadow-[var(--shadow-sm)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] disabled:opacity-50"
-                {...form.register('departmentId')}
-              >
-                <option value="">Select Department...</option>
-                {filteredDepartments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-              </select>
+                value={form.watch('departmentId') || ''}
+                onChange={val => form.setValue('departmentId', val)}
+                placeholder="Select Department..."
+                searchable={true}
+                options={[
+                  { value: '', label: 'Select Department...' },
+                  ...filteredDepartments.map(d => ({ value: d.id, label: d.name })),
+                ]}
+              />
             </div>
           </div>
           <div className="flex gap-2 pt-1">
