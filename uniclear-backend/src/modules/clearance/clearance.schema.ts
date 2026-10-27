@@ -31,6 +31,7 @@ export const queueQuerySchema = z.object({
   campaignId: optionalUuid,
   stageStatus: z.preprocess(
     (val) => (val === '' || val === null || val === undefined ? undefined : val),
-    z.enum(['ALL', 'SUBMITTED', 'PENDING', 'REJECTED']).optional()
+    z.enum(['ALL', 'SUBMITTED', 'PENDING', 'REJECTED', 'APPROVED']).optional()
   ),
 })
+

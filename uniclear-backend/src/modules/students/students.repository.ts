@@ -9,12 +9,35 @@ export class StudentsRepository {
     if (facultyId)    where.facultyId    = facultyId
     if (departmentId) where.departmentId = departmentId
     if (search) {
-      where.OR = [
-        { firstName: { contains: search, mode: 'insensitive' } },
-        { lastName:  { contains: search, mode: 'insensitive' } },
-        { matricNo:  { contains: search, mode: 'insensitive' } },
+      const trimmed = search.trim()
+      const parts = trimmed.split(/\s+/).filter(Boolean)
+      const orConditions: any[] = [
+        { firstName: { contains: trimmed, mode: 'insensitive' } },
+        { lastName:  { contains: trimmed, mode: 'insensitive' } },
+        { matricNo:  { contains: trimmed, mode: 'insensitive' } },
+        { jambRegNo: { contains: trimmed, mode: 'insensitive' } },
       ]
+
+      if (parts.length >= 2) {
+        orConditions.push(
+          {
+            AND: [
+              { firstName: { contains: parts[0], mode: 'insensitive' } },
+              { lastName:  { contains: parts.slice(1).join(' '), mode: 'insensitive' } },
+            ]
+          },
+          {
+            AND: [
+              { firstName: { contains: parts.slice(1).join(' '), mode: 'insensitive' } },
+              { lastName:  { contains: parts[0], mode: 'insensitive' } },
+            ]
+          }
+        )
+      }
+
+      where.OR = orConditions
     }
+
     const [data, total] = await Promise.all([
       db.student.findMany({ where, skip, take: limit, include: { faculty: true, department: true }, orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }] }),
       db.student.count({ where }),

@@ -121,6 +121,13 @@ export function OfficerQueueTable({
     return result
   }, [items, selectedDept, recentOnly])
 
+  // Auto-reset department if current list does not contain it
+  React.useEffect(() => {
+    if (selectedDept !== 'ALL' && !departments.includes(selectedDept)) {
+      setSelectedDept('ALL')
+    }
+  }, [departments, selectedDept])
+
   // Real-time debounced search so officers don't have to manually press Enter
   React.useEffect(() => {
     const handler = setTimeout(() => {
@@ -139,6 +146,7 @@ export function OfficerQueueTable({
     e.preventDefault()
     onSearchChange?.(localSearch)
   }
+
 
   return (
     <Card padding="sm" className="p-0 overflow-hidden border border-[var(--color-border)] shadow-sm">
@@ -179,11 +187,11 @@ export function OfficerQueueTable({
             <span>Recent Uploads {recentCount > 0 ? `(${recentCount})` : ''}</span>
           </button>
 
-          {departments.length > 1 && (
+          {departments.length >= 1 && (
             <div className="flex items-center gap-1.5 text-xs">
               <Filter className="h-3.5 w-3.5 text-[var(--color-muted)]" />
               <select
-                className="text-xs bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg px-2.5 py-1.5 outline-none focus:ring-1 focus:ring-[var(--color-primary)] text-[var(--color-text)] font-medium"
+                className="text-xs bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg px-2.5 py-1.5 outline-none focus:ring-1 focus:ring-[var(--color-primary)] text-[var(--color-text)] font-medium cursor-pointer"
                 value={selectedDept}
                 onChange={e => setSelectedDept(e.target.value)}
               >
@@ -196,6 +204,7 @@ export function OfficerQueueTable({
               </select>
             </div>
           )}
+
 
           {onRefresh && (
             <button
@@ -411,7 +420,7 @@ export function OfficerQueueTable({
             Showing <span className="font-semibold text-[var(--color-text)]">{filteredItems.length}</span> of{' '}
             <span className="font-semibold text-[var(--color-text)]">{total}</span> student requests
           </p>
-          {onPageChange && total > 20 && (
+          {onPageChange && (total > 20 || page > 1) && (
             <div className="flex items-center gap-2">
               <Button
                 size="sm"
@@ -424,7 +433,7 @@ export function OfficerQueueTable({
                 Previous
               </Button>
               <span className="font-medium text-[var(--color-text)] px-1">
-                Page {page}
+                Page {page} of {Math.max(1, Math.ceil(total / 20))}
               </span>
               <Button
                 size="sm"
@@ -438,6 +447,7 @@ export function OfficerQueueTable({
               </Button>
             </div>
           )}
+
         </div>
       )}
     </Card>

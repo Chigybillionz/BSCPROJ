@@ -205,17 +205,39 @@ export class ClearanceRepository {
     if (campaignId) where.campaignId = campaignId
 
     if (search) {
+      const trimmed = search.trim()
+      const parts = trimmed.split(/\s+/).filter(Boolean)
+      const searchConditions: any[] = [
+        { firstName: { contains: trimmed, mode: 'insensitive' } },
+        { lastName:  { contains: trimmed, mode: 'insensitive' } },
+        { jambRegNo: { contains: trimmed, mode: 'insensitive' } },
+        { matricNo:  { contains: trimmed, mode: 'insensitive' } },
+      ]
+
+      if (parts.length >= 2) {
+        searchConditions.push(
+          {
+            AND: [
+              { firstName: { contains: parts[0], mode: 'insensitive' } },
+              { lastName:  { contains: parts.slice(1).join(' '), mode: 'insensitive' } },
+            ]
+          },
+          {
+            AND: [
+              { firstName: { contains: parts.slice(1).join(' '), mode: 'insensitive' } },
+              { lastName:  { contains: parts[0], mode: 'insensitive' } },
+            ]
+          }
+        )
+      }
+
       where.AND.push({
         student: {
-          OR: [
-            { firstName: { contains: search, mode: 'insensitive' } },
-            { lastName:  { contains: search, mode: 'insensitive' } },
-            { jambRegNo: { contains: search, mode: 'insensitive' } },
-            { matricNo:  { contains: search, mode: 'insensitive' } },
-          ]
-        }
+          OR: searchConditions,
+        },
       })
     }
+
 
     const [data, total] = await Promise.all([
       db.clearanceRequest.findMany({
