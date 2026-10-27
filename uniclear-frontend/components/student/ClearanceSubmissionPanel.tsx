@@ -394,9 +394,18 @@ export function ClearanceSubmissionPanel({
                               size="sm"
                               variant="secondary"
                               onClick={() => document.getElementById(`file-input-${req.id}`)?.click()}
-                              className="text-xs font-bold text-red-700 hover:bg-red-100 border-red-300"
+                              disabled={isCurrentUploading}
+                              className="text-xs font-bold text-red-700 hover:bg-red-100 border-red-300 cursor-pointer"
                             >
-                              <UploadCloud className="w-3.5 h-3.5 mr-1" /> Re-upload File
+                              {isCurrentUploading ? (
+                                <>
+                                  <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> Uploading...
+                                </>
+                              ) : (
+                                <>
+                                  <UploadCloud className="w-3.5 h-3.5 mr-1" /> Re-upload File
+                                </>
+                              )}
                             </Button>
                           </div>
                         </div>
@@ -435,18 +444,19 @@ export function ClearanceSubmissionPanel({
                         </p>
                       </>
                     )}
-
-                    <input 
-                      id={`file-input-${req.id}`}
-                      type="file" 
-                      className="hidden" 
-                      accept={allowedFormats.map((f: string) => `.${f}`).join(',')}
-                      onChange={(e) => handleFileChange(e, req.documentTypeId)}
-                      disabled={isCurrentUploading}
-                      data-testid={`file-input-${req.documentTypeId}`}
-                    />
                   </div>
                 )}
+
+                {/* Persistent Hidden File Input for both Initial Upload and Re-upload */}
+                <input 
+                  id={`file-input-${req.id}`}
+                  type="file" 
+                  className="hidden" 
+                  accept={allowedFormats.map((f: string) => `.${f}`).join(',')}
+                  onChange={(e) => handleFileChange(e, req.documentTypeId)}
+                  disabled={isCurrentUploading}
+                  data-testid={`file-input-${req.documentTypeId}`}
+                />
               </div>
             )
           })}

@@ -181,7 +181,30 @@ export class StudentsService {
     const student = await StudentsService.getById(id, universityId)
     return db.clearanceRequest.findFirst({
       where: { studentId: student.id, universityId },
-      include: { stageApprovals: { include: { stage: true } }, session: true },
+      include: {
+        stageApprovals: {
+          include: {
+            stage: true,
+            officerRef: true,
+            stamp: true,
+          },
+          orderBy: { decidedAt: 'asc' },
+        },
+        documents: {
+          include: {
+            documentType: true,
+          },
+          orderBy: { uploadedAt: 'desc' },
+        },
+        session: true,
+        campaign: {
+          include: {
+            stages: {
+              orderBy: { orderIndex: 'asc' },
+            },
+          },
+        },
+      },
       orderBy: { createdAt: 'desc' },
     })
   }

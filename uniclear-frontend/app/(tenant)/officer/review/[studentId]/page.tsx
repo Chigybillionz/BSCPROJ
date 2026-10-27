@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useState } from 'react'
+import { use, useState, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useApproveStage, useRejectStage } from '@/features/clearance/hooks/useClearance'
 import { RejectDialog } from '@/components/officer/RejectDialog'
@@ -8,11 +8,14 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Dialog } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { officerStampsApi, OfficerStamp } from '@/lib/api/officerStamps.api'
+import { StampManagerDialog } from '@/components/officer/StampManagerDialog'
 import dynamic from 'next/dynamic'
 const PdfStampViewer = dynamic(
   () => import('@/components/officer/PdfStampViewer').then(mod => mod.PdfStampViewer),
   { ssr: false, loading: () => <LoadingSkeleton rows={10} /> }
 )
+
 import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton'
 import { ErrorState } from '@/components/shared/EmptyState'
 import { clearanceApi } from '@/lib/api/clearance.api'
@@ -169,6 +172,33 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
   const [docActionPending, setDocActionPending] = useState(false)
   const [docFilter, setDocFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL')
   const [docSearch, setDocSearch] = useState('')
+
+  // Load officer's available stamps and auto-select default stamp
+  const { data: officerStampsRes, refetch: refetchStamps } = useQuery({
+    queryKey: ['officerStamps'],
+    queryFn: () => officerStampsApi.getAll().then(r => r.data.data),
+  })
+  const [stampsList, setStampsList] = useState<OfficerStamp[]>([])
+
+  useEffect(() => {
+    if (officerStampsRes) {
+      setStampsList(officerStampsRes)
+      if (officerStampsRes.length > 0 && !selectedStampId) {
+        const savedId = typeof window !== 'undefined' ? localStorage.getItem('uniclear_default_stamp_id') : null
+        const match = officerStampsRes.find((s: OfficerStamp) => s.id === savedId) || officerStampsRes[0]
+        if (match) setSelectedStampId(match.id)
+      }
+    }
+  }, [officerStampsRes, selectedStampId])
+
+  const handleSelectStamp = (id: string) => {
+    setSelectedStampId(id)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('uniclear_default_stamp_id', id)
+    }
+    toast.success('Official stamp linked to this clearance endorsement')
+  }
+
 
   // Resilient query: handles both requestId and studentId, with 8s polling for real-time sync
   const { data: clearance, isLoading, isError, refetch: refetchClearance, isFetching: fetchingClearance } = useQuery({
@@ -799,7 +829,70 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
           {/* ======================================================== */}
           {/* Main Action Buttons: "Approve" (Green) and "Reject" (Red) */}
           {/* ======================================================== */}
-          <div className="pt-4 border-t border-[var(--color-border)] space-y-2.5 mt-auto">
+          <div className="pt-4 border-t border-[var(--color-border)] space-y-3 mt-auto">
+            {/* Digital Endorsement Stamp & Signature Selector */}
+            <div className="p-3 bg-slate-50/90 rounded-xl border border-slate-200/90 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5 uppercase tracking-wider">
+                  <ShieldCheck className="h-3.5 w-3.5 text-[var(--color-primary)]" />
+                  <span>Official Digital Seal</span>
+                </span>
+                <StampManagerDialog
+                  stamps={stampsList}
+                  onStampsChange={newStamps => {
+                    setStampsList(newStamps)
+                    refetchStamps()
+                  }}
+                />
+              </div>
+
+              {stampsList.length === 0 ? (
+                <div className="text-[11px] text-slate-500 bg-white p-2.5 rounded-lg border border-slate-200/60 text-center">
+                  <p>No digital stamps uploaded yet.</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Click Manage Signatures &amp; Stamps above to add your official seal.</p>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                    {stampsList.map((stamp: OfficerStamp) => {
+                      const isSelected = selectedStampId === stamp.id
+                      return (
+                        <button
+                          key={stamp.id}
+                          type="button"
+                          onClick={() => handleSelectStamp(stamp.id)}
+                          className={`relative flex items-center gap-2 p-1.5 rounded-lg border transition-all cursor-pointer shrink-0 bg-white ${
+                            isSelected
+                              ? 'border-emerald-600 ring-2 ring-emerald-500/30 bg-emerald-50/40'
+                              : 'border-slate-200 hover:border-slate-300'
+                          }`}
+                        >
+                          <div className="w-10 h-8 rounded border border-slate-100 flex items-center justify-center p-0.5 overflow-hidden bg-slate-50/50">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={normalizeDocUrl(stamp.imageUrl)}
+                              alt={stamp.name}
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                          <div className="text-left pr-1.5">
+                            <p className="text-[11px] font-bold text-slate-800 line-clamp-1 max-w-[110px]">{stamp.name}</p>
+                            <span className={`text-[9px] font-semibold block ${isSelected ? 'text-emerald-700' : 'text-slate-400'}`}>
+                              {isSelected ? '✓ Selected' : 'Click to use'}
+                            </span>
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <p className="text-[10px] text-slate-500 flex items-center gap-1">
+                    <span className="font-semibold text-emerald-700">✓ Stamp attached:</span>
+                    <span>Will be watermarked on the student&apos;s completion certificate.</span>
+                  </p>
+                </div>
+              )}
+            </div>
+
             {!allDocsApproved && totalDocsCount > 0 && (
               <div className="flex items-center gap-1.5 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-[11px] leading-tight">
                 <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
@@ -808,6 +901,7 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
                 </span>
               </div>
             )}
+
 
             {/* 1. Main Action Button: APPROVE (Green) */}
             <Button
@@ -876,10 +970,28 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
           <p className="text-xs text-[var(--color-muted)] leading-relaxed">
             Specify why this document is invalid or rejected (e.g. illegible, missing stamp, wrong session). The student will be prompted to re-upload.
           </p>
-          <div>
-            <label className="text-xs font-semibold text-[var(--color-text)] mb-1 block">
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-[var(--color-text)] block">
               Rejection Remarks (Required)
             </label>
+            {/* Quick preset chips */}
+            <div className="flex flex-wrap gap-1">
+              {[
+                'Document image is blurry or unreadable. Please upload a clear copy.',
+                'Missing required departmental stamp or official signature.',
+                'Uploaded file belongs to an incorrect academic session.',
+                'Incomplete document or missing pages.',
+              ].map(chip => (
+                <button
+                  key={chip}
+                  type="button"
+                  onClick={() => setDocRejectReason(chip)}
+                  className="text-[10px] text-left px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 cursor-pointer"
+                >
+                  {chip}
+                </button>
+              ))}
+            </div>
             <Input
               value={docRejectReason}
               onChange={e => setDocRejectReason(e.target.value)}
@@ -887,6 +999,7 @@ export default function ReviewPage({ params }: { params: Promise<{ studentId: st
               className="text-xs"
             />
           </div>
+
           <div className="flex justify-end gap-2 pt-2">
             <Button
               variant="secondary"

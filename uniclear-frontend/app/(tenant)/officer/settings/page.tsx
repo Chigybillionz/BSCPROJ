@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
-import Image from 'next/image'
 import { useQuery } from '@tanstack/react-query'
 import { officersApi } from '@/lib/api/officers.api'
 import { officerStampsApi, OfficerStamp } from '@/lib/api/officerStamps.api'
@@ -19,12 +18,15 @@ import {
   Building,
   Layers,
   Sparkles,
-  Info
+  Info,
+  Star
 } from 'lucide-react'
+import { normalizeDocUrl } from '@/lib/utils/format'
 
 export default function OfficerSettingsPage() {
   const [stamps, setStamps] = useState<OfficerStamp[]>([])
   const [loadingStamps, setLoadingStamps] = useState(true)
+  const [defaultStampId, setDefaultStampId] = useState<string | null>(null)
 
   // Upload state
   const [uploadName, setUploadName] = useState('')
@@ -45,12 +47,23 @@ export default function OfficerSettingsPage() {
     queryFn: () => officersApi.getMe().then((r: any) => r.data.data),
   })
 
-  // Load stamps
+  // Load stamps & initialize default stamp
   const loadStamps = async () => {
     try {
       setLoadingStamps(true)
       const res = await officerStampsApi.getAll()
-      setStamps(res.data.data || [])
+      const loaded = res.data.data || []
+      setStamps(loaded)
+
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('uniclear_default_stamp_id')
+        if (saved && loaded.some(s => s.id === saved)) {
+          setDefaultStampId(saved)
+        } else if (loaded.length > 0) {
+          localStorage.setItem('uniclear_default_stamp_id', loaded[0].id)
+          setDefaultStampId(loaded[0].id)
+        }
+      }
     } catch {
       toast.error('Failed to load stamps')
     } finally {
@@ -92,11 +105,18 @@ export default function OfficerSettingsPage() {
     try {
       setUploading(true)
       const res = await officerStampsApi.upload(uploadName.trim(), file)
-      setStamps(prev => [...prev, res.data.data])
+      const newStamp = res.data.data
+      setStamps(prev => [...prev, newStamp])
       setUploadName('')
       setFile(null)
       setFilePreview(null)
-      toast.success('Official stamp uploaded and ready for clearance endorsements!')
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('uniclear_default_stamp_id', newStamp.id)
+        setDefaultStampId(newStamp.id)
+      }
+
+      toast.success('Official stamp uploaded and set as your active clearance stamp!')
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Failed to upload stamp')
     } finally {
@@ -181,10 +201,17 @@ export default function OfficerSettingsPage() {
       const drawnFile = new File([blob], `${drawName.replace(/\s+/g, '_')}.png`, { type: 'image/png' })
 
       const res = await officerStampsApi.upload(drawName.trim(), drawnFile)
-      setStamps(prev => [...prev, res.data.data])
+      const newStamp = res.data.data
+      setStamps(prev => [...prev, newStamp])
       setDrawName('')
       clearCanvas()
-      toast.success('Digital signature saved successfully!')
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('uniclear_default_stamp_id', newStamp.id)
+        setDefaultStampId(newStamp.id)
+      }
+
+      toast.success('Digital signature saved and set as your active clearance stamp!')
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Failed to save drawn signature')
     } finally {
@@ -192,11 +219,27 @@ export default function OfficerSettingsPage() {
     }
   }
 
+  // Set default stamp
+  const handleSetDefault = (stamp: OfficerStamp) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('uniclear_default_stamp_id', stamp.id)
+      setDefaultStampId(stamp.id)
+      toast.success(`"${stamp.name}" set as your default endorsement stamp!`)
+    }
+  }
+
   // Delete stamp
   const handleDelete = async (id: string) => {
     try {
       await officerStampsApi.delete(id)
-      setStamps(prev => prev.filter(s => s.id !== id))
+      setStamps(prev => {
+        const remaining = prev.filter(s => s.id !== id)
+        if (defaultStampId === id && remaining.length > 0) {
+          localStorage.setItem('uniclear_default_stamp_id', remaining[0].id)
+          setDefaultStampId(remaining[0].id)
+        }
+        return remaining
+      })
       toast.success('Stamp deleted')
     } catch {
       toast.error('Failed to delete stamp')
@@ -334,12 +377,12 @@ export default function OfficerSettingsPage() {
                     />
                     {filePreview ? (
                       <div className="flex flex-col items-center">
-                        <div className="relative w-32 h-24 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:8px_8px] rounded-lg border border-[var(--color-border)] flex items-center justify-center p-2 mb-2">
-                          <Image
+                        <div className="relative w-32 h-24 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:8px_8px] rounded-lg border border-[var(--color-border)] flex items-center justify-center p-2 mb-2 overflow-hidden">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
                             src={filePreview}
                             alt="Stamp Preview"
-                            fill
-                            className="object-contain p-2"
+                            className="max-h-full max-w-full object-contain p-2"
                           />
                         </div>
                         <p className="text-xs font-semibold text-[var(--color-text)] truncate max-w-xs">
@@ -476,45 +519,69 @@ export default function OfficerSettingsPage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 overflow-y-auto max-h-[500px] p-0.5">
-                {stamps.map(stamp => (
-                  <div
-                    key={stamp.id}
-                    className="p-3 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl hover:shadow-xs transition-shadow flex flex-col justify-between group"
-                  >
-                    <div>
-                      {/* Checkerboard container for transparency visualization */}
-                      <div className="relative w-full h-28 bg-[radial-gradient(#d1d5db_1px,transparent_1px)] [background-size:8px_8px] bg-slate-50 rounded-lg border border-[var(--color-border)] flex items-center justify-center p-2 mb-2">
-                        <Image
-                          src={stamp.imageUrl}
-                          alt={stamp.name}
-                          fill
-                          className="object-contain p-2"
-                        />
+                {stamps.map(stamp => {
+                  const isDefault = stamp.id === defaultStampId
+                  return (
+                    <div
+                      key={stamp.id}
+                      className={`p-3 bg-[var(--color-surface)] border rounded-xl hover:shadow-xs transition-shadow flex flex-col justify-between group ${
+                        isDefault ? 'border-amber-400 ring-1 ring-amber-400/40 bg-amber-50/10' : 'border-[var(--color-border)]'
+                      }`}
+                    >
+                      <div>
+                        {/* Checkerboard container for transparency visualization */}
+                        <div className="relative w-full h-28 bg-[radial-gradient(#d1d5db_1px,transparent_1px)] [background-size:8px_8px] bg-slate-50 rounded-lg border border-[var(--color-border)] flex items-center justify-center p-2 mb-2 overflow-hidden">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={normalizeDocUrl(stamp.imageUrl)}
+                            alt={stamp.name}
+                            className="max-h-full max-w-full object-contain p-2"
+                          />
+                        </div>
+                        <div className="flex items-center justify-between gap-1">
+                          <p className="text-xs font-bold text-[var(--color-text)] truncate" title={stamp.name}>
+                            {stamp.name}
+                          </p>
+                          {isDefault && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-100/80 px-2 py-0.5 rounded-full shrink-0">
+                              <Star className="h-3 w-3 fill-amber-500 text-amber-600" />
+                              <span>Default</span>
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-[var(--color-muted)] font-mono mt-0.5">
+                          Added: {new Date(stamp.createdAt).toLocaleDateString()}
+                        </p>
                       </div>
-                      <p className="text-xs font-bold text-[var(--color-text)] truncate" title={stamp.name}>
-                        {stamp.name}
-                      </p>
-                      <p className="text-[10px] text-[var(--color-muted)] font-mono mt-0.5">
-                        Added: {new Date(stamp.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
 
-                    <div className="flex items-center justify-between pt-2 mt-2 border-t border-[var(--color-border)]">
-                      <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200">
-                        Ready
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(stamp.id)}
-                        className="text-[11px] text-[var(--color-muted)] hover:text-rose-600 transition-colors p-1 rounded-md hover:bg-rose-50 flex items-center gap-1"
-                        title="Delete stamp"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        <span>Delete</span>
-                      </button>
+                      <div className="flex items-center justify-between pt-2 mt-2 border-t border-[var(--color-border)]">
+                        {isDefault ? (
+                          <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200">
+                            Active Default
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleSetDefault(stamp)}
+                            className="text-[11px] font-semibold text-blue-700 hover:text-blue-800 hover:underline flex items-center gap-1 cursor-pointer"
+                          >
+                            <Star className="h-3 w-3 text-blue-600" />
+                            <span>Set as Default</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(stamp.id)}
+                          className="text-[11px] text-[var(--color-muted)] hover:text-rose-600 transition-colors p-1 rounded-md hover:bg-rose-50 flex items-center gap-1 cursor-pointer"
+                          title="Delete stamp"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          <span>Delete</span>
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </Card>

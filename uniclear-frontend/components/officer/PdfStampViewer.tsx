@@ -8,8 +8,10 @@ import 'react-pdf/dist/esm/Page/TextLayer.css'
 import { Button } from '@/components/ui/button'
 import { OfficerStamp, officerStampsApi } from '@/lib/api/officerStamps.api'
 import { StampManagerDialog } from './StampManagerDialog'
-import Image from 'next/image'
 import { toast } from 'sonner'
+
+import { normalizeDocUrl } from '@/lib/utils/format'
+import { Sparkles, MapPin, Check } from 'lucide-react'
 
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
 
@@ -27,15 +29,50 @@ export function PdfStampViewer({ fileUrl, onSaveStampedFile, onStampSelect }: Pd
   
   const isImage = /\.(jpe?g|png|webp)($|\?)/i.test(fileUrl)
 
-  // To track where the stamp is placed
+  // Track where the stamp is placed
   const [stampPosition, setStampPosition] = useState<{ x: number, y: number } | null>(null)
+  const [savedPosition, setSavedPosition] = useState<{ x: number, y: number } | null>(() => {
+    if (typeof window === 'undefined') return null
+    try {
+      const p = localStorage.getItem('uniclear_last_stamp_pos')
+      return p ? JSON.parse(p) : null
+    } catch {
+      return null
+    }
+  })
   const pageRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     officerStampsApi.getAll().then((res) => {
-      setStamps(res.data.data)
+      const stampList = res.data.data || []
+      setStamps(stampList)
+      if (stampList.length > 0) {
+        const savedStampId = typeof window !== 'undefined' ? localStorage.getItem('uniclear_default_stamp_id') : null
+        const match = stampList.find(s => s.id === savedStampId) || stampList[0]
+        if (match) {
+          setSelectedStamp(match)
+          onStampSelect?.(match)
+        }
+      }
     }).catch(e => console.error("Could not load stamps", e))
   }, [])
+
+  const handleSelectStamp = (stamp: OfficerStamp) => {
+    setSelectedStamp(stamp)
+    onStampSelect?.(stamp)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('uniclear_default_stamp_id', stamp.id)
+    }
+  }
+
+  const handleSetPosition = (pos: { x: number; y: number }) => {
+    setStampPosition(pos)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('uniclear_last_stamp_pos', JSON.stringify(pos))
+      setSavedPosition(pos)
+    }
+  }
+
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
     setNumPages(numPages)
@@ -114,6 +151,11 @@ export function PdfStampViewer({ fileUrl, onSaveStampedFile, onStampSelect }: Pd
       const blob = new Blob([pdfBytes as unknown as BlobPart], { type: 'application/pdf' })
       const file = new File([blob], 'signed_document.pdf', { type: 'application/pdf' })
 
+      if (typeof window !== 'undefined' && stampPosition) {
+        localStorage.setItem('uniclear_last_stamp_pos', JSON.stringify(stampPosition))
+        setSavedPosition(stampPosition)
+      }
+
       toast.success('Document successfully stamped!', { id: 'stamp' })
       onSaveStampedFile(file)
     } catch (err) {
@@ -125,33 +167,87 @@ export function PdfStampViewer({ fileUrl, onSaveStampedFile, onStampSelect }: Pd
   return (
     <div className="flex flex-col h-full relative">
       {/* Stamp Toolbar */}
-      <div className="bg-[var(--color-bg)] border-b border-[var(--color-border)] p-3 flex items-center gap-4 overflow-x-auto shrink-0">
+      <div className="bg-[var(--color-bg)] border-b border-[var(--color-border)] p-3 flex items-center gap-3 overflow-x-auto shrink-0">
         <span className="text-xs font-semibold uppercase text-[var(--color-muted)] shrink-0">Your Stamps:</span>
         {stamps.length === 0 ? (
-          <span className="text-sm text-[var(--color-muted)]">No stamps uploaded yet. Go to settings to add stamps!</span>
+          <span className="text-xs text-[var(--color-muted)]">No stamps uploaded yet. Add stamps below to sign documents!</span>
         ) : (
           stamps.map(stamp => (
             <button
               key={stamp.id}
-              onClick={() => {
-                setSelectedStamp(stamp)
-                onStampSelect?.(stamp)
-              }}
-              className={`relative h-10 w-24 shrink-0 rounded border-2 transition-all overflow-hidden bg-white ${
+              type="button"
+              onClick={() => handleSelectStamp(stamp)}
+              className={`relative h-10 w-24 shrink-0 rounded border-2 transition-all overflow-hidden bg-white cursor-pointer ${
                 selectedStamp?.id === stamp.id ? 'border-[var(--color-primary)] ring-2 ring-[var(--color-primary)] ring-opacity-50' : 'border-[var(--color-border)] hover:border-gray-400'
               }`}
+              title={stamp.name}
             >
-              <Image src={stamp.imageUrl} alt={stamp.name} fill className="object-contain" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={normalizeDocUrl(stamp.imageUrl)} alt={stamp.name} className="w-full h-full object-contain p-0.5" />
             </button>
           ))
         )}
         <StampManagerDialog stamps={stamps} onStampsChange={setStamps} />
+
+        {/* Quick Position Helpers */}
+        {selectedStamp && (
+          <div className="flex items-center gap-1.5 ml-auto shrink-0">
+            {savedPosition && (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => handleSetPosition(savedPosition)}
+                className="h-8 px-2.5 text-xs font-semibold bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 flex items-center gap-1 cursor-pointer"
+                title="Place stamp at the exact position used previously"
+              >
+                <MapPin className="h-3 w-3 text-blue-600" />
+                <span>Use Last Position</span>
+              </Button>
+            )}
+
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => handleSetPosition({ x: 0.82, y: 0.15 })}
+              className="h-8 px-2.5 text-xs font-semibold border-slate-200 hover:bg-slate-100 flex items-center gap-1 cursor-pointer"
+              title="Standard bottom-right certificate endorsement position"
+            >
+              <Sparkles className="h-3 w-3 text-amber-500" />
+              <span>Bottom-Right Seal</span>
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-auto bg-gray-100 flex justify-center items-start p-4 relative">
         {selectedStamp && !stampPosition && (
-          <div className="absolute top-6 z-10 bg-black text-white px-4 py-2 rounded-full text-sm shadow-xl pointer-events-none animate-pulse">
-            Click anywhere on the document to drop your stamp
+          <div className="absolute top-4 z-20 bg-slate-900/95 text-white px-4 py-2 rounded-xl text-xs font-medium shadow-xl flex items-center gap-3 backdrop-blur-sm border border-slate-700">
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
+              <span>Click document to drop stamp, or use preset:</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              {savedPosition && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); handleSetPosition(savedPosition) }}
+                  className="px-2.5 py-1 text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white rounded-md transition-colors flex items-center gap-1 cursor-pointer shadow-xs"
+                >
+                  <MapPin className="h-3 w-3" />
+                  <span>Last Position</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); handleSetPosition({ x: 0.82, y: 0.15 }) }}
+                className="px-2.5 py-1 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 rounded-md transition-colors flex items-center gap-1 cursor-pointer"
+              >
+                <Sparkles className="h-3 w-3 text-amber-400" />
+                <span>Bottom-Right Seal</span>
+              </button>
+            </div>
           </div>
         )}
 
@@ -188,16 +284,17 @@ export function PdfStampViewer({ fileUrl, onSaveStampedFile, onStampSelect }: Pd
           {/* Visual preview of where stamp will be placed */}
           {stampPosition && selectedStamp && (
             <div 
-              className="absolute pointer-events-none opacity-80 shadow-md border border-blue-400 rounded bg-white z-20"
+              className="absolute pointer-events-none opacity-90 shadow-lg border-2 border-blue-500 rounded-lg bg-white/95 z-20 flex items-center justify-center p-1"
               style={{
                 left: `${stampPosition.x * 100}%`,
                 bottom: `${stampPosition.y * 100}%`,
                 transform: 'translate(-50%, 50%)',
                 width: '120px',
-                height: '40px'
+                height: '48px'
               }}
             >
-               <Image src={selectedStamp.imageUrl} alt="preview" fill className="object-contain p-1" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={normalizeDocUrl(selectedStamp.imageUrl)} alt="preview" className="w-full h-full object-contain" />
             </div>
           )}
         </div>
@@ -217,9 +314,21 @@ export function PdfStampViewer({ fileUrl, onSaveStampedFile, onStampSelect }: Pd
         </div>
         
         {stampPosition && (
-          <Button onClick={handleApplyStamp}>
-            ✓ Lock & Save Stamp
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setStampPosition(null)}
+              className="text-xs h-9 cursor-pointer"
+            >
+              Clear Placement
+            </Button>
+            <Button onClick={handleApplyStamp} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-1.5 cursor-pointer shadow-xs">
+              <Check className="h-4 w-4" />
+              <span>Apply & Save Stamp</span>
+            </Button>
+          </div>
         )}
       </div>
     </div>

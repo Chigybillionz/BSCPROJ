@@ -5,8 +5,9 @@ import { Dialog } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { officerStampsApi, OfficerStamp } from '@/lib/api/officerStamps.api'
+import { normalizeDocUrl } from '@/lib/utils/format'
 import { toast } from 'sonner'
-import Image from 'next/image'
+
 
 export function StampManagerDialog({ stamps, onStampsChange }: { stamps: OfficerStamp[], onStampsChange: (s: OfficerStamp[]) => void }) {
   const [open, setOpen] = useState(false)
@@ -83,10 +84,15 @@ export function StampManagerDialog({ stamps, onStampsChange }: { stamps: Officer
     try {
       setUploading(true)
       const res = await officerStampsApi.upload(uploadName, file)
-      onStampsChange([...stamps, res.data.data])
+      const newStamp = res.data.data
+      onStampsChange([...stamps, newStamp])
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('uniclear_default_stamp_id', newStamp.id)
+      }
       setUploadName('')
       setFile(null)
-      toast.success('Stamp uploaded successfully')
+      setOpen(false)
+      toast.success('Stamp uploaded and saved as your active stamp!')
     } catch {
       toast.error('Failed to upload stamp')
     } finally {
@@ -105,20 +111,26 @@ export function StampManagerDialog({ stamps, onStampsChange }: { stamps: Officer
       const drawnFile = new File([blob], 'signature.png', { type: 'image/png' })
 
       const res = await officerStampsApi.upload(drawName, drawnFile)
-      onStampsChange([...stamps, res.data.data])
+      const newStamp = res.data.data
+      onStampsChange([...stamps, newStamp])
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('uniclear_default_stamp_id', newStamp.id)
+      }
       setDrawName('')
       
       // Clear canvas
       const ctx = canvasRef.current.getContext('2d')
       if (ctx) ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height)
 
-      toast.success('Signature saved successfully')
+      setOpen(false)
+      toast.success('Signature saved and set as your active stamp!')
     } catch {
       toast.error('Failed to save signature')
     } finally {
       setUploading(false)
     }
   }
+
 
   const handleDelete = async (id: string) => {
     try {
@@ -197,9 +209,11 @@ export function StampManagerDialog({ stamps, onStampsChange }: { stamps: Officer
             <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
               {stamps.map(stamp => (
                 <div key={stamp.id} className="border border-[var(--color-border)] p-2 rounded relative group bg-white">
-                  <div className="relative h-12 w-full mb-2">
-                     <Image src={stamp.imageUrl} alt={stamp.name} fill className="object-contain" />
+                  <div className="relative h-12 w-full mb-2 flex items-center justify-center overflow-hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={normalizeDocUrl(stamp.imageUrl)} alt={stamp.name} className="h-full w-full object-contain" />
                   </div>
+
                   <p className="text-xs text-center truncate font-medium">{stamp.name}</p>
                   <button 
                     onClick={() => handleDelete(stamp.id)}
