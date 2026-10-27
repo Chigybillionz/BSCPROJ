@@ -8,7 +8,6 @@ export class CampaignsRepository {
       where.OR = [
         { sessionId },
         { clearanceRequests: { some: { sessionId } } },
-        { isActive: true },
       ]
     }
     return db.clearanceCampaign.findMany({

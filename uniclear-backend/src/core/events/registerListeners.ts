@@ -58,7 +58,7 @@ export function registerListeners() {
 
     const stageName = stage?.name || 'Clearance Stage'
     const studentName = student ? `${student.firstName} ${student.lastName}` : undefined
-    const targetUserId = student?.userId || studentId
+    const targetUserId = student?.userId
 
     await AuditService.log({
       universityId,
@@ -69,11 +69,13 @@ export function registerListeners() {
       metadata: { stageId, stageName, studentName, jambRegNo: student?.jambRegNo },
     })
 
-    await NotificationsService.send(
-      universityId, targetUserId, 'STAGE_APPROVED',
-      `Your ${stageName} was approved!`,
-      `Your ${stageName} stage has been approved. Proceed to the next stage.`
-    )
+    if (targetUserId) {
+      await NotificationsService.send(
+        universityId, targetUserId, 'STAGE_APPROVED',
+        `Your ${stageName} was approved!`,
+        `Your ${stageName} stage has been approved. Proceed to the next stage.`
+      )
+    }
 
     if (student?.user?.email) {
       const { sendClearanceStatusEmail } = await import('@/modules/notifications/channels/email.channel')
@@ -97,23 +99,20 @@ export function registerListeners() {
 
     const stageName = stage?.name || 'Clearance Stage'
     const studentName = student ? `${student.firstName} ${student.lastName}` : undefined
-    const targetUserId = student?.userId || studentId
-
-    await AuditService.log({
-      universityId,
-      actorId: officerId,
-      action: 'STAGE_REJECTED',
+    const targetUserId = student?.userId
       targetId: requestId,
       targetType: 'ClearanceRequest',
       metadata: { stageId, stageName, remarks, studentName, jambRegNo: student?.jambRegNo },
     })
 
-    await NotificationsService.send(
-      universityId, targetUserId, 'STAGE_REJECTED',
-      `Your ${stageName} was rejected`,
-      `Your ${stageName} stage was rejected. Reason: ${remarks}`,
-      { remarks }
-    )
+    if (targetUserId) {
+      await NotificationsService.send(
+        universityId, targetUserId, 'STAGE_REJECTED',
+        `Your ${stageName} was rejected`,
+        `Your ${stageName} stage was rejected. Reason: ${remarks}`,
+        { remarks }
+      )
+    }
 
     if (student?.user?.email) {
       const { sendClearanceStatusEmail } = await import('@/modules/notifications/channels/email.channel')

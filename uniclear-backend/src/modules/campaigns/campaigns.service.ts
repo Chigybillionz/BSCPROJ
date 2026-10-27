@@ -1,6 +1,5 @@
 import { CampaignsRepository } from './campaigns.repository'
 import { NotFoundError, ValidationError } from '@/core/errors/AppError'
-
 import { StudentsRepository } from '@/modules/students/students.repository'
 
 export class CampaignsService {
@@ -62,6 +61,11 @@ export class CampaignsService {
 
   static async delete(id: string, universityId: string) {
     await CampaignsService.getById(id, universityId)
+    const { db } = await import('@/lib/db')
+    const activeRequests = await db.clearanceRequest.count({ where: { campaignId: id, status: { not: 'COMPLETED' } } })
+    if (activeRequests > 0) {
+      throw new ValidationError(`Cannot delete campaign: ${activeRequests} active clearance request(s) are linked to it. Close or complete them first.`)
+    }
     return CampaignsRepository.delete(id)
   }
 

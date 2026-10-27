@@ -84,16 +84,29 @@ export default function StudentDashboard() {
       {(primaryClearance ? [primaryClearance] : []).map(clearance => {
         const campaignStages = (stages?.filter(s => s.campaignId === clearance.campaignId) ?? [])
           .sort((a, b) => a.orderIndex - b.orderIndex)
-        
+
+        // A stage is effectively approved if it has a formal StageApproval OR all its
+        // required documents are individually verified (APPROVED) by an officer.
+        const isStageEffectivelyApproved = (stage: any) => {
+          const formalApproval = clearance.stageApprovals?.find(a => a.stageId === stage.id && a.status === 'APPROVED')
+          if (formalApproval) return true
+          const stageReqs = stage.documentRequirements || []
+          const required = stageReqs.filter((r: any) => r.isRequired)
+          if (required.length === 0) return false
+          return required.every((r: any) =>
+            (clearance.documents || []).some((d: any) => d.documentTypeId === r.documentTypeId && d.status === 'APPROVED')
+          )
+        }
+
         const totalStages = campaignStages.length
-        const approvedCount = clearance.stageApprovals?.filter(a => a.status === 'APPROVED').length ?? 0
+        const approvedCount = campaignStages.filter(isStageEffectivelyApproved).length
         const progressPercent = totalStages > 0 ? Math.round((approvedCount / totalStages) * 100) : 0
         const activeStage = campaignStages.find(s => s.id === clearance.currentStageId)
 
         const filteredStages = campaignStages.filter(stage => {
           const approval = clearance.stageApprovals?.find(a => a.stageId === stage.id)
           const isCurrent = clearance.currentStageId === stage.id
-          const isApproved = approval?.status === 'APPROVED'
+          const isApproved = isStageEffectivelyApproved(stage)
           const isRejected = approval?.status === 'REJECTED'
           const isUnderReview = isCurrent && clearance.stageStatus === 'SUBMITTED'
 
@@ -476,7 +489,7 @@ export default function StudentDashboard() {
                 {filteredStages.map((stage, idx) => {
                   const approval = clearance.stageApprovals?.find(a => a.stageId === stage.id)
                   const isCurrent = clearance.currentStageId === stage.id
-                  const isApproved = approval?.status === 'APPROVED'
+                  const isApproved = isStageEffectivelyApproved(stage)
                   const isRejected = approval?.status === 'REJECTED'
                   const isUnderReview = isCurrent && clearance.stageStatus === 'SUBMITTED'
                   const isUpcoming = !isCurrent && !isApproved && !isRejected

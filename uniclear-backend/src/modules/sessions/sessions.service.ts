@@ -1,5 +1,5 @@
 import { SessionsRepository } from './sessions.repository'
-import { NotFoundError, TierLimitError } from '@/core/errors/AppError'
+import { NotFoundError, TierLimitError, ValidationError } from '@/core/errors/AppError'
 import { db } from '@/lib/db'
 import { TIER_LIMITS } from '@/lib/constants/tiers'
 
@@ -36,6 +36,10 @@ export class SessionsService {
 
   static async delete(id: string, universityId: string) {
     await SessionsService.getById(id, universityId)
+    const activeRequests = await db.clearanceRequest.count({ where: { sessionId: id } })
+    if (activeRequests > 0) {
+      throw new ValidationError(`Cannot delete session: ${activeRequests} clearance request(s) are linked to it`)
+    }
     return SessionsRepository.delete(id)
   }
 }
