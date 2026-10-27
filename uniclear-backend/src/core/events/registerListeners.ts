@@ -135,5 +135,111 @@ export function registerListeners() {
     if (actorId) {
       await AuditService.log({ universityId, actorId, action: 'DOCUMENT_UPLOADED', targetId: documentId, targetType: 'Document' })
     }
+
+    try {
+      const doc = await db.document.findUnique({
+        where: { id: documentId },
+        include: {
+          documentType: {
+            include: {
+              stageRequirements: {
+                include: { stage: true },
+              },
+            },
+          },
+          student: {
+            include: {
+              faculty: true,
+              department: true,
+            },
+          },
+          request: {
+            include: {
+              currentStage: true,
+            },
+          },
+        },
+      })
+
+      if (doc) {
+        const candidateStageIds = new Set<string>()
+        if (doc.request?.currentStageId) {
+          candidateStageIds.add(doc.request.currentStageId)
+        }
+        doc.documentType?.stageRequirements?.forEach(sr => {
+          if (sr.stageId) candidateStageIds.add(sr.stageId)
+        })
+
+        if (candidateStageIds.size > 0) {
+          const assignments = await db.stageOfficerAssignment.findMany({
+            where: {
+              universityId,
+              stageId: { in: Array.from(candidateStageIds) },
+              AND: [
+                {
+                  OR: [
+                    { sessionId: null },
+                    ...(doc.request?.sessionId ? [{ sessionId: doc.request.sessionId }] : []),
+                  ],
+                },
+                {
+                  OR: [
+                    { facultyId: null },
+                    ...(doc.student?.facultyId ? [{ facultyId: doc.student.facultyId }] : []),
+                  ],
+                },
+                {
+                  OR: [
+                    { departmentId: null },
+                    ...(doc.student?.departmentId ? [{ departmentId: doc.student.departmentId }] : []),
+                  ],
+                },
+              ],
+            },
+            include: {
+              officer: true,
+              stage: true,
+            },
+          })
+
+          const uniqueOfficers = new Map<string, { userId: string; stageName: string }>()
+          for (const a of assignments) {
+            if (a.officer?.userId && !uniqueOfficers.has(a.officer.userId)) {
+              uniqueOfficers.set(a.officer.userId, {
+                userId: a.officer.userId,
+                stageName: a.stage?.name || 'Assigned Stage',
+              })
+            }
+          }
+
+          const studentName = `${doc.student?.firstName || 'Student'} ${doc.student?.lastName || ''}`.trim()
+          const docName = doc.documentType?.name || doc.fileName
+
+          await Promise.all(
+            Array.from(uniqueOfficers.values()).map(o =>
+              NotificationsService.send(
+                universityId,
+                o.userId,
+                'DOCUMENT_UPLOADED',
+                'New Document Uploaded',
+                `${studentName} uploaded "${docName}" for ${o.stageName}.`,
+                {
+                  requestId: doc.requestId,
+                  studentId: doc.studentId,
+                  documentId: doc.id,
+                  documentName: docName,
+                  studentName,
+                  matricNo: doc.student?.matricNo || doc.student?.jambRegNo,
+                  stageName: o.stageName,
+                }
+              )
+            )
+          )
+        }
+      }
+    } catch (err) {
+      console.error('[EventBus:document.uploaded] Error dispatching officer notifications:', err)
+    }
   })
 }
+

@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { useOfficerQueue } from '@/features/clearance/hooks/useClearance'
 import { officersApi } from '@/lib/api/officers.api'
@@ -8,9 +9,27 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { Card } from '@/components/ui/card'
 import { CardSkeleton } from '@/components/shared/LoadingSkeleton'
 import { OfficerQueueTable } from '@/components/officer/OfficerQueueTable'
-import { Clock, ShieldAlert, Award, Layers, Building } from 'lucide-react'
+import { ROUTES } from '@/lib/constants'
+import { Clock, ShieldAlert, Award, Layers, Building, Sparkles, FileText, CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react'
+
+function formatAgo(dateString?: string | Date | null) {
+  if (!dateString) return ''
+  const past = new Date(dateString).getTime()
+  const diffMs = Date.now() - past
+  const diffSec = Math.floor(diffMs / 1000)
+  const diffMin = Math.floor(diffSec / 60)
+  const diffHour = Math.floor(diffMin / 60)
+  const diffDay = Math.floor(diffHour / 24)
+
+  if (diffSec < 60) return 'Just now'
+  if (diffMin < 60) return `${diffMin}m ago`
+  if (diffHour < 24) return `${diffHour}h ago`
+  if (diffDay < 7) return `${diffDay}d ago`
+  return new Date(dateString).toLocaleDateString()
+}
 
 export default function OfficerDashboard() {
+  const router = useRouter()
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
 
@@ -26,6 +45,49 @@ export default function OfficerDashboard() {
     queryKey: ['officer', 'me'],
     queryFn: () => officersApi.getMe().then((r: any) => r.data.data),
   })
+
+  // Extract recent uploads across students in the officer's queue (declared before conditional returns)
+  const recentUploads = React.useMemo(() => {
+    if (!queue?.items) return []
+    const list: Array<{
+      studentId: string
+      requestId: string
+      studentName: string
+      matricNo: string
+      departmentName: string
+      documentId: string
+      documentName: string
+      uploadedAt: string | Date
+      status: string
+      stageName: string
+    }> = []
+
+    queue.items.forEach((item: any) => {
+      const sName = item.student ? `${item.student.firstName} ${item.student.lastName}` : 'Student'
+      const matric = item.student?.matricNo || item.student?.jambRegNo || 'N/A'
+      const dept = item.student?.department?.name || 'Departmental Stage'
+      const stage = item.currentStage?.name || 'Clearance Stage'
+
+      ;(item.documents || []).forEach((doc: any) => {
+        list.push({
+          studentId: item.student?.id || item.id,
+          requestId: item.id,
+          studentName: sName,
+          matricNo: matric,
+          departmentName: dept,
+          documentId: doc.id,
+          documentName: doc.documentType?.name || doc.fileName || 'Uploaded Document',
+          uploadedAt: doc.uploadedAt || item.updatedAt,
+          status: doc.status || 'PENDING',
+          stageName: stage,
+        })
+      })
+    })
+
+    return list
+      .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime())
+      .slice(0, 6)
+  }, [queue?.items])
 
   // Error State: Officer not assigned to any stage
   if (queueIsError) {
@@ -153,6 +215,95 @@ export default function OfficerDashboard() {
           </>
         )}
       </div>
+
+      {/* Recent Student Uploads & Action Feed */}
+      <Card padding="md" className="border border-[var(--color-border)] shadow-xs overflow-hidden">
+        <div className="flex items-center justify-between pb-3 border-b border-[var(--color-border)]">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-lg bg-amber-50 text-amber-700 border border-amber-200">
+              <Sparkles className="h-4 w-4" />
+            </div>
+            <div>
+              <h3 className="text-xs font-bold text-[var(--color-text)] uppercase tracking-wider">
+                Recent Student Uploads & Action Feed
+              </h3>
+              <p className="text-[11px] text-[var(--color-muted)]">
+                Files uploaded by students for your review & instant verification
+              </p>
+            </div>
+          </div>
+          {recentUploads.length > 0 && (
+            <span className="text-[11px] font-semibold text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
+              {recentUploads.length} recent files
+            </span>
+          )}
+        </div>
+
+        {recentUploads.length === 0 ? (
+          <div className="py-6 text-center text-xs text-[var(--color-muted)] flex flex-col items-center justify-center gap-1.5">
+            <FileText className="h-6 w-6 text-slate-300" />
+            <p className="font-semibold text-slate-700">No student documents in the queue yet</p>
+            <p className="text-[11px] text-slate-400">Newly uploaded student documents will appear here automatically for fast-track verification.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pt-3">
+            {recentUploads.map((up) => (
+              <div
+                key={`${up.requestId}-${up.documentId}`}
+                className="group p-3 rounded-xl border border-[var(--color-border)] hover:border-[var(--color-primary)]/40 hover:bg-[var(--color-bg)]/40 transition-all flex flex-col justify-between gap-2.5 bg-[var(--color-surface)] shadow-2xs"
+              >
+                <div>
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 shrink-0">
+                      {up.stageName}
+                    </span>
+                    <span className="text-[10px] text-[var(--color-muted)] flex items-center gap-1 shrink-0 font-medium">
+                      <Clock className="h-3 w-3" />
+                      {formatAgo(up.uploadedAt)}
+                    </span>
+                  </div>
+
+                  <p className="font-bold text-xs text-[var(--color-text)] mt-2 group-hover:text-[var(--color-primary)] transition-colors line-clamp-1" title={up.documentName}>
+                    {up.documentName}
+                  </p>
+
+                  <div className="mt-1 flex items-center justify-between text-[11px] text-[var(--color-muted)]">
+                    <span className="font-medium text-slate-700 truncate max-w-[140px]">{up.studentName}</span>
+                    <span className="font-mono text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-600 font-semibold">{up.matricNo}</span>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-[var(--color-border)]/60 flex items-center justify-between">
+                  {up.status === 'APPROVED' ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700">
+                      <CheckCircle2 className="h-3 w-3" />
+                      Verified
+                    </span>
+                  ) : up.status === 'REJECTED' ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-rose-700">
+                      <AlertCircle className="h-3 w-3" />
+                      Flagged
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700">
+                      <Clock className="h-3 w-3" />
+                      Awaiting Review
+                    </span>
+                  )}
+
+                  <button
+                    onClick={() => router.push(ROUTES.officer.review(up.requestId))}
+                    className="inline-flex items-center gap-1 text-xs font-bold text-[var(--color-primary)] hover:underline group-hover:translate-x-0.5 transition-transform cursor-pointer"
+                  >
+                    <span>Review</span>
+                    <ArrowRight className="h-3 w-3" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
 
       {/* Main Request Queue Data Table */}
       <div className="space-y-3">

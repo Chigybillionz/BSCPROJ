@@ -1,12 +1,15 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Bell, CheckCheck, CheckCircle2, AlertTriangle, Sparkles,
-  FileText, Info, Trash2
+  FileText, Info, Trash2, ArrowUpRight
 } from 'lucide-react'
 import { notificationsApi, type AppNotification } from '@/lib/api/notifications.api'
+import { useAuthStore } from '@/store/useAuthStore'
+import { ROUTES } from '@/lib/constants'
 import { cn } from '@/lib/utils/cn'
 import { toast } from 'sonner'
 
@@ -27,6 +30,8 @@ function formatTimeAgo(dateString: string) {
 }
 
 export function NotificationBellDropdown() {
+  const router = useRouter()
+  const user = useAuthStore(s => s.user)
   const [open, setOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const qc = useQueryClient()
@@ -84,6 +89,37 @@ export function NotificationBellDropdown() {
       qc.invalidateQueries({ queryKey: ['notifications'] })
     },
   })
+
+  const handleNotificationClick = (n: AppNotification) => {
+    if (!n.isRead) markRead(n.id)
+    setOpen(false)
+
+    const meta = (n.metadata || {}) as Record<string, any>
+    const targetId = meta.requestId || meta.studentId
+
+    if (user?.role === 'OFFICER' || user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') {
+      if (targetId) {
+        router.push(ROUTES.officer.review(targetId))
+        return
+      }
+      if (n.type === 'DOCUMENT_UPLOADED') {
+        router.push(ROUTES.officer.queue)
+        return
+      }
+    }
+
+    if (user?.role === 'STUDENT') {
+      if (n.type === 'DOCUMENT_UPLOADED' || n.type === 'STAGE_REJECTED') {
+        router.push(ROUTES.student.documents)
+        return
+      }
+      if (n.type === 'CLEARANCE_COMPLETE') {
+        router.push(ROUTES.student.certificate)
+        return
+      }
+      router.push(ROUTES.student.dashboard)
+    }
+  }
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -161,9 +197,7 @@ export function NotificationBellDropdown() {
               notifications.map((n) => (
                 <div
                   key={n.id}
-                  onClick={() => {
-                    if (!n.isRead) markRead(n.id)
-                  }}
+                  onClick={() => handleNotificationClick(n)}
                   className={cn(
                     "group relative p-3.5 flex items-start gap-3 transition-colors cursor-pointer hover:bg-gray-50",
                     !n.isRead ? "bg-blue-50/40" : "bg-white"
@@ -185,9 +219,17 @@ export function NotificationBellDropdown() {
                     <p className="text-xs text-gray-600 mt-0.5 line-clamp-2 leading-relaxed">
                       {n.message}
                     </p>
-                    <p className="text-[10px] text-gray-400 mt-1 font-medium">
-                      {formatTimeAgo(n.createdAt)}
-                    </p>
+                    <div className="flex items-center justify-between mt-1.5">
+                      <p className="text-[10px] text-gray-400 font-medium">
+                        {formatTimeAgo(n.createdAt)}
+                      </p>
+                      {(user?.role === 'OFFICER' || user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (n.metadata?.requestId || n.metadata?.studentId) && (
+                        <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 px-1.5 py-0.5 rounded group-hover:bg-blue-100 transition-colors">
+                          <span>Review student</span>
+                          <ArrowUpRight className="h-2.5 w-2.5" />
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   <button

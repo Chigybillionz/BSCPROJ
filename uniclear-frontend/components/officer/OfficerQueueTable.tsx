@@ -19,8 +19,10 @@ import {
   ChevronLeft,
   ChevronRight,
   GraduationCap,
-  AlertCircle
+  AlertCircle,
+  Sparkles
 } from 'lucide-react'
+import { cn } from '@/lib/utils/cn'
 
 export interface OfficerQueueItem {
   id: string
@@ -77,6 +79,7 @@ export function OfficerQueueTable({
   const router = useRouter()
   const [localSearch, setLocalSearch] = useState(search)
   const [selectedDept, setSelectedDept] = useState<string>('ALL')
+  const [recentOnly, setRecentOnly] = useState<boolean>(false)
 
   // Extract unique departments for filter dropdown
   const departments = React.useMemo(() => {
@@ -89,11 +92,34 @@ export function OfficerQueueTable({
     return Array.from(set).sort()
   }, [items])
 
-  // Filter items locally by department if selected
+  // Helper to determine if an item had an upload within the last 24 hours
+  const isRecentlyUploaded = (item: OfficerQueueItem) => {
+    const docs = item.documents || []
+    if (docs.length === 0) return false
+    const now = Date.now()
+    return docs.some(d => {
+      if (!d.uploadedAt) return false
+      const uploadedTime = new Date(d.uploadedAt).getTime()
+      return now - uploadedTime < 24 * 60 * 60 * 1000 // 24 hours
+    })
+  }
+
+  // Count recent items
+  const recentCount = React.useMemo(() => {
+    return items.filter(isRecentlyUploaded).length
+  }, [items])
+
+  // Filter items locally by department and recent uploads
   const filteredItems = React.useMemo(() => {
-    if (selectedDept === 'ALL') return items
-    return items.filter(i => i.student?.department?.name === selectedDept)
-  }, [items, selectedDept])
+    let result = items
+    if (selectedDept !== 'ALL') {
+      result = result.filter(i => i.student?.department?.name === selectedDept)
+    }
+    if (recentOnly) {
+      result = result.filter(isRecentlyUploaded)
+    }
+    return result
+  }, [items, selectedDept, recentOnly])
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -123,6 +149,22 @@ export function OfficerQueueTable({
         </form>
 
         <div className="flex items-center gap-2.5">
+          {/* Recent Uploads Quick Filter Toggle */}
+          <button
+            type="button"
+            onClick={() => setRecentOnly(!recentOnly)}
+            className={cn(
+              "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer",
+              recentOnly
+                ? "bg-amber-500 text-white border-amber-600 shadow-xs"
+                : "bg-[var(--color-bg)] border-[var(--color-border)] text-[var(--color-text)] hover:bg-[var(--color-border)]/40"
+            )}
+            title="Filter students who uploaded documents in the last 24 hours"
+          >
+            <Sparkles className={cn("h-3.5 w-3.5", recentOnly ? "text-white" : "text-amber-500")} />
+            <span>Recent Uploads {recentCount > 0 ? `(${recentCount})` : ''}</span>
+          </button>
+
           {departments.length > 1 && (
             <div className="flex items-center gap-1.5 text-xs">
               <Filter className="h-3.5 w-3.5 text-[var(--color-muted)]" />
@@ -216,9 +258,20 @@ export function OfficerQueueTable({
                           {initials}
                         </div>
                         <div className="min-w-0">
-                          <p className="font-semibold text-xs text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors truncate">
-                            {fullName}
-                          </p>
+                          <div className="flex items-center gap-1.5">
+                            <p className="font-semibold text-xs text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors truncate">
+                              {fullName}
+                            </p>
+                            {isRecentlyUploaded(item) && (
+                              <span 
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-50 text-amber-800 border border-amber-300 shrink-0"
+                                title="Student uploaded new document(s) within the last 24 hours"
+                              >
+                                <Sparkles className="h-2.5 w-2.5 text-amber-600 animate-pulse" />
+                                <span>New Upload</span>
+                              </span>
+                            )}
+                          </div>
                           {item.student?.level && (
                             <span className="text-[10px] text-[var(--color-muted)] flex items-center gap-1">
                               <GraduationCap className="h-3 w-3" />
